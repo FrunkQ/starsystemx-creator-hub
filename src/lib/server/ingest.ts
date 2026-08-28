@@ -331,6 +331,8 @@ async function writeRows(sb: Db, a: WriteArgs): Promise<void> {
     creator_id: viewer.id,
     title: shaped.title,
     summary: shaped.summary,
+    description: shaped.description,
+    tags: shaped.tags,
     kind,
     bundle_format: format,
     published_gm_tree: a.publishGmTree,

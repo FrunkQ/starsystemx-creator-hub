@@ -8,6 +8,7 @@ import { describe, it, expect } from 'vitest';
 import { checkProvenance, collectAttributions } from '../src/lib/bundle/attribution';
 import { readProvenance } from '../src/lib/bundle/provenance';
 import { detectGmContent } from '../src/lib/bundle/gmContent';
+import { normalise } from '../src/lib/bundle/normalise';
 
 const withImage = (image: Record<string, unknown>) => ({
   nodes: [{ id: 'n1', name: 'Kepler', image: { url: 'assets/images/n1.jpg', ...image } }]
@@ -184,5 +185,38 @@ describe('detecting GM-only content', () => {
     for (const doc of [null, undefined, 42, 'nope', [], {}, { nodes: null }, { systems: 'x' }]) {
       expect(() => detectGmContent(doc)).not.toThrow();
     }
+  });
+});
+
+// ------------------------------------------------------------------------------------------------
+// The `meta` block: the creator's write-up, authored in the app. See docs/sse-integration-spec.md.
+// ------------------------------------------------------------------------------------------------
+describe('the write-up carried in the save', () => {
+  it('prefers meta when present', () => {
+    const n = normalise({
+      name: 'old name',
+      meta: { title: 'The Hystrine Reach', summary: 'A dying binary.', tags: ['Hard-SF', ' binary '] },
+      nodes: []
+    });
+    expect(n.title).toBe('The Hystrine Reach');
+    expect(n.summary).toBe('A dying binary.');
+    expect(n.tags).toEqual(['hard-sf', 'binary']);
+  });
+
+  it('falls back exactly as it did before meta existed', () => {
+    // Absent is the normal case for every save that exists today, and must never be an error.
+    expect(normalise({ name: 'Sirius', nodes: [] }).title).toBe('Sirius');
+    expect(normalise({ nodes: [] }).title).toBe('Untitled');
+    expect(normalise({ nodes: [] }).tags).toEqual([]);
+  });
+
+  it('clamps hostile lengths and ignores non-string tags', () => {
+    const n = normalise({
+      meta: { title: 'x'.repeat(500), summary: 'y'.repeat(5000), tags: ['ok', 42, null, {}] },
+      nodes: []
+    });
+    expect(n.title.length).toBe(120);
+    expect(n.summary?.length).toBe(300);
+    expect(n.tags).toEqual(['ok']);
   });
 });

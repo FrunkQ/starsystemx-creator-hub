@@ -29,6 +29,8 @@ export interface NormalisedNode {
 export interface NormalisedBundle {
   title: string;
   summary: string | null;
+  description: string | null;
+  tags: string[];
   systemNames: string[];
   bodies: NormalisedNode[];
   constructs: NormalisedNode[];
@@ -84,6 +86,25 @@ export function normalise(doc: any): NormalisedBundle {
     for (const node of entry?.system?.nodes ?? []) push(node);
   }
 
-  const title = String(doc?.name ?? doc?.title ?? systemNames[0] ?? 'Untitled');
-  return { title, summary: str(doc?.description), systemNames, bodies, constructs };
+  // THE CREATOR'S WRITE-UP, if the save carries one (docs/sse-integration-spec.md section 1).
+  // A `meta` block lets someone write their pitch in the app, where they are already working,
+  // instead of only in a web form afterwards. It PREFILLS; edits made on the hub then win.
+  //
+  // Absent is the normal case today and must never be an error - hence the fallback chain, which
+  // is exactly what the hub did before `meta` existed.
+  const meta = doc?.meta ?? {};
+  const title = String(meta.title ?? doc?.name ?? doc?.title ?? systemNames[0] ?? 'Untitled').slice(0, 120);
+
+  // Length caps because these are displayed and arrive from a file a stranger wrote.
+  const summary = clamp(str(meta.summary), 300);
+  const description = clamp(str(meta.description) ?? str(doc?.description), 8000);
+
+  const tags = Array.isArray(meta.tags)
+    ? meta.tags.filter((t: unknown): t is string => typeof t === 'string' && !!t)
+        .map((t: string) => t.trim().toLowerCase()).filter(Boolean).slice(0, 12)
+    : [];
+
+  return { title, summary, description, tags, systemNames, bodies, constructs };
 }
+
+const clamp = (v: string | null, max: number) => (v === null ? null : v.slice(0, max));

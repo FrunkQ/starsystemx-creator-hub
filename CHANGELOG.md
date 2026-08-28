@@ -22,9 +22,25 @@ everyone had to make before they understood it. `published_gm_tree` now records 
 Requested from the engine as R-10: an `exportMode` stamp, for the LABEL only - a stamp rides inside
 a stranger's file and is a claim, so detection stays the control.
 
+### The integration spec
+
+`docs/sse-integration-spec.md` - the SSE-to-hub system rather than a list of asks: what a saved file
+should carry, the one-click link, uploads, updates, and downloads (which need NO credentials, ever -
+one click is the whole point).
+
+THE RULE IT IS BUILT AROUND: metadata makes a LABEL certain, it never becomes a GATE. Every field
+arrives inside a file a stranger uploaded, so it is a claim - exactly like ATTRIBUTIONS.md and a
+model's path hash. `exportMode: "player"` on a file full of GM notes loses to the detector. Invert
+that and a one-line JSON edit walks past every gate the hub has.
+
+The hub now reads an optional `meta` block (title, summary, description, tags) so a creator can
+write their pitch in the app where they are already working, rather than only in a web form
+afterwards. It PREFILLS; hub edits then win. Absent is the normal case for every save that exists
+today and is not an error.
+
 ### Checks
 
-42 tests. svelte-check clean. Build clean.
+45 tests. svelte-check clean. Build clean.
 
 ## 0.2.0 — 2026-08-28
 

@@ -57,7 +57,8 @@ Patreon OAuth callback (the webhook and entitlement logic are done), in-app sign
 | `docs/decisions.md` | what was decided and why; **what is still the owner's to answer** |
 | `docs/moderation.md` | how the ledger works operationally |
 | `docs/integrations.md` | Patreon, Discord and the hub — the three legs and which way each points |
-| `docs/sse-requirements.md` | **hand this to an agent working in the SSE repo** |
+| `docs/sse-integration-spec.md` | **the SSE↔hub system: metadata, links, uploads, downloads** |
+| `docs/sse-requirements.md` | the individual asks, ordered by what unblocks what |
 | `docs/deployment.md` | standing it up on Cloudflare, and what must be true before uploads open |
 | `creator-hub-design.md` (engine repo, `docs/dev/`) | the design this is built to |
 
