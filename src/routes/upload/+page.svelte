@@ -7,8 +7,9 @@
   import { ATTESTATION_TEXT, ATTESTATION_NOTE } from '$lib/attestation';
 
   let file = $state<File | null>(null);
-  let publishGmTree = $state(false);
   let attested = $state(false);
+  // Set only after the hub has DETECTED GM content and the creator has said they meant it.
+  let confirmGmTree = $state(false);
   let busy = $state(false);
   let result = $state<any>(null);
 
@@ -19,7 +20,7 @@
     result = null;
     const body = new FormData();
     body.set('bundle', file);
-    if (publishGmTree) body.set('publishGmTree', 'on');
+    if (confirmGmTree) body.set('confirmGmTree', 'on');
     if (attested) body.set('attest', 'on');
     try {
       const res = await fetch('/api/upload', { method: 'POST', body });
@@ -58,24 +59,6 @@
     />
   </label>
 
-  <fieldset>
-    <legend>What gets published</legend>
-    <label class="radio">
-      <input type="radio" name="tree" checked={!publishGmTree} onchange={() => (publishGmTree = false)} />
-      <span>
-        <strong>The player version</strong> - GM notes, hidden bodies and secret tags are left out.
-        This is what almost everyone wants.
-      </span>
-    </label>
-    <label class="radio">
-      <input type="radio" name="tree" checked={publishGmTree} onchange={() => (publishGmTree = true)} />
-      <span>
-        <strong>Everything, including GM notes</strong> - publish the full tree exactly as you built
-        it. Only choose this if the map is meant to be read by other GMs.
-      </span>
-    </label>
-  </fieldset>
-
   <fieldset class="attest">
     <legend>Credit where it is due</legend>
     <label class="check">
@@ -90,10 +73,33 @@
   </button>
 </form>
 
-{#if result}
+{#if result?.code === 'gm-content'}
+  <!-- The one case where the creator IS asked - because the hub found evidence, and can say
+       exactly what. Rare by design, so it is worth reading when it appears. -->
+  <div class="panel notice bad">
+    <h3>This save still has your GM material in it</h3>
+    <ul>
+      {#each result.detail ?? [] as line}<li>{line}</li>{/each}
+    </ul>
+    <p>
+      In Star System Explorer, save again and choose the player version - that removes all of it.
+      Or, if you meant to share the full map with other GMs, confirm and it will publish as it is.
+    </p>
+    <label class="check">
+      <input type="checkbox" bind:checked={confirmGmTree} />
+      <span>I meant to share this. Publish everything, including my GM notes.</span>
+    </label>
+    <button class="primary" onclick={submit} disabled={!confirmGmTree || busy}>
+      Publish the full map
+    </button>
+  </div>
+{:else if result}
   <div class="panel notice" class:bad={!result.ok}>
     <h3>{result.ok ? 'Uploaded' : 'Not uploaded'}</h3>
     <p>{result.message ?? 'Your map is saved as a draft.'}</p>
+    {#if result.ok && result.gmContent?.length}
+      <p>Published as a full GM map, including: {result.gmContent.join('; ')}.</p>
+    {/if}
     {#if result.ok && !result.mayPublish}
       <p>
         Before this can be made public, every uploaded picture and model needs its source recorded.
@@ -113,9 +119,6 @@
   input[type='file'] { display: block; margin-top: 6px; color: var(--ink); }
   fieldset { border: 1px solid var(--edge); border-radius: var(--radius); margin: 18px 0; padding: 12px 14px; }
   legend { color: var(--ink-faint); padding: 0 6px; font-size: 0.9rem; }
-  .radio { display: flex; gap: 10px; align-items: start; margin: 10px 0; }
-  .radio span { color: var(--ink-dim); }
-  .radio strong { color: var(--ink); }
   .attest { border-color: var(--accent); }
   .check { display: flex; gap: 10px; align-items: start; margin: 4px 0 10px; }
   .check span { color: var(--ink); }

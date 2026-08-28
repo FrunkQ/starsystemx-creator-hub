@@ -7,6 +7,7 @@
 import { describe, it, expect } from 'vitest';
 import { checkProvenance, collectAttributions } from '../src/lib/bundle/attribution';
 import { readProvenance } from '../src/lib/bundle/provenance';
+import { detectGmContent } from '../src/lib/bundle/gmContent';
 
 const withImage = (image: Record<string, unknown>) => ({
   nodes: [{ id: 'n1', name: 'Kepler', image: { url: 'assets/images/n1.jpg', ...image } }]
@@ -119,5 +120,69 @@ describe('the capability marker', () => {
 
   it('caps a hostile version string rather than displaying it', () => {
     expect(readProvenance({ appVersion: 'x'.repeat(500) }).createdWith).toBeNull();
+  });
+});
+
+// ------------------------------------------------------------------------------------------------
+// GM content detection. Replaces a radio button the uploader could answer WRONGLY - and the wrong
+// answer was the one that leaks somebody's campaign.
+// ------------------------------------------------------------------------------------------------
+describe('detecting GM-only content', () => {
+  it('finds nothing in a clean player export', () => {
+    const r = detectGmContent({ nodes: [{ id: 'a', name: 'Earth', tags: [{ key: 'world/terran' }] }] });
+    expect(r.hasGmContent).toBe(false);
+    expect(r.summary).toEqual([]);
+  });
+
+  it('is CERTAIN when it says yes - every marker is one the player snapshot removes', () => {
+    expect(detectGmContent({ nodes: [{ id: 'a', name: 'A', gmNotes: 'the villain lives here' }] }).hasGmContent).toBe(true);
+    expect(detectGmContent({ nodes: [{ id: 'a', name: 'A', object_playerhidden: true }] }).hasGmContent).toBe(true);
+    expect(detectGmContent({ nodes: [{ id: 'a', name: 'A', tags: [{ key: 'x', secret: true }] }] }).hasGmContent).toBe(true);
+    expect(detectGmContent({ nodes: [{ id: 'a', name: 'A', overrides: { anomalies: { tempK: 'reactor' } } }] }).hasGmContent).toBe(true);
+    expect(detectGmContent({ gmNotes: 'campaign notes', nodes: [] }).hasGmContent).toBe(true);
+  });
+
+  it('reads the undo history under its one permitted spelling', () => {
+    // The engine allows exactly `undoHistory` and strips it on every outbound path, so its
+    // presence means the file never went through a normal export.
+    expect(detectGmContent({ undoHistory: [{ op: 'delete' }], nodes: [] }).hasGmContent).toBe(true);
+    expect(detectGmContent({ undoHistory: [], nodes: [] }).hasGmContent).toBe(false);
+    expect(detectGmContent({ undoStack: [{ op: 'delete' }], nodes: [] }).hasGmContent).toBe(false);
+  });
+
+  it('does not treat a hidden-description FLAG as proof, because the flag survives redaction', () => {
+    // The player snapshot deletes the description but leaves the flag, so the flag alone proves
+    // nothing. Only the flag with the text still attached is evidence.
+    expect(detectGmContent({ nodes: [{ id: 'a', name: 'A', description_playerhidden: true }] }).hasGmContent).toBe(false);
+    expect(detectGmContent({
+      nodes: [{ id: 'a', name: 'A', description_playerhidden: true, description: 'the truth' }]
+    }).hasGmContent).toBe(true);
+  });
+
+  it('counts and names what it found, so the warning is actionable', () => {
+    const r = detectGmContent({
+      nodes: [
+        { id: 'a', name: 'Vault', gmNotes: 'x' },
+        { id: 'b', name: 'Relay', gmNotes: 'y' },
+        { id: 'c', name: 'Ghost', object_playerhidden: true }
+      ]
+    });
+    expect(r.summary).toContain('GM notes on 2 objects');
+    expect(r.summary).toContain('1 object that is hidden from players');
+    expect(r.findings.find((f) => f.kind === 'gmNotes')?.examples).toContain('Vault');
+  });
+
+  it('walks a campaign, not just a single system', () => {
+    const r = detectGmContent({
+      systems: [{ name: 'Sol', system: { nodes: [{ id: 'a', name: 'Mars', gmNotes: 'secret base' }] } }]
+    });
+    expect(r.hasGmContent).toBe(true);
+    expect(r.findings[0].examples).toContain('Mars (Sol)');
+  });
+
+  it('never throws on hostile or empty input', () => {
+    for (const doc of [null, undefined, 42, 'nope', [], {}, { nodes: null }, { systems: 'x' }]) {
+      expect(() => detectGmContent(doc)).not.toThrow();
+    }
   });
 });

@@ -19,6 +19,7 @@ import type { Db } from './database.types';
 import { checkBundleFormat } from '$lib/bundle/format';
 import { checkProvenance } from '$lib/bundle/attribution';
 import { readProvenance } from '$lib/bundle/provenance';
+import { detectGmContent } from '$lib/bundle/gmContent';
 import { normalise, type NormalisedNode } from '$lib/bundle/normalise';
 import { readZip, BundleReadError } from '$lib/bundle/read';
 import { sha256Hex, claimedHashFromModelPath } from '$lib/bundle/hash';
@@ -43,6 +44,8 @@ export type IngestResult =
       flagged: boolean;
       mayPublish: boolean;
       missingProvenance: string[];
+      /** What the file turned out to be, read from the file itself. */
+      gmContent: string[];
     };
 
 interface PendingAsset {
@@ -58,7 +61,12 @@ export async function ingest(
   env: HubEnv, sb: Db, viewer: Viewer, gates: Gates,
   bytes: Uint8Array,
   opts: {
-    publishGmTree: boolean;
+    /**
+     * Confirmation that the creator wants to publish a save the hub has DETECTED as carrying
+     * GM-only content. Not a mode selector - the mode is a property of the file (bundle/gmContent.ts)
+     * and is never asked of the uploader.
+     */
+    confirmGmTree?: boolean;
     replacesSystemId?: string;
     /**
      * The creator's provenance attestation. REQUIRED. There is no way to disprove "I made this
@@ -127,6 +135,23 @@ export async function ingest(
   // The CAPABILITY MARKER, kept separate from the contract number - which build made this map.
   // Never a parse gate; a future SSE loads an older map fine (bundle/provenance.ts).
   const madeWith = readProvenance(doc);
+
+  // ---- DOES THIS SAVE CARRY GM-ONLY CONTENT? Read from the file, not asked of the uploader ----
+  // Design 3.1's rule is "never SILENTLY publish a GM tree". Detection is what makes that rule
+  // enforceable: an uploader restating the export mode could get it wrong, and the wrong answer is
+  // the one that leaks their campaign. So the warning fires on evidence, names exactly what it
+  // found, and only appears when there is genuinely something to lose.
+  const gm = detectGmContent(doc);
+  if (gm.hasGmContent && !opts.confirmGmTree) {
+    return {
+      ok: false, code: 'gm-content',
+      message:
+        'This save still contains things meant only for you: ' + gm.summary.join('; ') + '. ' +
+        'Export the player version from Star System Explorer and upload that instead - or confirm ' +
+        'below if you meant to share the full map with other GMs.',
+      detail: gm.summary
+    };
+  }
 
   // ---- provenance, computed from the DOC and never from ATTRIBUTIONS.md ----------------------
   const provenance = checkProvenance(doc, doc?.modelMeta ?? {}, {
@@ -226,7 +251,7 @@ export async function ingest(
 
   await writeRows(sb, {
     systemId, viewer, kind, format: format.format, shaped, pending, provenance,
-    coverHash, publishGmTree: opts.publishGmTree,
+    coverHash, publishGmTree: gm.hasGmContent,
     sourceBytes: bytes.length, isUpdate: !!opts.replacesSystemId, flagged, novelCount: novel.length,
     createdWith: madeWith.createdWith, legacyStamped: format.legacyStamped,
     attestation: opts.attestation
@@ -243,7 +268,8 @@ export async function ingest(
     withheldCount: pending.filter((p) => known.get(p.sha256) !== 'approved').length,
     flagged,
     mayPublish: provenance.mayPublish,
-    missingProvenance: provenance.missing.map((m) => m.path)
+    missingProvenance: provenance.missing.map((m) => m.path),
+    gmContent: gm.summary
   };
 }
 

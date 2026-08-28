@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.3.0 — 2026-08-28
+
+### The GM/player choice is now read from the file, not asked
+
+The owner pointed out the choice is already made in the app at export time, so asking the uploader
+to restate it was asking them to get it wrong - and the wrong answer publishes somebody's campaign
+secrets. The radio buttons are gone.
+
+Detection is ASYMMETRIC and that is the design. GM notes, player-hidden objects, secret tags,
+anomaly overrides, a hidden description with its text still attached, or an undo history all mean
+CERTAINLY a GM tree, because computePlayerSnapshot removes every one of them. None of them means a
+player export OR a GM export of a campaign with no secrets - indistinguishable, and harmless,
+because a GM tree with nothing hidden in it has nothing to leak.
+
+So the hub stopped asking which mode a file was exported in and started asking whether there is
+anything in it the creator would not want published. The warning is consequently rare, specific
+("GM notes on 12 objects; 3 objects hidden from players") and worth reading, instead of a choice
+everyone had to make before they understood it. `published_gm_tree` now records a detected fact.
+
+Requested from the engine as R-10: an `exportMode` stamp, for the LABEL only - a stamp rides inside
+a stranger's file and is a claim, so detection stays the control.
+
+### Checks
+
+42 tests. svelte-check clean. Build clean.
+
 ## 0.2.0 — 2026-08-28
 
 The owner answered the two open gate questions and added three requirements: creator write-ups with

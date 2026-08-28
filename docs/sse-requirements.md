@@ -244,6 +244,34 @@ than a DNS change, and the whole point of leaving Vercel up is that rollback sta
 
 ---
 
+## R-10. Stamp the export mode — for the LABEL, not for the gate
+
+**What:** an `exportMode: 'player' | 'gm'` field written at export, recording which the GM chose in
+the Save modal.
+
+**Why it is only nice-to-have.** The hub no longer asks the uploader which kind of save they are
+uploading — it reads the file (`src/lib/bundle/gmContent.ts`), because the choice was already made
+at export and asking someone to restate a fact is asking them to get it wrong. The wrong answer
+there leaks a campaign.
+
+**But the inference is asymmetric, and a stamp is what would close the gap:**
+
+| the file | the hub can tell |
+|---|---|
+| contains GM notes / hidden objects / secret tags | **certainly a GM tree** — every one of those is removed by `computePlayerSnapshot` |
+| contains none of them | a player export, **or** a GM export of a campaign with no secrets — genuinely indistinguishable |
+
+That ambiguity is **safe** — a GM tree with nothing hidden in it has nothing to leak — so nothing is
+blocked on this. What it costs is precision in the *labelling*: the hub cannot honestly print "this
+is the player version" on a page, only "no GM-only content found".
+
+> **CRITICAL, if this is built: the stamp must never become the gate.** It arrives inside a file a
+> stranger uploaded, so it is a claim, exactly like `ATTRIBUTIONS.md` (`contract-with-sse.md` C-02).
+> Detection stays the control; the stamp only makes the label certain. A stamp saying `player` on a
+> file full of GM notes must lose to the detector, loudly.
+
+---
+
 ## What the hub will NOT ask the engine to do
 
 Recorded so nobody builds them by mistake:

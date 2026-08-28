@@ -37,10 +37,10 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
   }
 
   const replacesSystemId = (form.get('replaces') as string) || undefined;
-  // "Creator picks what publishes, with a preview" (decision 1). The default is the PLAYER tree -
-  // never silently publish a GM tree (design 3.1). The engine has already done the redaction on
-  // export; this flag only records which of the two the creator chose to upload.
-  const publishGmTree = form.get('publishGmTree') === 'on';
+  // NOT a mode selector. The GM/player choice was made in the app at export time, so it is a
+  // property of the file and the hub reads it (bundle/gmContent.ts). This is only the creator's
+  // answer to a warning the hub raised, and it is meaningless unless GM content was detected.
+  const confirmGmTree = form.get('confirmGmTree') === 'on';
 
   // The attestation. Recorded with the EXACT text shown, so an old record still says what was
   // actually agreed to even after the wording changes.
@@ -65,7 +65,7 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 
   let result;
   try {
-    result = await ingest(env, sb, viewer!, gates, bytes, { publishGmTree, replacesSystemId, attestation });
+    result = await ingest(env, sb, viewer!, gates, bytes, { confirmGmTree, replacesSystemId, attestation });
   } catch (e) {
     console.error('ingest failed', e);
     return json(

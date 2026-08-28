@@ -157,6 +157,37 @@ The gate is also re-checked **server-side at the moment of publishing**, not onl
 creator can edit claims between the two, so the upload-time check is a courtesy and the publish-time
 one is the control.
 
+### D-14. The GM/player question is READ from the file, not asked of the uploader
+
+The owner, 2026-08-28: *"This choice is made on export of a file - so can be gleaned from it."*
+Correct, and the radio buttons are gone.
+
+**The inference is asymmetric, and that turned out to be the useful part.** Markers present
+(`gmNotes`, `object_playerhidden`, secret tags, `overrides.anomalies`, a hidden description with its
+text still attached, an `undoHistory`) mean **certainly** a GM tree — every one is removed by
+`computePlayerSnapshot`. Markers absent means a player export *or* a GM export of a campaign with no
+secrets, which are indistinguishable — **and it does not matter**, because a GM tree with nothing
+hidden in it has nothing to leak.
+
+So the hub stopped trying to recover the export *mode* and instead answers the question that
+actually protects someone: **is there anything in here they would not want published?**
+
+Three things fall out of that, and they are why this is better than the radio rather than merely
+tidier:
+
+1. **It cannot be answered wrongly.** The file is the truth. A creator mis-clicking a radio was the
+   one path that published somebody's campaign secrets.
+2. **The warning became rare, so it gets read.** Almost nobody sees it. Those who do see *"GM notes
+   on 12 objects; 3 objects that are hidden from players"* — specific and actionable — rather than a
+   choice they must make before they understand it.
+3. **§3.1's "never silently publish a GM tree" became enforceable** rather than advisory, and
+   `systems.published_gm_tree` now records a detected fact instead of a self-report.
+
+The one thing lost is labelling precision — the hub can say "no GM-only content found" but not
+"this is the player version". `docs/sse-requirements.md` R-10 asks the engine for an `exportMode`
+stamp to close that, **for the label only**: a stamp arrives inside a stranger's file and is a
+claim, so detection stays the control.
+
 ---
 
 ## Still open — the owner's to answer
