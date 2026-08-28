@@ -10,6 +10,9 @@ import { loadGates } from '$lib/server/config';
 import { checkPreflight } from '$lib/server/gates';
 import { mayContribute } from '$lib/server/auth';
 import { ingest } from '$lib/server/ingest';
+import { gatesForTier } from '$lib/server/entitlements';
+import { ATTESTATION_TEXT, ATTESTATION_TEXT_VERSION } from '$lib/attestation';
+import * as badges from '$lib/server/integrations/badges';
 
 export const POST: RequestHandler = async ({ request, platform, locals }) => {
   const env = platform?.env;
@@ -21,7 +24,11 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
   }
 
   const sb = db(env);
-  const gates = await loadGates(sb);
+  const baseGates = await loadGates(sb);
+
+  // A tier is a set of config rows applied over the base gates, not a branch in code.
+  const { data: me } = await sb.from('creators').select('account_tier').eq('id', viewer!.id).maybeSingle();
+  const gates = gatesForTier(baseGates, (me?.account_tier as 'free' | 'pro') ?? 'free');
 
   const form = await request.formData();
   const file = form.get('bundle');
@@ -34,6 +41,14 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
   // never silently publish a GM tree (design 3.1). The engine has already done the redaction on
   // export; this flag only records which of the two the creator chose to upload.
   const publishGmTree = form.get('publishGmTree') === 'on';
+
+  // The attestation. Recorded with the EXACT text shown, so an old record still says what was
+  // actually agreed to even after the wording changes.
+  const attestation = {
+    accepted: form.get('attest') === 'on',
+    textVersion: ATTESTATION_TEXT_VERSION,
+    textShown: ATTESTATION_TEXT
+  };
 
   const refusal = await checkPreflight(sb, gates, viewer!, file.size, !!replacesSystemId);
   if (refusal) return json({ ok: false, ...refusal }, { status: 429 });
@@ -50,7 +65,7 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 
   let result;
   try {
-    result = await ingest(env, sb, viewer!, gates, bytes, { publishGmTree, replacesSystemId });
+    result = await ingest(env, sb, viewer!, gates, bytes, { publishGmTree, replacesSystemId, attestation });
   } catch (e) {
     console.error('ingest failed', e);
     return json(
@@ -58,6 +73,9 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
       { status: 500 }
     );
   }
+
+  // Badges are derived, so reconciling here is cheap and idempotent; the outbox collapses repeats.
+  if (result.ok) await badges.reconcile(sb, gates, viewer!.id);
 
   return json(result, { status: result.ok ? 200 : 400 });
 };

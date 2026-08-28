@@ -4,8 +4,11 @@
   // The upload is CLOSED today and says so plainly: the hub has no reference save to test its
   // reader against, and it will not read a format it has never seen into a public library. That is
   // the format gate in src/lib/bundle/format.ts speaking, not a placeholder.
+  import { ATTESTATION_TEXT, ATTESTATION_NOTE } from '$lib/attestation';
+
   let file = $state<File | null>(null);
   let publishGmTree = $state(false);
+  let attested = $state(false);
   let busy = $state(false);
   let result = $state<any>(null);
 
@@ -17,6 +20,7 @@
     const body = new FormData();
     body.set('bundle', file);
     if (publishGmTree) body.set('publishGmTree', 'on');
+    if (attested) body.set('attest', 'on');
     try {
       const res = await fetch('/api/upload', { method: 'POST', body });
       result = await res.json();
@@ -72,7 +76,16 @@
     </label>
   </fieldset>
 
-  <button class="primary" type="submit" disabled={!file || busy}>
+  <fieldset class="attest">
+    <legend>Credit where it is due</legend>
+    <label class="check">
+      <input type="checkbox" bind:checked={attested} />
+      <span>{ATTESTATION_TEXT}</span>
+    </label>
+    <p class="note">{ATTESTATION_NOTE}</p>
+  </fieldset>
+
+  <button class="primary" type="submit" disabled={!file || !attested || busy}>
     {busy ? 'Reading...' : 'Upload'}
   </button>
 </form>
@@ -103,4 +116,8 @@
   .radio { display: flex; gap: 10px; align-items: start; margin: 10px 0; }
   .radio span { color: var(--ink-dim); }
   .radio strong { color: var(--ink); }
+  .attest { border-color: var(--accent); }
+  .check { display: flex; gap: 10px; align-items: start; margin: 4px 0 10px; }
+  .check span { color: var(--ink); }
+  .note { margin: 0; color: var(--ink-faint); font-size: 0.9rem; }
 </style>

@@ -5,13 +5,16 @@
 import { KNOWN_BUNDLE_FORMATS } from './contract';
 
 export type FormatVerdict =
-  | { ok: true; format: number }
+  | { ok: true; format: number; legacyStamped: boolean }
   | { ok: false; code: 'no-parser-yet' | 'unstamped' | 'too-new' | 'unknown'; message: string; format: number | null };
 
 export interface FormatGateOptions {
-  /** config: accept_unstamped_bundles. See docs/decisions.md Q-01 - an OPEN question for the owner. */
+  /**
+   * config: accept_unstamped_bundles. ANSWERED by the owner 2026-08-28 - true. Saves made before
+   * the engine stamped anything are accepted as LEGACY and base-stamped by the hub.
+   */
   acceptUnstamped: boolean;
-  /** config: the integer this deploy treats an unstamped bundle as, when accepting them at all. */
+  /** config: legacy_bundle_format - what an unstamped save is base-stamped as. */
   unstampedAs: number;
 }
 
@@ -35,7 +38,11 @@ export function checkBundleFormat(doc: unknown, opts: FormatGateOptions): Format
           'version and upload again.'
       };
     }
-    return gateAgainstKnown(opts.unstampedAs);
+    // LEGACY BASE-STAMPING. The pre-stamp layout is known and stable, so an unstamped save is
+    // treated as the legacy format rather than refused - refusing it would close the hub to every
+    // save anyone currently has. Flagged so the assumption stays visible in the database rather
+    // than becoming invisible the moment it is made.
+    return gateAgainstKnown(opts.unstampedAs, true);
   }
 
   if (typeof raw !== 'number' || !Number.isInteger(raw) || raw < 1) {
@@ -45,10 +52,11 @@ export function checkBundleFormat(doc: unknown, opts: FormatGateOptions): Format
     };
   }
 
-  return gateAgainstKnown(raw);
+  // A save that carries its own stamp is never restamped.
+  return gateAgainstKnown(raw, false);
 }
 
-function gateAgainstKnown(format: number): FormatVerdict {
+function gateAgainstKnown(format: number, legacyStamped: boolean): FormatVerdict {
   if (KNOWN_BUNDLE_FORMATS.length === 0) {
     return {
       ok: false, code: 'no-parser-yet', format,
@@ -57,7 +65,7 @@ function gateAgainstKnown(format: number): FormatVerdict {
         'against, and it will not read a format it has never seen into a public library.'
     };
   }
-  if (KNOWN_BUNDLE_FORMATS.includes(format)) return { ok: true, format };
+  if (KNOWN_BUNDLE_FORMATS.includes(format)) return { ok: true, format, legacyStamped };
 
   const newest = Math.max(...KNOWN_BUNDLE_FORMATS);
   if (format > newest) {

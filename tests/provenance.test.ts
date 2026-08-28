@@ -6,6 +6,7 @@
 // ATTRIBUTIONS.md, which is a user-supplied file inside a user-supplied zip.
 import { describe, it, expect } from 'vitest';
 import { checkProvenance, collectAttributions } from '../src/lib/bundle/attribution';
+import { readProvenance } from '../src/lib/bundle/provenance';
 
 const withImage = (image: Record<string, unknown>) => ({
   nodes: [{ id: 'n1', name: 'Kepler', image: { url: 'assets/images/n1.jpg', ...image } }]
@@ -90,5 +91,33 @@ describe('what gets collected', () => {
       systems: [{ name: 'Sol', system: { nodes: [{ id: 'a', name: 'Earth', image: { url: 'assets/images/a.jpg' } }] } }]
     });
     expect(entries[0].usedBy).toEqual(['Earth (Sol)']);
+  });
+});
+
+// ------------------------------------------------------------------------------------------------
+// The CAPABILITY MARKER. Separate from the contract number on purpose - see bundle/provenance.ts.
+// ------------------------------------------------------------------------------------------------
+describe('the capability marker', () => {
+  it('reads the engine build that wrote the save', () => {
+    expect(readProvenance({ appVersion: '3.0.161' }).createdWith).toBe('3.0.161');
+  });
+
+  it('treats absence as absence, not as an error and not as a default', () => {
+    // A save from before the stamp is legitimate. It is also the case the owner asked us to accept
+    // as legacy rather than refuse.
+    expect(readProvenance({}).createdWith).toBeNull();
+    expect(readProvenance(null).createdWith).toBeNull();
+    expect(readProvenance({ appVersion: 42 }).createdWith).toBeNull();
+  });
+
+  it('never invents a baseMapVersion', () => {
+    // The engine is explicit that a map built from scratch has no base and carries none, so absent
+    // must stay absent rather than becoming 0 or 1.
+    expect(readProvenance({}).baseMapVersion).toBeNull();
+    expect(readProvenance({ baseMapVersion: 2 }).baseMapVersion).toBe(2);
+  });
+
+  it('caps a hostile version string rather than displaying it', () => {
+    expect(readProvenance({ appVersion: 'x'.repeat(500) }).createdWith).toBeNull();
   });
 });

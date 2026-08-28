@@ -25,6 +25,10 @@ export type CreatorRole = 'user' | 'admin';
 export type CreatorState = 'active' | 'suspended' | 'banned';
 export type ReportTarget = 'system' | 'asset';
 export type ReportState = 'open' | 'actioned' | 'dismissed';
+export type AccountTier = 'free' | 'pro';
+export type IdentityProvider = 'discord' | 'patreon';
+export type EntitlementSource = 'patreon' | 'manual' | 'grandfathered' | 'gift';
+export type OutboxState = 'pending' | 'sent' | 'failed' | 'abandoned';
 
 // Supabase's select() parser walks these shapes at the type level. `Relationships` must list any
 // foreign key a select() string traverses - e.g. `systems(slug, title)` from `system_assets` - or
@@ -50,6 +54,7 @@ export type CreatorRow = {
   display_name: string | null;
   role: CreatorRole;
   state: CreatorState;
+  account_tier: AccountTier;
   created_at: string;
 }
 
@@ -85,9 +90,75 @@ export type SystemRow = {
   hearts_count: number;
   download_count: number;
   source_bytes: number;
+  // The CAPABILITY MARKER - which engine build wrote this. Never a parse gate.
+  created_with: string | null;
+  legacy_stamped: boolean;
+  blurb: string | null;
+  tags: string[];
   created_at: string;
   updated_at: string;
 }
+
+export type SystemScreenshotRow = {
+  system_id: string;
+  sha256: string;
+  ordinal: number;
+  caption: string | null;
+  created_at: string;
+};
+
+export type AttestationRow = {
+  id: string;
+  system_id: string;
+  creator_id: string | null;
+  text_version: number;
+  text_shown: string;
+  attested_at: string;
+};
+
+export type CreatorIdentityRow = {
+  creator_id: string;
+  provider: IdentityProvider;
+  provider_user_id: string;
+  handle: string | null;
+  avatar_url: string | null;
+  refresh_token: string | null;
+  scopes: string[];
+  linked_at: string;
+  last_synced_at: string | null;
+};
+
+export type EntitlementRow = {
+  id: string;
+  creator_id: string;
+  source: EntitlementSource;
+  tier: AccountTier;
+  external_ref: string | null;
+  note: string | null;
+  granted_by: string | null;
+  granted_at: string;
+  expires_at: string | null;
+  revoked_at: string | null;
+};
+
+export type CreatorBadgeRow = {
+  creator_id: string;
+  badge: string;
+  earned_at: string;
+};
+
+export type IntegrationOutboxRow = {
+  id: string;
+  kind: string;
+  creator_id: string | null;
+  payload: unknown;
+  state: OutboxState;
+  attempts: number;
+  last_error: string | null;
+  dedupe_key: string | null;
+  created_at: string;
+  sent_at: string | null;
+};
 
 export type SystemAssetRow = {
   system_id: string;
@@ -192,11 +263,18 @@ export interface Database {
       config: Table<ConfigRow>;
       upload_events: Table<UploadEventRow>;
       admin_actions: Table<AdminActionRow>;
+      system_screenshots: Table<SystemScreenshotRow>;
+      attestations: Table<AttestationRow>;
+      creator_identities: Table<CreatorIdentityRow>;
+      entitlements: Table<EntitlementRow>;
+      creator_badges: Table<CreatorBadgeRow>;
+      integration_outbox: Table<IntegrationOutboxRow>;
     };
     Views: { [_ in never]: never };
     Functions: {
       asset_refcount: { Args: { p_sha256: string }; Returns: number };
       increment_download: { Args: { p_system_id: string }; Returns: undefined };
+      creator_tier: { Args: { p_creator_id: string }; Returns: AccountTier };
     };
     Enums: {
       review_state: ReviewState;
@@ -208,6 +286,10 @@ export interface Database {
       creator_state: CreatorState;
       report_target: ReportTarget;
       report_state: ReportState;
+      account_tier: AccountTier;
+      identity_provider: IdentityProvider;
+      entitlement_source: EntitlementSource;
+      outbox_state: OutboxState;
     };
     CompositeTypes: { [_ in never]: never };
   };

@@ -16,6 +16,24 @@ export interface Gates {
   max_bundle_format: number;
   accept_unstamped_bundles: boolean;
   block_cc_by_breach: boolean;
+  legacy_bundle_format: number;
+  attestation_text_version: number;
+  max_screenshots_per_system: number;
+
+  // Tier benefits. A tier is a set of config rows, not a branch in code - same reasoning as the
+  // gates themselves: what Pro is worth will be tuned, and tuning it should not need a deploy.
+  pro_uploads_per_user_per_day: number;
+  pro_max_bundle_bytes: number;
+  pro_max_assets_per_bundle: number;
+
+  // Integrations. All inert until enabled and the secrets are set.
+  discord_enabled: boolean;
+  discord_guild_id: string;
+  discord_role_creator: string;
+  discord_role_pro: string;
+  patreon_enabled: boolean;
+  patreon_campaign_id: string;
+  patreon_tier_map: Record<string, string>;
 }
 
 // Used only when a key is absent from the table - a missing row must never mean "no limit".
@@ -28,8 +46,24 @@ export const GATE_FALLBACKS: Gates = {
   novel_hash_limit_per_upload: 40,
   min_bundle_format: 1,
   max_bundle_format: 1,
-  accept_unstamped_bundles: false,
-  block_cc_by_breach: false
+  // Both ANSWERED by the owner 2026-08-28 - see db/migrations/0006 and docs/decisions.md.
+  accept_unstamped_bundles: true,
+  block_cc_by_breach: true,
+  legacy_bundle_format: 1,
+  attestation_text_version: 1,
+  max_screenshots_per_system: 8,
+
+  pro_uploads_per_user_per_day: 10,
+  pro_max_bundle_bytes: 200 * 1024 * 1024,
+  pro_max_assets_per_bundle: 600,
+
+  discord_enabled: false,
+  discord_guild_id: '',
+  discord_role_creator: '',
+  discord_role_pro: '',
+  patreon_enabled: false,
+  patreon_campaign_id: '',
+  patreon_tier_map: {}
 };
 
 export async function loadGates(sb: Db): Promise<Gates> {

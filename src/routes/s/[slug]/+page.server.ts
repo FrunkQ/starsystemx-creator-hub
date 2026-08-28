@@ -28,9 +28,16 @@ export const load: PageServerLoad = async ({ params, platform, setHeaders }) => 
     sb.from('system_assets').select('sha256').eq('system_id', system.id)
   ]);
 
+  const { data: shots } = await sb.from('system_screenshots')
+    .select('sha256, caption, ordinal').eq('system_id', system.id).order('ordinal');
+
   // HOW MANY PICTURES ARE STILL WAITING (design 6.2). The map is public and downloadable either
   // way; saying how many are withheld is what stops a gap reading as a bug.
-  const hashes = [...new Set((assets ?? []).map((a) => a.sha256 as string))];
+  // Screenshots go through the same ledger as bundled assets, so they are counted the same way.
+  const hashes = [...new Set([
+    ...(assets ?? []).map((a) => a.sha256 as string),
+    ...(shots ?? []).map((s2) => s2.sha256 as string)
+  ])];
   const approved = await ledger.approvedOnly(sb, hashes);
   const withheldCount = hashes.length - approved.size;
 
@@ -42,6 +49,8 @@ export const load: PageServerLoad = async ({ params, platform, setHeaders }) => 
     bodies: bodies ?? [],
     constructs: constructs ?? [],
     withheldCount,
+    // Only approved screenshots reach a public page. An unreviewed one is simply not there yet.
+    screenshots: (shots ?? []).filter((s2) => approved.has(s2.sha256 as string)),
     coverServable: system.cover_sha256 ? approved.has(system.cover_sha256) : false
   };
 };

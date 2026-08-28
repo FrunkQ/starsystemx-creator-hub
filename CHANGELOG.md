@@ -1,5 +1,62 @@
 # Changelog
 
+## 0.2.0 — 2026-08-28
+
+The owner answered the two open gate questions and added three requirements: creator write-ups with
+screenshots, an honesty attestation, and hooks for Patreon and Discord.
+
+### Answers, now built
+
+- **Legacy saves are accepted and base-stamped.** Unstamped bundles no longer refused; they are
+  stamped as format 1 and the row is flagged, so the assumption stays visible in the database.
+- **Two versions, two jobs.** `bundle_format` is the contract number and an unknown value is a
+  refusal; `created_with` is the engine's `appVersion` build stamp, a CAPABILITY MARKER that is
+  never a parse gate. Conflating them would start refusing perfectly readable maps.
+- **An incomplete attribution blocks publishing.** CC-BY with no credit now blocks alongside
+  provenance that is missing entirely, and the gate is re-checked server-side at the moment of
+  publishing rather than only at upload.
+
+### Creators can sell their own maps
+
+- Write-up page: title, one-liner, description, tags, publish and unpublish.
+- Screenshots, uploaded by the creator, **through the ordinary hash ledger** - same dedup, same
+  review queue, no second moderation path. Any screenshot can be made the cover.
+- The publish blocker names the assets still needing a credit, rather than just saying no.
+
+### The attestation
+
+Asked plainly at upload and recorded append-only WITH THE EXACT TEXT SHOWN, not just a version
+number - so an old record still says what was actually agreed to after the wording changes. One
+source for that text, shared by the form and the record, or the two drift on the first tweak.
+
+### Patreon and Discord hooks - built, switched off
+
+- Entitlements are a grant LEDGER, not a tier column: it can answer why someone has Pro, when it
+  lapses, and what happens when a cancellation meets a gift. Patreon grants carry the paid-through
+  date as an expiry, so a missed webhook lapses instead of becoming free Pro forever.
+- Linked identities, unique per provider, so one pledge cannot buy Pro for a dozen accounts.
+- Badges are DERIVED from what the hub knows - published a map, earned hearts - which is the one leg
+  neither Patreon nor Discord can do. Lost when the thing that earned them goes away.
+- An idempotent outbox for outbound Discord calls, because a fire-and-forget role assignment fails
+  silently and nobody notices for a month.
+- Webhook signature verified against the RAW body, constant-time, failing closed.
+- What Pro is worth is config rows, not a branch in code.
+
+### Fixed
+
+- **The creator could not see their own pending screenshot.** The privileged image route was
+  admin-only. Now ONE route with two branches - admin, or the creator who owns a map using those
+  bytes - rather than a second route, which would have made the "unreviewed is never served" rule
+  uncheckable by reading one file.
+
+### Docs
+
+`docs/sse-requirements.md` (hand to an SSE agent), `docs/integrations.md`, `docs/deployment.md`.
+
+### Checks
+
+35 tests. svelte-check clean. Build clean.
+
 ## 0.1.0 — 2026-08-28
 
 First build. Phase 2 of `creator-hub-design.md` — the funnel — with the moderation gates from day

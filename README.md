@@ -39,8 +39,13 @@ the bundle or shipped a canonical fixture (phase 0, engine-side). Until it does,
 read a format it has never been tested against into a public database. Opening it is a two-line
 change: see `docs/decisions.md` D-01.
 
-Not built yet: hearts and discovery UI (phase 3 — the API and schema exist), account deletion,
-`/terms`, `/acceptable-use`, `/takedown`.
+**Creators write up their own maps** and add screenshots (which go through the same review queue as
+anything else), then publish. **Patreon and Discord hooks are built and switched off** — the schema
+is the expensive part to change later, so it exists now; see `docs/integrations.md`.
+
+Not built yet: hearts and discovery UI (phase 3 — the API and schema exist), account deletion, the
+Patreon OAuth callback (the webhook and entitlement logic are done), in-app sign-in for SSE
+(`docs/sse-requirements.md` R-06), and `/terms`, `/acceptable-use`, `/takedown`.
 
 ---
 
@@ -49,8 +54,11 @@ Not built yet: hearts and discovery UI (phase 3 — the API and schema exist), a
 | file | why |
 |---|---|
 | `docs/contract-with-sse.md` | the seam with the engine, **and the five non-obvious things about it** |
-| `docs/decisions.md` | what was decided and why; **the open questions that are the owner's, not ours** |
+| `docs/decisions.md` | what was decided and why; **what is still the owner's to answer** |
 | `docs/moderation.md` | how the ledger works operationally |
+| `docs/integrations.md` | Patreon, Discord and the hub — the three legs and which way each points |
+| `docs/sse-requirements.md` | **hand this to an agent working in the SSE repo** |
+| `docs/deployment.md` | standing it up on Cloudflare, and what must be true before uploads open |
 | `creator-hub-design.md` (engine repo, `docs/dev/`) | the design this is built to |
 
 The three things most likely to be got wrong are C-01, C-02 and C-03 in `contract-with-sse.md`. They
@@ -68,12 +76,14 @@ library to read what the first one writes is the duplication fault worth avoidin
 ## Layout
 
 ```
-src/lib/bundle/     the seam: mirrored constants, format gate, hashing, hardened zip reader,
-                    provenance, normalisation
-src/lib/server/     ledger, gates, config, R2, ingest, download packing, audit, auth
-src/routes/         the funnel (/, /s/[slug], /upload) and the admin tool (/admin/*)
+src/lib/bundle/     the seam: mirrored constants, format gate, capability marker, hashing,
+                    hardened zip reader, provenance, normalisation
+src/lib/server/     ledger, gates, config, R2, ingest, download packing, entitlements, audit, auth
+src/lib/server/integrations/   Discord, Patreon, badges, the outbox
+src/routes/         the funnel (/, /s/[slug], /upload), the creator's pages (/manage, /account)
+                    and the admin tool (/admin/*)
 db/migrations/      the schema, with the design's invariants encoded in it
-tests/              30 tests; everything testable without the engine fixture
+tests/              35 tests; everything testable without the engine fixture
 ```
 
 ## Running it

@@ -94,8 +94,8 @@
 {:else}
   <div class="review">
     <div class="stage">
-      <!-- The admin-only serve route: the one place an unreviewed asset is shown. -->
-      <img src="/admin/asset/{current.sha256}" alt="Unreviewed upload awaiting review" />
+      <!-- The single privileged serve route: the one place an unreviewed asset is shown. -->
+      <img src="/private/asset/{current.sha256}" alt="Unreviewed upload awaiting review" />
     </div>
     <aside>
       <h2>Claimed provenance</h2>

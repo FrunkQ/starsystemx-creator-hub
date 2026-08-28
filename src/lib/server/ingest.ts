@@ -18,6 +18,7 @@
 import type { Db } from './database.types';
 import { checkBundleFormat } from '$lib/bundle/format';
 import { checkProvenance } from '$lib/bundle/attribution';
+import { readProvenance } from '$lib/bundle/provenance';
 import { normalise, type NormalisedNode } from '$lib/bundle/normalise';
 import { readZip, BundleReadError } from '$lib/bundle/read';
 import { sha256Hex, claimedHashFromModelPath } from '$lib/bundle/hash';
@@ -55,8 +56,25 @@ interface PendingAsset {
 
 export async function ingest(
   env: HubEnv, sb: Db, viewer: Viewer, gates: Gates,
-  bytes: Uint8Array, opts: { publishGmTree: boolean; replacesSystemId?: string }
+  bytes: Uint8Array,
+  opts: {
+    publishGmTree: boolean;
+    replacesSystemId?: string;
+    /**
+     * The creator's provenance attestation. REQUIRED. There is no way to disprove "I made this
+     * myself", so the hub does the one thing it honestly can: it asks plainly and records the
+     * answer, and responsibility sits with the person who ticked it (docs/decisions.md D-09).
+     */
+    attestation: { accepted: boolean; textVersion: number; textShown: string };
+  }
 ): Promise<IngestResult> {
+  if (!opts.attestation?.accepted) {
+    return {
+      ok: false, code: 'no-attestation',
+      message: 'Please confirm you have the right to share everything in this save.'
+    };
+  }
+
   const zipped = isZip(bytes);
 
   const zipRefusal = checkZipsAllowed(gates, zipped);
@@ -100,11 +118,15 @@ export async function ingest(
   // ---- THE FORMAT GATE. Refuse politely; never guess. ----------------------------------------
   const format = checkBundleFormat(doc, {
     acceptUnstamped: gates.accept_unstamped_bundles,
-    unstampedAs: gates.min_bundle_format
+    unstampedAs: gates.legacy_bundle_format
   });
   if (!format.ok) return { ok: false, code: format.code, message: format.message };
 
   const kind: 'starmap' | 'system' = docPath.endsWith(DOC_NAME.starmap) ? 'starmap' : 'system';
+
+  // The CAPABILITY MARKER, kept separate from the contract number - which build made this map.
+  // Never a parse gate; a future SSE loads an older map fine (bundle/provenance.ts).
+  const madeWith = readProvenance(doc);
 
   // ---- provenance, computed from the DOC and never from ATTRIBUTIONS.md ----------------------
   const provenance = checkProvenance(doc, doc?.modelMeta ?? {}, {
@@ -205,7 +227,9 @@ export async function ingest(
   await writeRows(sb, {
     systemId, viewer, kind, format: format.format, shaped, pending, provenance,
     coverHash, publishGmTree: opts.publishGmTree,
-    sourceBytes: bytes.length, isUpdate: !!opts.replacesSystemId, flagged, novelCount: novel.length
+    sourceBytes: bytes.length, isUpdate: !!opts.replacesSystemId, flagged, novelCount: novel.length,
+    createdWith: madeWith.createdWith, legacyStamped: format.legacyStamped,
+    attestation: opts.attestation
   });
 
   // The original zip is kept for provenance and re-packing, NEVER served raw - serving it would
@@ -265,6 +289,9 @@ interface WriteArgs {
   isUpdate: boolean;
   flagged: boolean;
   novelCount: number;
+  createdWith: string | null;
+  legacyStamped: boolean;
+  attestation: { accepted: boolean; textVersion: number; textShown: string };
 }
 
 async function writeRows(sb: Db, a: WriteArgs): Promise<void> {
@@ -284,7 +311,9 @@ async function writeRows(sb: Db, a: WriteArgs): Promise<void> {
     // Drafts until the creator publishes. The provenance gate decides whether they CAN.
     state: 'draft',
     cover_sha256: coverHash,
-    source_bytes: a.sourceBytes
+    source_bytes: a.sourceBytes,
+    created_with: a.createdWith,
+    legacy_stamped: a.legacyStamped
   });
   if (sysError) throw new Error('could not save the map: ' + sysError.message);
 
@@ -330,6 +359,17 @@ async function writeRows(sb: Db, a: WriteArgs): Promise<void> {
       model_sha256: n.model_hash_claim ?? null
     })));
   }
+
+  // APPEND-ONLY, and re-taken on every upload including an update. If the wording ever changes,
+  // an old row still shows what was actually agreed to at the time - which is the only thing that
+  // makes it worth anything if a claim is ever disputed.
+  await sb.from('attestations').insert({
+    id: crypto.randomUUID(),
+    system_id: systemId,
+    creator_id: viewer.id,
+    text_version: a.attestation.textVersion,
+    text_shown: a.attestation.textShown
+  });
 
   await sb.from('upload_events').insert({
     id: crypto.randomUUID(), creator_id: viewer.id, system_id: systemId,

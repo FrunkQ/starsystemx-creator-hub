@@ -68,6 +68,17 @@
     <img class="cover" src="/asset/{s.cover_sha256}" alt="Cover image for {s.title}" />
   {/if}
 
+  {#if data.screenshots.length}
+    <div class="shots">
+      {#each data.screenshots as shot (shot.sha256)}
+        <figure>
+          <img src="/asset/{shot.sha256}" alt={shot.caption ?? 'Screenshot of ' + s.title} loading="lazy" />
+          {#if shot.caption}<figcaption>{shot.caption}</figcaption>{/if}
+        </figure>
+      {/each}
+    </div>
+  {/if}
+
   <!-- 4. The data. -->
   <h2>What is in it</h2>
   <table>
@@ -130,6 +141,10 @@
     border: 1px solid var(--edge); margin: 22px 0; display: block;
   }
   h2 { margin: 32px 0 8px; font-size: 1.2rem; }
+  .shots { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); margin: 22px 0; }
+  .shots figure { margin: 0; }
+  .shots img { width: 100%; border-radius: var(--radius); border: 1px solid var(--edge); display: block; }
+  .shots figcaption { color: var(--ink-faint); font-size: 0.85rem; margin-top: 6px; }
   .muted { color: var(--ink-dim); margin: 0 0 12px; }
   .foot-actions { margin-top: 36px; }
   label { display: block; margin: 10px 0; color: var(--ink-dim); }

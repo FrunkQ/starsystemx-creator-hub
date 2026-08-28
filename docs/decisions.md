@@ -62,13 +62,21 @@ Naming them is mildly an oracle — it confirms which specific image was removed
 acceptable trade: the uploader already possesses the file, and a refusal a creator cannot act on is
 worse than one that tells them which picture to replace.
 
-### D-06. The admin image route is the single exception to "unreviewed is never served"
+### D-06. ONE route serves unreviewed assets, with two branches
 
-Somebody has to look at the picture to review it. `/admin/asset/[hash]` is admin-only, `no-store`,
-`noindex`, and is the **only** route that reads R2 without consulting the ledger.
+`/private/asset/[hash]` is the single exception to "an unreviewed asset is never served". Two people
+legitimately need to see bytes before anybody else does:
 
-It returns 404 rather than 403 to a non-admin, so it does not confirm that a hash exists to anyone
-not entitled to know. **If a second such route ever appears, the rule in §6.2 is gone.**
+- **an admin** — somebody has to look at the picture in order to review it;
+- **the creator** — they must see the screenshot they just added to their own map. This leaks
+  nothing: they uploaded those bytes and already have them.
+
+It was briefly two routes (an admin one), and the creator's own pending screenshot was consequently
+invisible to them. **One route with two branches, not two routes** — the moment it becomes two, the
+rule in §6.2 stops being checkable by reading one file.
+
+`no-store`, `noindex`, and every refusal is a 404 rather than a 403, so it does not confirm that a
+hash exists to anyone not entitled to know.
 
 ### D-07. Row types are `type` aliases, never `interface`
 
@@ -83,35 +91,75 @@ find. The file says so at the top.
 the non-update allowance, and only novel hashes count. A creator iterating on a map would otherwise
 burn a day's quota by lunchtime.
 
+### D-09. The attestation: ask plainly, record the answer, and store the text shown
+
+The owner: *"They may attribute everything to themselves - not much we can do about that - we have to
+assume they are honest - and when they upload we ask them to confirm this - they take
+responsibility."*
+
+So `attestations` is **append-only and versioned**, and stores the **exact text shown** alongside the
+answer — not just a version number. A version number alone is a promise that the deploy history is
+intact; the text is the evidence. If the wording changes, an old record still says what was actually
+agreed to.
+
+`src/lib/attestation.ts` is the single source for that text, shared by the form and the record. If
+the page owned its own copy the two would drift on the first tweak and the stored record would
+quietly stop being worth anything.
+
+**What it is not:** a substitute for the provenance gate. An asset with nothing recorded still blocks
+publishing. The attestation covers only the part a machine cannot check — whether what they filled in
+is *true*.
+
+### D-10. Badges are derived, never set
+
+`deriveBadges` is a pure function of what the database already knows, so it can be re-run any time
+and always agrees with itself. That is what makes the outbox dedupe key safe, and it means a badge is
+**lost** when the thing that earned it goes away — a map unpublished, or removed by a moderator.
+Leaving a community role attached to content that no longer exists is how a badge stops meaning
+anything.
+
+### D-13. Screenshots go through the ordinary ledger
+
+A creator-uploaded screenshot is hashed, deduped and reviewed by exactly the same queue as a bundled
+picture. **No second moderation path** — a second path is a second thing to get wrong, and it is the
+one an attacker would look for. It also means a screenshot that happens to be bytes already approved
+elsewhere goes live immediately, for free.
+
+### ~~Q-01~~ → **D-11. Legacy saves are accepted and base-stamped** — ANSWERED 2026-08-28
+
+The owner: *"we need to stamp from here on out... We can accept unstamped maps as legacy and base
+stamp them ourselves."*
+
+`accept_unstamped_bundles` is now `true`; an unstamped save is stamped as `legacy_bundle_format` (1)
+and the row is flagged `legacy_stamped` so the assumption stays **visible in the database** rather
+than becoming invisible the moment it is made. A save carrying its own stamp is never restamped.
+
+**And the second half of that answer produced a distinction worth keeping:** *"We need to keep which
+version it was created in — future versions will be able to load it but this is a capability
+marker."* So the hub stores **two** versions and they do different jobs:
+
+| | question | on an unknown value |
+|---|---|---|
+| `bundle_format` | *can this parser read this layout?* | **refuse** |
+| `created_with` | *what could the app do when this was made?* | **never a gate** |
+
+`created_with` is the engine's existing `appVersion` build stamp. Conflating the two would turn a
+capability marker into a parse gate and start refusing perfectly readable maps.
+
+### ~~Q-02~~ → **D-12. An incomplete attribution blocks publishing** — ANSWERED 2026-08-28
+
+The owner: *"obviously faked up attributions should get an upload rejected until the user fills it
+in."* A CC-BY licence with no author named is precisely an attribution that has not been filled in —
+the creator has told us a name is required and then not supplied one. `block_cc_by_breach` is now
+`true`.
+
+The gate is also re-checked **server-side at the moment of publishing**, not only at upload: a
+creator can edit claims between the two, so the upload-time check is a courtesy and the publish-time
+one is the control.
+
 ---
 
-## Open questions — the owner's to answer
-
-### Q-01. What happens to saves made before the `bundleFormat` stamp exists? **(recommendation below)**
-
-Every bundle in the world today is unstamped. If the hub refuses unstamped bundles it refuses
-**every save anyone currently has**, on day one, including the owner's own.
-
-Config key `accept_unstamped_bundles`, currently `false`.
-
-**Recommendation: set it `true` and treat unstamped as format 1.** The pre-stamp layout is known,
-stable, and is the one the mirrored parser was written against; refusing it buys nothing and closes
-the funnel to the existing user base. Refuse only integers *above* what the deploy knows.
-
-Not done unilaterally because it decides whether the hub opens to today's users or only to users on
-a future engine build — which is a product question, not a technical one.
-
-### Q-02. Should a CC-BY breach block publication, as well as missing provenance?
-
-The design's gate is `missing.length === 0`. But the engine singles out CC-BY-without-credit as
-*"the one combination that is actively wrong, not merely unrecorded"* — a blank field is an
-omission, a CC-BY breach is a licence violation being published.
-
-Config key `block_cc_by_breach`, currently `false` (matching the design exactly).
-
-**Recommendation: turn it on.** It is a small number of cases and the creator is told precisely what
-to fix. Left off because it is stricter than the design specifies and that is not a change to make
-quietly.
+## Still open — the owner's to answer
 
 ### Q-03. What designates the cover image, and what happens when there is none? (§7.4)
 

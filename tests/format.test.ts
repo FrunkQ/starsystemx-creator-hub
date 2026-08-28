@@ -40,9 +40,9 @@ describe('the format gate as it ships today', () => {
 });
 
 describe('the format gate once a fixture has been verified', () => {
-  it('accepts a format it knows', async () => {
+  it('accepts a format it knows, and does not restamp a save that carries its own', async () => {
     await withKnownFormats([1], (check) => {
-      expect(check({ bundleFormat: 1 }, OPTS)).toEqual({ ok: true, format: 1 });
+      expect(check({ bundleFormat: 1 }, OPTS)).toEqual({ ok: true, format: 1, legacyStamped: false });
     });
   });
 
@@ -62,6 +62,18 @@ describe('the format gate once a fixture has been verified', () => {
     await withKnownFormats([1], (check) => {
       expect(check({}, { acceptUnstamped: true, unstampedAs: 1 }).ok).toBe(true);
       expect(check({}, { acceptUnstamped: false, unstampedAs: 1 }).ok).toBe(false);
+    });
+  });
+
+  // Q-01, answered by the owner: legacy saves are accepted and BASE-STAMPED by the hub. The flag
+  // is what keeps that assumption visible in the database instead of invisible.
+  it('marks a base-stamped legacy save as such, and a self-stamped one as not', async () => {
+    await withKnownFormats([1], (check) => {
+      const legacy = check({ name: 'An old save' }, { acceptUnstamped: true, unstampedAs: 1 });
+      expect(legacy).toEqual({ ok: true, format: 1, legacyStamped: true });
+
+      const stamped = check({ bundleFormat: 1 }, { acceptUnstamped: true, unstampedAs: 1 });
+      expect(stamped.ok && stamped.legacyStamped).toBe(false);
     });
   });
 
