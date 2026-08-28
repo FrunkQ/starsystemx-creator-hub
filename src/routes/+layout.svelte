@@ -27,6 +27,13 @@
     <div class="spacer"></div>
     <a href="/browse">Browse</a>
     <a href="/upload">Share a map</a>
+    {#if data?.viewer}
+      <a href="/account">{data.viewer.handle}</a>
+      {#if data.viewer.role === 'admin'}<a href="/admin/review">Review</a>{/if}
+      <form method="POST" action="/logout"><button class="linkish" type="submit">Sign out</button></form>
+    {:else}
+      <a href="/login">Sign in</a>
+    {/if}
     <a class="cta" href="https://starsystemx.com" rel="noopener">Get Star System Explorer</a>
   </nav>
 </header>

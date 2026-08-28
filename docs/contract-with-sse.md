@@ -116,6 +116,38 @@ None of this belongs in the engine. All of it belongs here.
 
 ---
 
+## C-06. App-shipped assets are referenced by PATH, not by hash — and that is correct
+
+Validated against seven real saves, 2026-08-28. A node's artwork comes in more shapes than the
+bundle layout suggests:
+
+| what | looks like | carried in the bundle? |
+|---|---|---|
+| a GM's uploaded picture | `assets/images/<nodeId>.jpg` | yes |
+| a GM's uploaded model | `assets/models/<sha256>.glb`, node has `model.hash` | yes |
+| **an app-shipped star image** | `/images/star_types/M.webp` | **no — it ships with SSE** |
+| **an app-shipped starter model** | `/models/nasa/iss.glb`, node has `model.url` and **no `hash`** | **no** |
+| someone else's hosting | `https://…` | no |
+
+The real Local Neighbourhood starmap has **60 nodes with images and one with a model, and not one
+of them is a carried asset.** They are all app-shipped or remote.
+
+**The hub ignores all three of the non-carried kinds, and should.** It is not hosting those bytes,
+so there is nothing to store, nothing to moderate and nothing to credit — the engine's own rule,
+that *"a remote url is someone else's hosting and is not ours to credit"*, extends naturally to the
+app's own artwork.
+
+**Two things to know because they are surprising:**
+
+1. **`node.model.hash` exists only for GM-uploaded models.** A starter model uses `model.url`. Code
+   that assumes `hash` will silently skip them — which is the right outcome here, but only by luck,
+   so it should be by intent.
+2. **A starter model still carries `credit`, `license` and `sourceUrl`** (the ISS model is credited
+   to NASA, public domain). Those never reach the hub's attribution list. That is correct — but if a
+   page should ever say *"uses NASA's ISS model"*, that is where the data is.
+
+---
+
 ## The mirrored surface, in full
 
 | what | where |

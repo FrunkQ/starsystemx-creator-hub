@@ -13,7 +13,12 @@ import type { LayoutServerLoad } from './$types';
 //
 // Absent token = no script tag at all. A page whose job is to LOAD FAST does not get a third-party
 // script it did not ask for.
-export const load: LayoutServerLoad = async ({ platform }) => {
+export const load: LayoutServerLoad = async ({ platform, locals }) => {
   const token = (platform?.env as unknown as { PUBLIC_CF_BEACON_TOKEN?: string })?.PUBLIC_CF_BEACON_TOKEN;
-  return { cfBeaconToken: token && /^[a-zA-Z0-9]{8,64}$/.test(token) ? token : null };
+  return {
+    cfBeaconToken: token && /^[a-zA-Z0-9]{8,64}$/.test(token) ? token : null,
+    // Only what the chrome needs. Never the whole viewer object - it carries state the nav has no
+    // business knowing, and a layout payload is serialised into every page.
+    viewer: locals.viewer ? { handle: locals.viewer.handle, role: locals.viewer.role } : null
+  };
 };

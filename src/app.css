@@ -136,6 +136,13 @@ button {
 button:hover { background: var(--edge); }
 button.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; font-weight: 600; }
 button.danger { border-color: var(--bad); color: var(--bad); }
+/* A form button that has to sit in a nav row of links without looking like a button. */
+button.linkish {
+  background: none; border: none; padding: 0; color: var(--accent);
+  font: inherit; cursor: pointer;
+}
+button.linkish:hover { text-decoration: underline; background: none; }
+header nav form { display: inline; }
 
 .tag {
   display: inline-block; padding: 2px 8px; border-radius: 999px;
