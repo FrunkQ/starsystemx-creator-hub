@@ -68,7 +68,7 @@ are there because each one was a live mistake waiting to happen.
 
 ## Stack
 
-SvelteKit 2 · Svelte 5 · TypeScript · Cloudflare Pages/Workers · Supabase (Postgres) · R2 · `fflate`
+SvelteKit 2 · Svelte 5 · TypeScript · Cloudflare Workers (static assets) · Supabase (Postgres) · R2 · `fflate`
 
 `fflate`, **not JSZip** — the engine already writes this format with it, and adding a second zip
 library to read what the first one writes is the duplication fault worth avoiding.
@@ -108,7 +108,7 @@ Copy `.env.example`. R2 buckets and Supabase secrets are bound in `wrangler.toml
 key is a secret, never a committed value.
 
 ```bash
-npx wrangler pages secret put SUPABASE_SERVICE_ROLE_KEY
+npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
 ```
 
 Apply `db/migrations/*.sql` in order.

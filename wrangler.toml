@@ -1,11 +1,32 @@
 name = "starsystemx-creator-hub"
 compatibility_date = "2026-08-01"
 compatibility_flags = ["nodejs_compat"]
-pages_build_output_dir = ".svelte-kit/cloudflare"
 
-# NOTE: the binding is HUB_ASSETS, not ASSETS - "ASSETS" is RESERVED in Pages projects
-# (it is the static-asset fetcher) and wrangler refuses the config outright.
+# DEPLOYED AS A WORKER WITH STATIC ASSETS, not as a Pages project.
 #
+# This config was originally written for Pages (`pages_build_output_dir`) and that was wrong: the
+# Cloudflare project is a Worker. The two targets need genuinely different keys, and a Pages key in
+# a Worker project is silently ignored rather than flagged - so the deploy fails with something
+# unhelpful further down.
+#
+#   Pages:   pages_build_output_dir = ".svelte-kit/cloudflare"
+#   Workers: main + [assets], which is what is below
+main = ".svelte-kit/cloudflare/_worker.js"
+
+# THE BINDING MUST BE CALLED `ASSETS`. The worker that @sveltejs/adapter-cloudflare generates calls
+# `env.ASSETS.fetch` by name, so this is not a free choice.
+#
+# NOTE THE REVERSAL, because it is a trap in both directions: in a PAGES project `ASSETS` is a
+# RESERVED name and wrangler refuses the config outright. In a WORKERS project it is REQUIRED. The
+# R2 buckets below are therefore `HUB_ASSETS` / `HUB_BUNDLES` - which was the right call for Pages
+# and is now doubly right, because `ASSETS` is taken by the static-asset fetcher.
+#
+# `directory` is the same folder as `main` lives in; the adapter emits a `.assetsignore` that keeps
+# `_worker.js`, `_routes.json`, `_headers` and `_redirects` from being served as static files.
+[assets]
+directory = ".svelte-kit/cloudflare"
+binding = "ASSETS"
+
 # THE ASSET BUCKET IS PRIVATE. Nothing reads it but this Worker, and every read consults the hash
 # ledger first (design 6.2). There is deliberately no public bucket binding and no r2.dev domain.
 [[r2_buckets]]
@@ -18,5 +39,5 @@ bucket_name = "sshub-assets"
 binding = "HUB_BUNDLES"
 bucket_name = "sshub-bundles"
 
-# SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are secrets:
-#   wrangler pages secret put SUPABASE_SERVICE_ROLE_KEY
+# SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are secrets, set in the dashboard or with:
+#   wrangler secret put SUPABASE_SERVICE_ROLE_KEY

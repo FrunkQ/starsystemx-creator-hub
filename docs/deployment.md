@@ -9,8 +9,22 @@ coordinator.
 
 ## 1. Cloudflare
 
-**Pages project.** Connect the repo, or deploy from the CLI. Build command `npm run build`, output
-directory `.svelte-kit/cloudflare` (already set in `wrangler.toml`).
+**A WORKER, not a Pages project.** The two are different deploy targets with different config keys,
+and a Pages key in a Worker project is **silently ignored** rather than flagged — so the failure
+surfaces later as something unhelpful. `wrangler.toml` is set up for Workers:
+
+```
+main      = ".svelte-kit/cloudflare/_worker.js"
+[assets]  directory = ".svelte-kit/cloudflare", binding = "ASSETS"
+```
+
+Build command is `npm run build`. Verify the whole config without deploying anything:
+
+```bash
+npx wrangler deploy --dry-run
+```
+
+That prints the bindings it resolved — expect `HUB_ASSETS`, `HUB_BUNDLES` and `ASSETS`.
 
 **Two R2 buckets.** Both **private**. Do not enable a public r2.dev domain on either — every object
 is served through a Worker that checks the ledger, and a public bucket URL silently bypasses the one
@@ -24,9 +38,11 @@ npx wrangler r2 bucket create sshub-assets
 npx wrangler r2 bucket create sshub-bundles
 ```
 
-> **The binding is `HUB_ASSETS`, not `ASSETS`.** `ASSETS` is **reserved** in Pages projects — it is
-> the static-asset fetcher — and wrangler refuses the config outright. This cost a debugging round
-> the first time; the names in `wrangler.toml` are already correct.
+> **`ASSETS` is a trap in BOTH directions, and it reverses between the two targets.** In a **Pages**
+> project it is a *reserved* name and wrangler refuses the config outright. In a **Workers** project
+> it is *required* — the worker the adapter generates calls `env.ASSETS.fetch` by name. So the R2
+> buckets are `HUB_ASSETS` / `HUB_BUNDLES`, which was necessary under Pages and is still necessary
+> under Workers, now because `ASSETS` is taken by the static-asset fetcher.
 
 > **Wrangler auto-config, and a trap worth knowing about.** When wrangler deploys a project with
 > **no** `wrangler.toml`, it runs an auto-configuration pass that guesses at settings and can
@@ -39,6 +55,11 @@ npx wrangler r2 bucket create sshub-bundles
 
 **A Cron Trigger** for the integration outbox, once Discord is switched on. Every 5 minutes is
 plenty; it POSTs `/api/admin/outbox` with the `x-cron-key` header set to `CRON_SECRET`.
+
+**Git builds.** Workers Builds is configured under the Worker's **Settings → Build**: connect the
+repo and set the production branch to `main`. It is not automatic the way Vercel is — connecting the
+repository is a separate step from creating the Worker, and a Worker created from the dashboard
+starts life with a placeholder deployment and no Git connection at all.
 
 ---
 
@@ -67,7 +88,7 @@ values ('<your-auth-user-uuid>', 'frunk', 'FrunkQ', 'admin');
 None of these belong in the repo. `.env.example` lists the shape.
 
 ```bash
-npx wrangler pages secret put SUPABASE_SERVICE_ROLE_KEY
+npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
 ```
 
 | secret | needed for | when |
@@ -109,7 +130,7 @@ In order, and the first two are hard blocks:
 
 Either is fine and neither is required:
 
-- **Dashboard toggle** — Pages project > Web Analytics. Cloudflare injects the beacon; no code.
+- **Dashboard toggle** — the Worker > Web Analytics. Cloudflare injects the beacon; no code.
 - **`PUBLIC_CF_BEACON_TOKEN`** — set it and `src/routes/+layout.server.ts` renders a deferred beacon
   script instead. Unset means **no script tag at all**, which is the default and is correct for a
   page whose whole job is to load fast.
