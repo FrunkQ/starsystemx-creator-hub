@@ -1,0 +1,144 @@
+/* StarSystemX Creator Hub.
+ *
+ * THE PAGE MUST BE FAST AT LOADING, NOT AT RENDERING (design 2). There is no engine here, no 3D,
+ * no rendered preview - a cover image and some text. So: no webfonts, no framework CSS, no icon
+ * font. One stylesheet, system fonts, and a layout that paints as soon as the HTML arrives.
+ */
+
+:root {
+  color-scheme: dark;
+  --bg: #0a0d14;
+  --panel: #131824;
+  --panel-2: #1a2030;
+  --edge: #26304a;
+  --ink: #e8ecf5;
+  --ink-dim: #9aa6bf;
+  --ink-faint: #6b7794;
+  --accent: #6fb3ff;
+  --accent-ink: #04101f;
+  --warn: #ffc266;
+  --bad: #ff8080;
+  --radius: 10px;
+  --max: 1080px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.skip {
+  position: absolute; left: -9999px;
+}
+.skip:focus {
+  left: 8px; top: 8px; z-index: 10; padding: 8px 12px;
+  background: var(--accent); color: var(--accent-ink); border-radius: var(--radius);
+}
+
+/* ---- chrome ------------------------------------------------------------------------------- */
+header {
+  border-bottom: 1px solid var(--edge);
+  background: var(--panel);
+}
+header nav {
+  max-width: var(--max); margin: 0 auto; padding: 12px 20px;
+  display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+}
+.wordmark { color: var(--ink); font-weight: 650; letter-spacing: -0.01em; }
+.wordmark span { color: var(--ink-faint); font-weight: 500; }
+.spacer { flex: 1; }
+
+.cta {
+  background: var(--accent); color: var(--accent-ink);
+  padding: 8px 14px; border-radius: var(--radius); font-weight: 600;
+}
+.cta:hover { text-decoration: none; filter: brightness(1.08); }
+
+main { max-width: var(--max); margin: 0 auto; padding: 28px 20px 64px; }
+
+footer {
+  border-top: 1px solid var(--edge); background: var(--panel);
+  padding: 32px 20px;
+}
+footer .what { max-width: var(--max); margin: 0 auto; }
+footer .what h2 { margin: 0 0 6px; font-size: 1.05rem; }
+footer .what p { margin: 0 0 14px; color: var(--ink-dim); max-width: 62ch; }
+footer .small {
+  max-width: var(--max); margin: 24px auto 0; display: flex; gap: 18px; flex-wrap: wrap;
+  color: var(--ink-faint); font-size: 0.9rem;
+}
+footer .small a { color: var(--ink-faint); }
+
+/* ---- the download, which is the point ----------------------------------------------------- */
+/* Above the fold, above the description, above everything (design 2). */
+.download {
+  display: inline-flex; align-items: center; gap: 10px;
+  background: var(--accent); color: var(--accent-ink);
+  padding: 14px 22px; border-radius: var(--radius);
+  font-size: 1.05rem; font-weight: 650;
+}
+.download:hover { text-decoration: none; filter: brightness(1.08); }
+.download-note { color: var(--ink-faint); font-size: 0.9rem; margin-top: 8px; }
+
+/* ---- cards -------------------------------------------------------------------------------- */
+.grid {
+  display: grid; gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+}
+.card {
+  background: var(--panel); border: 1px solid var(--edge); border-radius: var(--radius);
+  overflow: hidden; display: flex; flex-direction: column;
+}
+.card .cover { aspect-ratio: 16 / 9; width: 100%; object-fit: cover; background: var(--panel-2); display: block; }
+.card .body { padding: 12px 14px; }
+.card h3 { margin: 0 0 4px; font-size: 1rem; }
+.card p { margin: 0; color: var(--ink-dim); font-size: 0.9rem; }
+.card .meta { color: var(--ink-faint); font-size: 0.85rem; margin-top: 8px; display: flex; gap: 12px; }
+
+/* A bundle with no suitable picture gets a generated card, not a broken image (design 7.4). */
+.cover-fallback {
+  aspect-ratio: 16 / 9; display: grid; place-items: center;
+  background: radial-gradient(120% 120% at 30% 20%, #1c2740 0%, #0b0f18 70%);
+  color: var(--ink-faint); font-size: 0.85rem; letter-spacing: 0.08em; text-transform: uppercase;
+}
+
+/* ---- panels and notices -------------------------------------------------------------------- */
+.panel {
+  background: var(--panel); border: 1px solid var(--edge);
+  border-radius: var(--radius); padding: 16px 18px; margin: 18px 0;
+}
+.notice { border-left: 3px solid var(--warn); }
+.notice.bad { border-left-color: var(--bad); }
+.notice h3 { margin: 0 0 6px; font-size: 0.98rem; }
+.notice p { margin: 0; color: var(--ink-dim); }
+
+table { border-collapse: collapse; width: 100%; font-size: 0.93rem; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--edge); vertical-align: top; }
+th { color: var(--ink-faint); font-weight: 600; }
+
+pre {
+  background: #070a10; border: 1px solid var(--edge); border-radius: var(--radius);
+  padding: 12px; overflow-x: auto; font-size: 0.85rem; margin: 0;
+}
+code { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; }
+
+button {
+  font: inherit; background: var(--panel-2); color: var(--ink);
+  border: 1px solid var(--edge); border-radius: 8px; padding: 7px 12px; cursor: pointer;
+}
+button:hover { background: var(--edge); }
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; font-weight: 600; }
+button.danger { border-color: var(--bad); color: var(--bad); }
+
+.tag {
+  display: inline-block; padding: 2px 8px; border-radius: 999px;
+  background: var(--panel-2); border: 1px solid var(--edge);
+  font-size: 0.8rem; color: var(--ink-dim);
+}

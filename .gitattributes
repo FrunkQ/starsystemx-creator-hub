@@ -1,0 +1,7 @@
+# Normalise line endings in the repo to LF. Set on day one deliberately: a mixed-ending repo
+# makes scripted edits and diffs unreliable, and that has bitten this project family before.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.glb binary
+*.zip binary

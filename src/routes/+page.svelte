@@ -1,0 +1,39 @@
+<script lang="ts">
+  import SystemCard from '$lib/components/SystemCard.svelte';
+  let { data } = $props();
+</script>
+
+<svelte:head>
+  <title>StarSystemX Creator Hub - star systems and campaigns to download</title>
+  <meta name="description" content="Star systems and campaign starmaps made by other people, free to download and open in Star System Explorer." />
+</svelte:head>
+
+<section class="hero">
+  <h1>Star systems, made by other people.</h1>
+  <p>
+    Download a system or a whole campaign starmap and open it in Star System Explorer.
+    One click, no account needed.
+  </p>
+</section>
+
+{#if !data.systems.length}
+  <div class="panel notice">
+    <h3>Nothing published yet</h3>
+    <p>
+      The hub is not open for uploads yet. When it is, maps shared by other people will appear here.
+      In the meantime, Star System Explorer itself is free to use.
+    </p>
+  </div>
+{:else}
+  <div class="grid">
+    {#each data.systems as system (system.slug)}
+      <SystemCard {system} />
+    {/each}
+  </div>
+{/if}
+
+<style>
+  .hero { margin: 8px 0 28px; }
+  .hero h1 { margin: 0 0 8px; font-size: 2rem; letter-spacing: -0.02em; }
+  .hero p { margin: 0; color: var(--ink-dim); max-width: 56ch; font-size: 1.05rem; }
+</style>

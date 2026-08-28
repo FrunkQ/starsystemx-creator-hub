@@ -1,0 +1,22 @@
+name = "starsystemx-creator-hub"
+compatibility_date = "2026-08-01"
+compatibility_flags = ["nodejs_compat"]
+pages_build_output_dir = ".svelte-kit/cloudflare"
+
+# NOTE: the binding is HUB_ASSETS, not ASSETS - "ASSETS" is RESERVED in Pages projects
+# (it is the static-asset fetcher) and wrangler refuses the config outright.
+#
+# THE ASSET BUCKET IS PRIVATE. Nothing reads it but this Worker, and every read consults the hash
+# ledger first (design 6.2). There is deliberately no public bucket binding and no r2.dev domain.
+[[r2_buckets]]
+binding = "HUB_ASSETS"
+bucket_name = "sshub-assets"
+
+# The uploaded zips, kept for re-packing and provenance. NEVER served raw - a download is
+# reassembled from approved assets only (src/lib/server/pack.ts).
+[[r2_buckets]]
+binding = "HUB_BUNDLES"
+bucket_name = "sshub-bundles"
+
+# SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are secrets:
+#   wrangler pages secret put SUPABASE_SERVICE_ROLE_KEY
