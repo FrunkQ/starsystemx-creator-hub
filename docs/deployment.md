@@ -141,13 +141,46 @@ that problem for real, because during the migration window it runs on two hosts 
 
 ---
 
-## 6. Domain
+## 6. Domain — DEFERRED to the migration, deliberately
 
-`share.starsystemx.com` or `community.starsystemx.com` — either works; the hub does not care and
-nothing is hard-coded to a host.
+**The hub lives on `starsystemx-creator-hub.orange-tree-847c.workers.dev` and that is the decision
+for now** (owner, 2026-08-28). A custom domain waits for the full Vercel→Cloudflare migration.
 
-**Do not put the hub on the apex `starsystemx.com`.** The engine registers a service worker at that
-origin, and a service worker is scoped by origin. Sharing one would let the app's precache interfere
-with the hub's pages — which is a smaller version of exactly the failure the app migration has to
-avoid. A subdomain has no such interaction. (The hub itself registers no service worker at all —
-`decisions.md` D-02.)
+### Why it cannot be done sooner, which is not obvious
+
+`starsystemx.com` is served by **Vercel's nameservers** — `ns1.vercel-dns.com` / `ns2.vercel-dns.com`,
+with the apex on Vercel's IPs. And **a Cloudflare Workers custom domain requires the zone to be
+active in your Cloudflare account.** It is about who answers DNS, not about where anything is
+deployed, so no record added on the Vercel side can attach a subdomain to the Worker.
+
+**The two workarounds are both worse than waiting:**
+
+- **A redirect** from a Vercel-hosted subdomain makes `workers.dev` the canonical URL — every shared
+  link, and every OG preview, resolves there. For a hub whose product *is* link-sharing, that is
+  actively harmful.
+- **A Vercel rewrite/proxy** keeps the pretty URL but routes every bundle download through Vercel,
+  paying Vercel egress for exactly the traffic R2 was chosen to make free.
+
+### What the move will involve, when it happens
+
+Change the nameservers at the registrar to Cloudflare's. **This does not move the site** — SSE keeps
+running on Vercel, and Cloudflare simply answers DNS with the same apex A records.
+
+**Checked 2026-08-28: there are no MX and no TXT records on the domain**, which removes the classic
+way a nameserver move goes wrong (mail silently stopping). Re-check before switching; that fact has
+a shelf life.
+
+Doing the zone move *early and on its own* would de-risk the later cutover — it turns "cut DNS" from
+a nameserver change into a record change. But it is live-product DNS and belongs to the owner and
+coordinator, not to an agent.
+
+### When a domain does arrive
+
+`share.starsystemx.com` or `community.starsystemx.com`; the hub does not care and nothing is
+hard-coded to a host. Pick **one** canonical and 301 the other — two hostnames serving identical
+pages split OG previews and search ranking across two names.
+
+**Not the apex `starsystemx.com`.** The engine registers a service worker at that origin, and a
+service worker is scoped by origin. Sharing one would let the app's precache interfere with the
+hub's pages — a smaller version of exactly the failure the migration has to avoid. (The hub itself
+registers no service worker at all — `decisions.md` D-02.)
