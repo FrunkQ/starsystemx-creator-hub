@@ -53,6 +53,12 @@ source for that text, shared by the form and the record, or the two drift on the
 
 `docs/sse-requirements.md` (hand to an SSE agent), `docs/integrations.md`, `docs/deployment.md`.
 
+### Analytics
+
+Cloudflare Web Analytics, off unless `PUBLIC_CF_BEACON_TOKEN` is set - no token means no third-party
+script tag at all. The hub only runs on one host so there is no provider switching here; the engine
+has that problem for real during the migration window and it is written up as R-09.
+
 ### Checks
 
 35 tests. svelte-check clean. Build clean.

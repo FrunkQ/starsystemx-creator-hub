@@ -147,6 +147,101 @@ hub's account page.**
 3. **Show `created_with` on load** when a map was made by an older build — a quiet marker, not a
    warning. It is a capability marker, so **never refuse to load on it**.
 
+
+---
+
+## R-08. The Cloudflare deploy of SSE failed — and NOT for the reason it looks like
+
+**Observed, 2026-08-28**, deploying `star-system-generator@3.0.164` to Cloudflare Pages:
+
+```
+> star-system-generator@3.0.164 build
+> wrangler types --check && node scripts/generate-examples-list.cjs && vite build
+
+X [ERROR] Types file not found at worker-configuration.d.ts.
+```
+
+**The repository's build script is not that.** It is, in every worktree checked:
+
+```
+"build": "node scripts/generate-examples-list.cjs && vite build"
+```
+
+`wrangler types --check` **is not in the repo.** It was injected at deploy time by Cloudflare's own
+auto-configuration — the stack trace shows `maybeRunAutoConfig` -> `runAutoConfig` -> `runCommand`.
+Wrangler saw a SvelteKit project with **no `wrangler.toml` / `wrangler.jsonc` at all**, decided it
+should have Workers types, prepended a check for `worker-configuration.d.ts`, and then failed
+because nothing has ever generated that file.
+
+> **So the SSE repo is not broken and its build script should not be "fixed" in response to this.**
+> Editing it to satisfy an injected check would be patching a symptom that only exists because the
+> project has no wrangler config for auto-config to read.
+
+**The real fix is the adapter swap and a real `wrangler.toml`** — which is the migration, and the
+migration is sequenced (below). If a green Cloudflare build is wanted *before* that, the options are:
+
+1. **Commit a `worker-configuration.d.ts`** (run `wrangler types` once). This is the intended
+   workflow and it makes `--check` meaningful; it must be regenerated when bindings change.
+2. **Add a minimal `wrangler.toml`** so auto-config has something to read and stops guessing.
+3. **Do not point Cloudflare at SSE yet** — see the ordering warning.
+
+### THE ORDERING WARNING, and this is the important part
+
+Deploying SSE to Cloudflare Pages **is the migration starting**, and `creator-hub-design.md` §5.2 is
+explicit that its steps are sequenced for a reason:
+
+1. push the `sw.js` cache-constant bump **to prod on Vercel first**, and let it propagate for days;
+2. *then* swap the adapter and deploy to Pages in parallel on `*.pages.dev`;
+3. verify with a hard reload and `?no-sw=1`;
+4. cut DNS;
+5. leave Vercel up for a week.
+
+The cutover is **same-origin**, so every returning visitor's service worker survives the change of
+host and will serve a Vercel-era precached shell that requests asset hashes Cloudflare does not
+have. Step 2 before step 1 is exactly the shape of that failure.
+
+**This is owner-and-coordinator work, not an agent job.** Recorded here so whoever picks it up knows
+the failed build was auto-config, not a repo defect, and knows which step of a sequenced plan it
+belongs to.
+
+---
+
+## R-09. Analytics must follow the deployment path — because for a while there are two
+
+**Today:** `src/routes/+layout.svelte` calls `injectAnalytics` from `@vercel/analytics/sveltekit`,
+and `@vercel/analytics` is a dependency.
+
+**The problem is specific to the migration window.** §5.2 step 2 deploys to Cloudflare Pages **in
+parallel** while Vercel is still serving production, and step 5 leaves Vercel up for at least a week
+after DNS is cut. So for that whole period the same code runs on **both hosts**, and:
+
+- Vercel Analytics on Cloudflare collects nothing and loads a script for no reason;
+- Cloudflare Web Analytics on Vercel does the same in reverse;
+- shipping both unconditionally double-counts every session on whichever host has both.
+
+**Recommended shape — an explicit build-time switch, not host sniffing:**
+
+```
+PUBLIC_ANALYTICS = vercel | cloudflare | none
+```
+
+Each host builds separately, so a build-time constant is enough, and an explicit variable beats
+detecting `VERCEL=1` / `CF_PAGES=1` because during a migration the thing you most want is to be able
+to say *"this deployment reports here"* and have it be true — including being able to set `none` on
+a pages.dev verification build so test traffic does not pollute either dataset.
+
+Then in the layout: call `injectAnalytics()` only for `vercel`, and render the Cloudflare beacon
+`<script>` only for `cloudflare`. Neither for `none`.
+
+**Cloudflare's side needs no package.** Web Analytics is either a dashboard toggle on the Pages
+project (Cloudflare injects the beacon itself — simplest) or a single deferred `<script>` with a
+token. The hub does the token version in `src/routes/+layout.server.ts` and
+`src/routes/+layout.svelte`, which is ~15 lines and can be copied verbatim.
+
+**Do not remove `@vercel/analytics` until Vercel is actually switched off** (§5.2 step 5 keeps it
+running for a week after DNS). Removing it early makes a rollback to Vercel a code change rather
+than a DNS change, and the whole point of leaving Vercel up is that rollback stays cheap.
+
 ---
 
 ## What the hub will NOT ask the engine to do

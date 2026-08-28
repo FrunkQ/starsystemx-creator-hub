@@ -28,6 +28,15 @@ npx wrangler r2 bucket create sshub-bundles
 > the static-asset fetcher — and wrangler refuses the config outright. This cost a debugging round
 > the first time; the names in `wrangler.toml` are already correct.
 
+> **Wrangler auto-config, and a trap worth knowing about.** When wrangler deploys a project with
+> **no** `wrangler.toml`, it runs an auto-configuration pass that guesses at settings and can
+> **inject `wrangler types --check` into your build command** — which then fails with
+> *"Types file not found at worker-configuration.d.ts"* even though your build script contains no
+> such thing. This is what broke the first Cloudflare deploy of the SSE engine
+> (`docs/sse-requirements.md` R-08). **The hub ships a `wrangler.toml`, so auto-config has something
+> real to read and should not guess.** If that error ever appears here anyway, the fix is to run
+> `npx wrangler types` once and commit `worker-configuration.d.ts` — not to edit the build script.
+
 **A Cron Trigger** for the integration outbox, once Discord is switched on. Every 5 minutes is
 plenty; it POSTs `/api/admin/outbox` with the `x-cron-key` header set to `CRON_SECRET`.
 
@@ -96,7 +105,22 @@ In order, and the first two are hard blocks:
 
 ---
 
-## 5. Domain
+## 5. Analytics
+
+Either is fine and neither is required:
+
+- **Dashboard toggle** — Pages project > Web Analytics. Cloudflare injects the beacon; no code.
+- **`PUBLIC_CF_BEACON_TOKEN`** — set it and `src/routes/+layout.server.ts` renders a deferred beacon
+  script instead. Unset means **no script tag at all**, which is the default and is correct for a
+  page whose whole job is to load fast.
+
+The hub only ever runs on Cloudflare, so there is no provider-switching logic here. The engine has
+that problem for real, because during the migration window it runs on two hosts at once — see
+`docs/sse-requirements.md` R-09.
+
+---
+
+## 6. Domain
 
 `share.starsystemx.com` or `community.starsystemx.com` — either works; the hub does not care and
 nothing is hard-coded to a host.

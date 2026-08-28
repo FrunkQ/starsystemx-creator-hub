@@ -3,8 +3,21 @@
   // arriving from a Discord link may never have heard of Star System Explorer, and the page's job
   // is to fix that in one screen and then get out of the way.
   import '../app.css';
-  let { children } = $props();
+  let { children, data } = $props();
 </script>
+
+<!-- Cloudflare Web Analytics. `defer` and nothing else: no third-party script gets to block a page
+     whose entire job is to load fast. No token means no script tag at all.
+     The {#if} lives INSIDE <svelte:head> - the tag itself cannot sit inside a block. -->
+<svelte:head>
+  {#if data?.cfBeaconToken}
+    <script
+      defer
+      src="https://static.cloudflareinsights.com/beacon.min.js"
+      data-cf-beacon={JSON.stringify({ token: data.cfBeaconToken })}
+    ></script>
+  {/if}
+</svelte:head>
 
 <a class="skip" href="#main">Skip to content</a>
 
