@@ -10,6 +10,7 @@
   let attested = $state(false);
   // Set only after the hub has DETECTED GM content and the creator has said they meant it.
   let confirmGmTree = $state(false);
+  let stripGm = $state(false);
   let busy = $state(false);
   let result = $state<any>(null);
 
@@ -21,6 +22,7 @@
     const body = new FormData();
     body.set('bundle', file);
     if (confirmGmTree) body.set('confirmGmTree', 'on');
+    if (stripGm) body.set('stripGm', 'on');
     if (attested) body.set('attest', 'on');
     try {
       const res = await fetch('/api/upload', { method: 'POST', body });
@@ -81,22 +83,41 @@
     <ul>
       {#each result.detail ?? [] as line}<li>{line}</li>{/each}
     </ul>
-    <p>
-      In Star System Explorer, save again and choose the player version - that removes all of it.
-      Or, if you meant to share the full map with other GMs, confirm and it will publish as it is.
-    </p>
-    <label class="check">
-      <input type="checkbox" bind:checked={confirmGmTree} />
-      <span>I meant to share this. Publish everything, including my GM notes.</span>
-    </label>
-    <button class="primary" onclick={submit} disabled={!confirmGmTree || busy}>
-      Publish the full map
-    </button>
+    <p>Three ways forward, and the first is usually the one you want:</p>
+
+    <div class="choices">
+      <button class="primary" onclick={() => { stripGm = true; confirmGmTree = false; submit(new Event('x')); }} disabled={busy}>
+        Take it out and publish the rest
+      </button>
+      <p class="why">
+        The hub removes the notes, hidden objects and secret tags, then checks its own work - if
+        anything is left it refuses rather than publishing. Your own copy is untouched.
+      </p>
+    </div>
+
+    <div class="choices">
+      <button onclick={() => { confirmGmTree = true; stripGm = false; submit(new Event('x')); }} disabled={busy}>
+        Publish everything, GM notes included
+      </button>
+      <p class="why">
+        For a map meant to be read by other GMs. Everything above becomes public.
+      </p>
+    </div>
+
+    <div class="choices">
+      <p class="why">
+        Or export the player version from Star System Explorer and upload that instead - it is the
+        same result, done at your end.
+      </p>
+    </div>
   </div>
 {:else if result}
   <div class="panel notice" class:bad={!result.ok}>
     <h3>{result.ok ? 'Uploaded' : 'Not uploaded'}</h3>
     <p>{result.message ?? 'Your map is saved as a draft.'}</p>
+    {#if result.ok && result.stripped?.length}
+      <p>Removed for you: {result.stripped.join('; ')}. Your own copy is untouched.</p>
+    {/if}
     {#if result.ok && result.gmContent?.length}
       <p>Published as a full GM map, including: {result.gmContent.join('; ')}.</p>
     {/if}
@@ -123,4 +144,6 @@
   .check { display: flex; gap: 10px; align-items: start; margin: 4px 0 10px; }
   .check span { color: var(--ink); }
   .note { margin: 0; color: var(--ink-faint); font-size: 0.9rem; }
+  .choices { margin: 14px 0; }
+  .why { margin: 6px 0 0; color: var(--ink-dim); font-size: 0.9rem; max-width: 62ch; }
 </style>

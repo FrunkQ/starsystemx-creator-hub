@@ -41,6 +41,8 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
   // property of the file and the hub reads it (bundle/gmContent.ts). This is only the creator's
   // answer to a warning the hub raised, and it is meaningless unless GM content was detected.
   const confirmGmTree = form.get('confirmGmTree') === 'on';
+  // "Take it out for me" - the hub strips, re-detects, and refuses if anything survived.
+  const stripGm = form.get('stripGm') === 'on';
 
   // The attestation. Recorded with the EXACT text shown, so an old record still says what was
   // actually agreed to even after the wording changes.
@@ -65,7 +67,7 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 
   let result;
   try {
-    result = await ingest(env, sb, viewer!, gates, bytes, { confirmGmTree, replacesSystemId, attestation });
+    result = await ingest(env, sb, viewer!, gates, bytes, { confirmGmTree, stripGm, replacesSystemId, attestation });
   } catch (e) {
     console.error('ingest failed', e);
     return json(

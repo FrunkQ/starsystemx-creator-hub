@@ -8,7 +8,7 @@ export const load: PageServerLoad = async ({ platform, setHeaders }) => {
 
   const sb = db(env);
   const { data } = await sb.from('systems')
-    .select('slug, title, summary, kind, cover_sha256, hearts_count, download_count')
+    .select('slug, title, summary, blurb, kind, cover_sha256, hearts_count, download_count, auto_tags, body_count, construct_count, system_count')
     .eq('state', 'public').eq('visibility', 'public')
     .order('hearts_count', { ascending: false })
     .order('created_at', { ascending: false })

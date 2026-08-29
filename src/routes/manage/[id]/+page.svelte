@@ -71,9 +71,26 @@
               placeholder="What is this map for? What is interesting about it? What would a GM do with it?"
     >{s.description ?? ''}</textarea>
   </label>
-  <label>
-    Tags <input name="tags" value={(s.tags ?? []).join(', ')} placeholder="hard-sf, binary, campaign" />
-  </label>
+  <fieldset class="vocab">
+    <legend>Tags</legend>
+    <p class="muted">
+      Pick what describes your map. These are how people find it - a fixed list rather than free
+      text, so a search for one of them finds every map that matches.
+    </p>
+    {#each data.vocabulary as group}
+      <div class="group">
+        <h3>{group.label} <span>{group.hint}</span></h3>
+        <div class="pills">
+          {#each group.tags as tag}
+            <label class="pick" class:on={(s.tags ?? []).includes(tag)}>
+              <input type="checkbox" name="tags" value={tag} checked={(s.tags ?? []).includes(tag)} />
+              <span>{tag}</span>
+            </label>
+          {/each}
+        </div>
+      </div>
+    {/each}
+  </fieldset>
   <button class="primary" type="submit">Save</button>
 </form>
 
@@ -132,6 +149,17 @@
     border: 1px solid var(--edge); border-radius: 8px; padding: 8px;
   }
   .file input { display: block; margin-top: 6px; color: var(--ink); }
+  .vocab { border: 1px solid var(--edge); border-radius: var(--radius); padding: 12px 14px; margin: 18px 0; }
+  .vocab legend { color: var(--ink-faint); padding: 0 6px; font-size: 0.9rem; }
+  .group { margin: 12px 0; }
+  .group h3 { margin: 0 0 6px; font-size: 0.9rem; }
+  .group h3 span { color: var(--ink-faint); font-weight: 400; margin-left: 8px; font-size: 0.85rem; }
+  .pills { display: flex; flex-wrap: wrap; gap: 6px; }
+  .pick { display: inline-flex; align-items: center; gap: 6px; margin: 0;
+          padding: 3px 10px; border-radius: 999px; cursor: pointer;
+          background: var(--panel-2); border: 1px solid var(--edge); font-size: 0.85rem; }
+  .pick.on { border-color: var(--accent); }
+  .pick input { margin: 0; }
   .shots { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); margin-top: 14px; }
   figure { margin: 0; }
   figure img { width: 100%; border-radius: 8px; border: 1px solid var(--edge); display: block; }

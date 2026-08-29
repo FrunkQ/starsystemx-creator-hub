@@ -20,6 +20,9 @@ import { checkBundleFormat } from '$lib/bundle/format';
 import { checkProvenance } from '$lib/bundle/attribution';
 import { readProvenance } from '$lib/bundle/provenance';
 import { detectGmContent } from '$lib/bundle/gmContent';
+import { computeFacets, deriveTags } from '$lib/bundle/facets';
+import { stripGmContent } from '$lib/bundle/strip';
+import { zipSync, strToU8 } from 'fflate';
 import { normalise, type NormalisedNode } from '$lib/bundle/normalise';
 import { readZip, BundleReadError } from '$lib/bundle/read';
 import { sha256Hex, claimedHashFromModelPath } from '$lib/bundle/hash';
@@ -46,6 +49,9 @@ export type IngestResult =
       missingProvenance: string[];
       /** What the file turned out to be, read from the file itself. */
       gmContent: string[];
+      autoTags: string[];
+      /** What the hub took out, when asked to strip. */
+      stripped: string[];
     };
 
 interface PendingAsset {
@@ -59,7 +65,7 @@ interface PendingAsset {
 
 export async function ingest(
   env: HubEnv, sb: Db, viewer: Viewer, gates: Gates,
-  bytes: Uint8Array,
+  input: Uint8Array,
   opts: {
     /**
      * Confirmation that the creator wants to publish a save the hub has DETECTED as carrying
@@ -67,6 +73,11 @@ export async function ingest(
      * and is never asked of the uploader.
      */
     confirmGmTree?: boolean;
+    /**
+     * "Take the GM material out for me." The hub strips it, then RE-DETECTS over its own output and
+     * refuses if anything survived - see bundle/strip.ts for why that asymmetry matters.
+     */
+    stripGm?: boolean;
     replacesSystemId?: string;
     /**
      * The creator's provenance attestation. REQUIRED. There is no way to disprove "I made this
@@ -76,6 +87,9 @@ export async function ingest(
     attestation: { accepted: boolean; textVersion: number; textShown: string };
   }
 ): Promise<IngestResult> {
+  // Reassigned when the creator asks the hub to strip GM material out (below).
+  let bytes = input;
+
   if (!opts.attestation?.accepted) {
     return {
       ok: false, code: 'no-attestation',
@@ -141,7 +155,38 @@ export async function ingest(
   // enforceable: an uploader restating the export mode could get it wrong, and the wrong answer is
   // the one that leaks their campaign. So the warning fires on evidence, names exactly what it
   // found, and only appears when there is genuinely something to lose.
-  const gm = detectGmContent(doc);
+  let gm = detectGmContent(doc);
+  let stripped: string[] = [];
+
+  if (gm.hasGmContent && opts.stripGm) {
+    const result = stripGmContent(doc);
+    if (!result.ok) {
+      // The stripper does not get to declare itself successful. If the detector still finds
+      // something, refuse - "we could not clean this" is a far better outcome than a leaked note.
+      return {
+        ok: false, code: 'strip-failed',
+        message:
+          'Some of the GM material in this save could not be removed safely, so nothing has been ' +
+          'published. Export the player version from Star System Explorer instead.',
+        detail: result.survived
+      };
+    }
+    doc = result.doc;
+    stripped = result.removed;
+    gm = detectGmContent(doc);
+
+    // THE STORED BYTES MUST CHANGE TOO. The download is reassembled from what is in R2, so leaving
+    // the original in place would serve exactly the notes we just removed.
+    if (zipped) {
+      const rebuilt: Record<string, Uint8Array> = { ...members };
+      rebuilt[docPath] = strToU8(JSON.stringify(doc));
+      bytes = zipSync(rebuilt);
+      members = rebuilt;
+    } else {
+      bytes = strToU8(JSON.stringify(doc));
+    }
+  }
+
   if (gm.hasGmContent && !opts.confirmGmTree) {
     return {
       ok: false, code: 'gm-content',
@@ -246,6 +291,10 @@ export async function ingest(
 
   // ---- rows -------------------------------------------------------------------------------------
   const shaped = normalise(doc);
+  // Facets are derived from the document, so they are recomputed on every upload and can never
+  // drift from what the file actually contains.
+  const facets = computeFacets(doc);
+  const autoTags = deriveTags(facets, { hasGmContent: gm.hasGmContent });
   const systemId = opts.replacesSystemId ?? crypto.randomUUID();
   const coverHash = pickCover(doc, pending);
 
@@ -254,7 +303,7 @@ export async function ingest(
     coverHash, publishGmTree: gm.hasGmContent,
     sourceBytes: bytes.length, isUpdate: !!opts.replacesSystemId, flagged, novelCount: novel.length,
     createdWith: madeWith.createdWith, legacyStamped: format.legacyStamped,
-    attestation: opts.attestation
+    attestation: opts.attestation, facets, autoTags
   });
 
   // The original zip is kept for provenance and re-packing, NEVER served raw - serving it would
@@ -269,7 +318,9 @@ export async function ingest(
     flagged,
     mayPublish: provenance.mayPublish,
     missingProvenance: provenance.missing.map((m) => m.path),
-    gmContent: gm.summary
+    gmContent: gm.summary,
+    autoTags,
+    stripped
   };
 }
 
@@ -317,6 +368,8 @@ interface WriteArgs {
   novelCount: number;
   createdWith: string | null;
   legacyStamped: boolean;
+  facets: ReturnType<typeof computeFacets>;
+  autoTags: string[];
   attestation: { accepted: boolean; textVersion: number; textShown: string };
 }
 
@@ -341,7 +394,15 @@ async function writeRows(sb: Db, a: WriteArgs): Promise<void> {
     cover_sha256: coverHash,
     source_bytes: a.sourceBytes,
     created_with: a.createdWith,
-    legacy_stamped: a.legacyStamped
+    legacy_stamped: a.legacyStamped,
+    auto_tags: a.autoTags,
+    system_count: a.facets.systemCount,
+    body_count: a.facets.bodyCount,
+    construct_count: a.facets.constructCount,
+    carried_images: a.facets.carriedImages,
+    carried_models: a.facets.carriedModels,
+    role_counts: a.facets.roleCounts,
+    tag_namespaces: a.facets.tagNamespaces
   });
   if (sysError) throw new Error('could not save the map: ' + sysError.message);
 

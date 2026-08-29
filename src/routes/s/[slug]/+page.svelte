@@ -10,11 +10,19 @@
   //   5. the copy-paste snippets, which are SECONDARY: the cheap way to lift one body without
   //      taking the whole map. They serve the same funnel - a snippet used is SSE opened.
   import SnippetBlock from '$lib/components/SnippetBlock.svelte';
+  import { formatBytes } from '$lib/bundle/facets';
   let { data } = $props();
 
   const s = $derived(data.system);
   const total = $derived(data.bodies.length + data.constructs.length);
   let reportOpen = $state(false);
+
+  // Role counts are the human axis - "12 planets, 4 stations" says what "230 bodies" cannot.
+  const roles = $derived(
+    Object.entries((s.role_counts ?? {}) as Record<string, number>)
+      .filter(([, n]) => n > 0)
+      .sort((a, b) => b[1] - a[1])
+  );
 </script>
 
 <svelte:head>
@@ -81,6 +89,29 @@
 
   <!-- 4. The data. -->
   <h2>What is in it</h2>
+
+  <!-- The facts, counted from the file. Above the table because a browsing GM wants the shape of
+       the thing before the list of it. -->
+  <div class="facts">
+    {#if s.system_count > 1}<div><b>{s.system_count}</b> systems</div>{/if}
+    {#if s.body_count}<div><b>{s.body_count}</b> bodies</div>{/if}
+    {#if s.construct_count}<div><b>{s.construct_count}</b> constructs</div>{/if}
+    {#if s.carried_images}<div><b>{s.carried_images}</b> pictures</div>{/if}
+    {#if s.carried_models}<div><b>{s.carried_models}</b> 3D models</div>{/if}
+    <div><b>{formatBytes(s.source_bytes ?? 0)}</b> download</div>
+    {#if s.created_with}<div>made with SSE <b>{s.created_with}</b></div>{/if}
+  </div>
+
+  {#if roles.length}
+    <p class="roles">{#each roles as [role, n], i}{n} {role}{n === 1 ? '' : 's'}{i < roles.length - 1 ? ' · ' : ''}{/each}</p>
+  {/if}
+
+  {#if (s.auto_tags ?? []).length}
+    <div class="pills">
+      {#each s.auto_tags as t}<a class="tag" href="/browse?tag={t}">{t}</a>{/each}
+    </div>
+  {/if}
+
   <table>
     <thead>
       <tr><th>Name</th><th>Kind</th><th>Role</th><th>Tags</th></tr>
@@ -146,6 +177,12 @@
   .shots img { width: 100%; border-radius: var(--radius); border: 1px solid var(--edge); display: block; }
   .shots figcaption { color: var(--ink-faint); font-size: 0.85rem; margin-top: 6px; }
   .muted { color: var(--ink-dim); margin: 0 0 12px; }
+  .facts { display: flex; flex-wrap: wrap; gap: 8px 22px; margin: 0 0 10px; color: var(--ink-dim); }
+  .facts b { color: var(--ink); font-variant-numeric: tabular-nums; }
+  .roles { color: var(--ink-faint); margin: 0 0 12px; font-size: 0.92rem; }
+  .pills { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 18px; }
+  .pills a.tag { text-decoration: none; }
+  .pills a.tag:hover { border-color: var(--accent); }
   .foot-actions { margin-top: 36px; }
   label { display: block; margin: 10px 0; color: var(--ink-dim); }
   select, textarea {

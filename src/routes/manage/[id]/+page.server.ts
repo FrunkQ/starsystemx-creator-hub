@@ -6,6 +6,7 @@ import type { PageServerLoad, Actions } from './$types';
 import { error, fail } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import { loadGates } from '$lib/server/config';
+import { sanitiseTags, vocabularyFrom, DEFAULT_VOCABULARY } from '$lib/vocabulary';
 import { checkProvenance } from '$lib/bundle/attribution';
 import * as ledger from '$lib/server/ledger';
 import * as badges from '$lib/server/integrations/badges';
@@ -38,7 +39,11 @@ export const load: PageServerLoad = async ({ params, platform, locals }) => {
   // people complain about; one that names the three pictures needing a credit is a gate they clear.
   const blocking = (claims ?? []).filter((c) => c.no_provenance || c.cc_by_breach);
 
+  const { data: vocabRow } = await sb.from('config')
+    .select('value').eq('key', 'creator_vocabulary').maybeSingle();
+
   return {
+    vocabulary: vocabularyFrom(vocabRow?.value ?? null),
     system,
     screenshots: (shots ?? []).map((s) => ({ ...s, approved: approved.has(s.sha256) })),
     blocking,
@@ -57,8 +62,11 @@ export const actions: Actions = {
     const title = String(form.get('title') ?? '').trim().slice(0, 120);
     if (!title) return fail(400, { message: 'A map needs a title.' });
 
-    const tags = String(form.get('tags') ?? '')
-      .split(',').map((t) => t.trim().toLowerCase()).filter(Boolean).slice(0, 12);
+    // Checkboxes from the curated list. Validated server-side against the vocabulary, because a
+    // form field is whatever the client decided to send.
+    const { data: vocabRow } = await sb.from('config')
+      .select('value').eq('key', 'creator_vocabulary').maybeSingle();
+    const tags = sanitiseTags(form.getAll('tags'), vocabularyFrom(vocabRow?.value ?? null));
 
     const { error: e } = await sb.from('systems').update({
       title,

@@ -95,6 +95,16 @@ export type SystemRow = {
   legacy_stamped: boolean;
   blurb: string | null;
   tags: string[];
+  // Derived facets (db/migrations/0007). Facts the hub computed, kept separate from `tags` so a
+  // filter on `player-safe` returns maps that were CHECKED, not maps that claimed it.
+  auto_tags: string[];
+  system_count: number;
+  body_count: number;
+  construct_count: number;
+  carried_images: number;
+  carried_models: number;
+  role_counts: Record<string, number>;
+  tag_namespaces: Record<string, number>;
   created_at: string;
   updated_at: string;
 }

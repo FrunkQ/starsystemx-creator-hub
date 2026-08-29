@@ -9,6 +9,7 @@ import { normalise } from '../src/lib/bundle/normalise';
 import { checkProvenance } from '../src/lib/bundle/attribution';
 import { detectGmContent } from '../src/lib/bundle/gmContent';
 import { readProvenance } from '../src/lib/bundle/provenance';
+import { computeFacets, deriveTags, formatBytes } from '../src/lib/bundle/facets';
 
 const ROOT = 'C:/Development/star-system-explorer-v2';
 const FILES = [
@@ -31,6 +32,8 @@ describe('the parser against REAL engine saves', () => {
       const prov = readProvenance(doc);
       const attrib = checkProvenance(doc, doc.modelMeta ?? {});
       const gm = detectGmContent(doc);
+      const facets = computeFacets(doc);
+      const autoTags = deriveTags(facets, { hasGmContent: gm.hasGmContent });
 
       console.log(
         `\n${label}\n` +
@@ -40,7 +43,15 @@ describe('the parser against REAL engine saves', () => {
         `  systems      ${shaped.systemNames.length}\n` +
         `  assets       ${attrib.entries.length}  missing ${attrib.missing.length}  ccByBreach ${attrib.breaches.length}\n` +
         `  mayPublish   ${attrib.mayPublish}\n` +
-        `  gmContent    ${gm.hasGmContent ? gm.summary.join('; ') : 'none'}`
+        `  gmContent    ${gm.hasGmContent ? gm.summary.join('; ') : 'none'}
+` +
+        `  roles        ${Object.entries(facets.roleCounts).map(([r, n]) => n + ' ' + r).join(', ') || '-'}
+` +
+        `  carried      ${facets.carriedImages} images, ${facets.carriedModels} models  (app art: ${facets.appArtwork})
+` +
+        `  size         ${formatBytes(readFileSync(path).length)}
+` +
+        `  PILLS        ${autoTags.join('  ')}`
       );
 
       // The only hard assertions: it must not throw, and it must find SOMETHING.
