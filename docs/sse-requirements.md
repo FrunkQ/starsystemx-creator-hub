@@ -305,7 +305,33 @@ not a spec. Any consistent naming works; the hub adapts with a config edit, not 
    baseline maintenance entirely.
 2. **Do not write the whole shipped library into every save.** If a save carries all 24 shipped
    liquids plus one custom one, the hub must subtract 24 names it has to keep in step with. Writing
-   only what the GM actually added or changed is smaller, clearer, and self-describing.
+   only what the GM actually added or changed is clearer and self-describing.
+
+### THIS IS A CORRECTNESS PROBLEM, NOT A SIZE ONE — and that is the stronger argument
+
+Measured on the real 327 KB Local Neighbourhood starmap, because the size case is the one people
+reach for first and it does not hold:
+
+| | share of file |
+|---|---|
+| `systems` (the actual campaign) | 51% |
+| **whitespace / pretty-printing** | **45%** |
+| `coiCategories` (shipped defaults) | 2.6% |
+| `temporal` (shipped calendars) | 1.0% |
+| null / empty node fields | ~10% of node fields |
+
+**So the shipped-defaults block is under 4% of the file.** Removing it saves almost nothing, and
+**the 45% is whitespace that a `.sse.zip` compresses away to near-nothing anyway** — and which buys
+the hand-editable, diffable working file that `io/bundle.ts` deliberately set out to produce. **Do
+not chase it.** That trade was made on purpose and it was made correctly.
+
+**The reason to fix this is that the file currently misdescribes itself.** A save carrying the
+shipped calendar registry is claiming to define four calendars the GM never defined. Nothing reading
+that file can tell the difference between "this campaign uses a custom reckoning" and "this campaign
+was saved by SSE" — which is precisely why the hub's facet lied on every map until the baseline was
+corrected.
+
+A save should describe what the GM made. Everything else is the app's, and belongs in the app.
 
 > **The trap, stated plainly because the hub already fell into it:** the first version of the
 > calendar rule listed one shipped calendar instead of four, and reported *"3 custom calendars"* for
