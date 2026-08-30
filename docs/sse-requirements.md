@@ -345,6 +345,74 @@ which is also the only context where it means anything.
 
 ---
 
+## R-12. A monotonic revision counter — this one prevents real data loss
+
+**What:** an integer on the document that increments on every explicit save. `revision: 47`.
+
+**The scenario, and it will happen:**
+
+1. A creator uploads their campaign. The hub stores it.
+2. Weeks later they find an older export in their Downloads folder and upload it as an update.
+3. **The hub accepts it, replaces every row, and overwrites the stored bundle.** The newer version
+   is gone — from the hub, and from anybody who would have downloaded it.
+
+The hub cannot currently prevent this, because **there is nothing in a save that says which of two
+exports is newer.** Verified across two real exports of the same map nine months apart:
+
+| | fresh export | bundled example |
+|---|---|---|
+| `id` | `starmap-local-neighbourhood` | `starmap-local-neighbourhood` — **stable** |
+| system ids | — | **42/42 shared** |
+| `appVersion` | 3.0.190 | 2.1.692-beta |
+| **revision / serial / updatedAt** | **none** | **none** |
+
+`appVersion` is not a substitute: two saves from the same build are indistinguishable, and a creator
+who has not updated SSE produces identical stamps forever.
+
+**A file timestamp is not a substitute either.** It is a client clock, it survives copying badly, and
+it is trivially wrong.
+
+With a revision the hub can simply say: *"the copy you uploaded is older than the one already
+published — did you mean to roll back?"* — and let the creator decide, instead of silently
+destroying work.
+
+> **Bonus, free with the same field:** `doc.id` being stable already means the app could offer
+> *"this came from the hub — update your published version?"* without the creator hunting for their
+> own entry. The revision is what makes doing that automatically **safe**.
+
+---
+
+## R-13. A machine-readable manifest of what SSE ships
+
+**What:** one static JSON, served from the app, listing the content that ships with the build —
+calendar names, tag category ids, star-type image paths, starter model paths, and later the shipped
+gases/liquids/fuels.
+
+```jsonc
+{ "appVersion": "3.0.190",
+  "calendars": ["Earth Gregorian", "Star Trek Stardate", "…"],
+  "tagCategories": ["status", "owner", "…"],
+  "starterModels": ["/models/nasa/iss.glb"] }
+```
+
+**Why: it removes an entire class of bug rather than one instance of it.** The hub has to tell
+GM-authored content from app-shipped content, and right now it does that by **hardcoding lists
+copied out of this repo**. That list drifted within an hour of being written — the calendar baseline
+had one name where it needed four, and the facet lied on every map until it was corrected against
+the real file.
+
+Every such list is a standing promise to notice a change in another repository. **A manifest turns
+that into a fetch.**
+
+**This is the cheaper alternative to R-11's per-entry `custom: true` flag**, and it also covers the
+cases a flag cannot: knowing that `/images/star_types/M.webp` is app artwork rather than a creator's
+upload, which the hub currently decides by matching a path prefix.
+
+**Either solves the problem; the manifest solves more of it.** If both happen, the flags win for
+save contents and the manifest still earns its place for assets.
+
+---
+
 ## What the hub will NOT ask the engine to do
 
 Recorded so nobody builds them by mistake:
