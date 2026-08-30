@@ -16,7 +16,12 @@
   </p>
 </section>
 
-{#if !data.systems.length}
+{#if data.failed}
+  <div class="panel notice bad">
+    <h3>Could not read the library</h3>
+    <p>Something went wrong at our end - this is not an empty shelf. Please try again shortly.</p>
+  </div>
+{:else if !data.systems.length}
   <div class="panel notice">
     <h3>Nothing published yet</h3>
     <p>

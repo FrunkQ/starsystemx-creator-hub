@@ -18,7 +18,7 @@ export const load: PageServerLoad = async ({ platform, url, setHeaders }) => {
   const sort = url.searchParams.get('sort') === 'new' ? 'new' : 'loved';
 
   if (!env?.SUPABASE_URL) {
-    return { systems: [], groups: FACET_GROUPS, selected, q, sort, counts: {}, configured: false };
+    return { systems: [], groups: FACET_GROUPS, selected, q, sort, counts: {}, configured: false, failed: false };
   }
 
   const sb = db(env);
@@ -38,7 +38,15 @@ export const load: PageServerLoad = async ({ platform, url, setHeaders }) => {
     ? query.order('created_at', { ascending: false })
     : query.order('hearts_count', { ascending: false }).order('created_at', { ascending: false });
 
-  const { data } = await query.limit(60);
+  const { data, error } = await query.limit(60);
+
+  // A FAILED QUERY MUST NOT LOOK LIKE AN EMPTY LIBRARY. Discarding `error` here made a missing
+  // column (an unrun migration) render as a cheerful "no maps have been published yet" - which is
+  // exactly the silent failure this codebase refuses everywhere else. Surfaced, not swallowed.
+  if (error) {
+    console.error('browse query failed', error.message);
+    return { systems: [], groups: FACET_GROUPS, selected, q, sort, counts: {}, configured: true, failed: true };
+  }
 
   // How many results each pill would still leave, computed over the CURRENT result set - so a pill
   // that would give zero can be shown as spent rather than letting someone click into an empty page.
@@ -48,5 +56,5 @@ export const load: PageServerLoad = async ({ platform, url, setHeaders }) => {
   }
 
   setHeaders({ 'cache-control': 'public, max-age=60' });
-  return { systems: data ?? [], groups: FACET_GROUPS, selected, q, sort, counts, configured: true };
+  return { systems: data ?? [], groups: FACET_GROUPS, selected, q, sort, counts, configured: true, failed: false };
 };
