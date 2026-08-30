@@ -53,9 +53,8 @@
     <a class="cta" href="https://starsystemx.com" rel="noopener">Open Star System Explorer</a>
   </div>
   <div class="small">
-    <!-- OWED BY THE OWNER (design 6.8): terms, an acceptable-use line, and a takedown address
-         that reaches a person. These links are placeholders and MUST be real before the first
-         public upload. See docs/decisions.md Q-04. -->
+    <!-- Written and owner-signed-off 2026-08-28. `acceptable-use` is a 308 to the relevant section
+         of the terms: there is deliberately no separate AUP document. -->
     <a href="/terms">Terms</a>
     <a href="/acceptable-use">Acceptable use</a>
     <a href="/takedown">Report a copyright problem</a>

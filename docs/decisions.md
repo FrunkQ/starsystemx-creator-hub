@@ -206,21 +206,39 @@ Nothing in the bundle marks a cover. The hub currently uses this chain
 The cleaner long-term answer is a `coverAssetId` field in the bundle, which is engine-side work and
 was not raised because phase 0 is already carrying two items.
 
-### Q-04. The three non-technical things §6.8 still owes, and one of them blocks launch
+### ~~Q-04~~ → **D-15. The terms are written and the pages are built** — ANSWERED 2026-08-28
 
-1. **Terms and an acceptable-use line.** The tooling enforces a policy; it does not write one. It
-   must exist before the first public upload.
-2. **A takedown address that reaches a person**, for copyright claims from people with no account.
-3. **Does a rejected asset leave its map published-without-it, or does the whole map come down?**
+Owner-signed-off text, delivered by the coordinator. **This was the launch blocker and it is
+cleared.** `/terms` carries the full text; `/takedown` is a page of its own; `/acceptable-use` is a
+**308 to the relevant section of the terms**, because there is deliberately no separate AUP document
+(the owner's brief: *"No formal AUP... it's just protective"*). Two documents that could disagree
+about what is allowed is worse than one that is blunt.
 
-The footer links `/terms`, `/acceptable-use` and `/takedown` are **placeholders and those routes do
-not exist yet.** They must be real before uploads open.
+**Do not "improve" the voice.** The plain-English register was signed off in that form. It has no
+governing-law clause, no arbitration clause and no GDPR recitals, and their absence is a decision
+rather than an oversight — the privacy *practice* is stated in plain words instead.
 
-On (3): **the hub is built assuming the map lives and the asset is withheld** (§6.2's own
-assumption), because that is what "never stop the funnel" implies everywhere else in the design and
-because it is the behaviour that reads as fair rather than arbitrary. If the answer is the other
-way, `pack.ts` and the system page both change. Please confirm rather than let the assumption
-harden.
+**`LAST_UPDATED` in the page IS the version.** The terms say the current version is the one on the
+page, dated, so that string is the mechanism. Change the text, change the date.
+
+### D-16. The takedown address is assembled at runtime, never served as text
+
+The owner's instruction was explicit: keep it off the page as scrapable text. It is stored as
+character codes and assembled only when a visitor asks. **Verified against the built output: the
+address does not appear in any served file**, in any form a pattern match would find.
+
+**Stated honestly on the page and here:** this defeats crawlers that harvest addresses out of page
+source, which is the actual volume threat. It does not defeat anyone who runs the JavaScript and
+looks, and nothing rendered client-side ever could. It is a spam measure, not a secret.
+
+**Why not a contact form:** it needs a mail-sending backend the hub does not have, and a form that
+silently fails is worse than an address — a copyright claim that never arrives is the one message
+here that must not go missing.
+
+**The one open question this leaves:** confirmation that a rejected asset leaves its map
+published-without-it rather than taking the map down. The terms now say so in the takedown page
+("the asset is removed and the map stays up without it"), and the code assumes it — so this is
+settled unless the owner says otherwise.
 
 ### Q-05. Does the hub host campaigns as well as single systems? (§9.3)
 
