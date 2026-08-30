@@ -402,7 +402,8 @@ async function writeRows(sb: Db, a: WriteArgs): Promise<void> {
     carried_images: a.facets.carriedImages,
     carried_models: a.facets.carriedModels,
     role_counts: a.facets.roleCounts,
-    tag_namespaces: a.facets.tagNamespaces
+    tag_namespaces: a.facets.tagNamespaces,
+    facet_results: a.facets.rules
   });
   if (sysError) throw new Error('could not save the map: ' + sysError.message);
 

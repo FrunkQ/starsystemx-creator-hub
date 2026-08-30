@@ -1,5 +1,40 @@
 # Changelog
 
+## 0.4.0 — 2026-08-28
+
+### A rule-driven facet system, so it can grow without a deploy
+
+The owner: *"we want a flexible categorised tag (and a tag can carry a value) ... if players add
+their own custom gases, engines, fuels then those are added to the starmap file - so we know things
+like Custom Gases: 3, Custom Liquids: 4."*
+
+That removes the need for a separate artefact library entirely. The hub does not need a "fuels"
+section; it needs the map to carry its own custom fuels, and it counts them.
+
+Facets are now DECLARED, not coded - `{id, label, category, countKeysAt|countItemsAt|tagPattern,
+baseline, minCount, enabled}` - and the rule list is a config row. Custom calendars, tag categories
+and POI packs already ride in a save and are counted today. Gases, liquids, fuels, engines and
+reactions ship as DISABLED rules naming the keys the hub will look for, so enabling them is an edit
+rather than a release. Value-carrying tags are surfaced properly: weather comes back as
+"sulfuric-acid virga, constant lightning" rather than a bare count.
+
+### The bug that proves why `baseline` exists
+
+The calendar rule first listed only 'Earth Gregorian' as shipped - and every real starmap carries
+four, so it reported "3 custom calendars" for maps that had none. Caught by running the rules
+against real engine files, not by reading the code.
+
+A facet that is universally true is worse than no facet: it teaches people the pills cannot be
+trusted, which devalues every other pill beside it. The baseline is now read from the engine's own
+`static/temporal/calendars.json`, and there is a regression test for the full shipped set.
+
+Written up for the engine as R-11, including the cheaper fix: a `custom: true` flag per entry would
+remove the baseline maintenance altogether.
+
+### Checks
+
+84 tests. svelte-check clean. Build clean.
+
 ## 0.3.0 — 2026-08-28
 
 ### The GM/player choice is now read from the file, not asked

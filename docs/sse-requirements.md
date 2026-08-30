@@ -272,6 +272,53 @@ is the player version" on a page, only "no GM-only content found".
 
 ---
 
+## R-11. Put custom definitions in the save, under a predictable key
+
+**The owner's framing, and it is the right one:** *"If players add their own custom gases, engines,
+fuels, constructs, etc, then those are added to the starmap file - so if they are in, we know things
+like Custom Gases: 3, Habitable Biospheres: 2, Custom Liquids: 4."*
+
+That removes the need for a separate artefact library on the hub entirely. **The hub does not need a
+"fuels" section; it needs the map to carry its own custom fuels**, and it will count them.
+
+### What already works
+
+Two containers already ride in a save and the hub already counts them:
+
+| container | in the save as | shipped baseline |
+|---|---|---|
+| calendars | `temporal.temporal_registry` (keyed object) | the four in `static/temporal/calendars.json` |
+| tag categories | `coiCategories` (array) | the nine SSE ships |
+| points of interest | `poiPacks` (array) | none |
+
+### What is missing
+
+Custom **gases, liquids, fuels, engines, reactions** and **atmosphere mixes** have no container in
+the save format. The hub already ships disabled rules naming the keys it will look for -
+`customGases`, `customLiquids`, `customFuels`, `customEngines`, `customReactions` - as a **proposal**,
+not a spec. Any consistent naming works; the hub adapts with a config edit, not a deploy.
+
+**Two things that make the counting honest, and both are cheap:**
+
+1. **Mark what is custom, or keep the shipped set stable and listed.** The hub subtracts a baseline
+   of app-shipped names. A `custom: true` flag on each entry would be better still - it removes the
+   baseline maintenance entirely.
+2. **Do not write the whole shipped library into every save.** If a save carries all 24 shipped
+   liquids plus one custom one, the hub must subtract 24 names it has to keep in step with. Writing
+   only what the GM actually added or changed is smaller, clearer, and self-describing.
+
+> **The trap, stated plainly because the hub already fell into it:** the first version of the
+> calendar rule listed one shipped calendar instead of four, and reported *"3 custom calendars"* for
+> every real starmap. A facet that is universally true is worse than no facet - it teaches people
+> the pills cannot be trusted, which devalues every other pill beside it.
+
+### Not needed
+
+**No export/import of individual definitions.** A custom fuel travels inside the map that uses it,
+which is also the only context where it means anything.
+
+---
+
 ## What the hub will NOT ask the engine to do
 
 Recorded so nobody builds them by mistake:

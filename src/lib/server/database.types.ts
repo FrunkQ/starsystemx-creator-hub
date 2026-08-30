@@ -105,6 +105,7 @@ export type SystemRow = {
   carried_models: number;
   role_counts: Record<string, number>;
   tag_namespaces: Record<string, number>;
+  facet_results: unknown;
   created_at: string;
   updated_at: string;
 }

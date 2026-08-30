@@ -14,6 +14,7 @@
 // has to be able to tell those apart at a glance, and only roleHint does that.
 // ============================================================================================
 import { nodesWithSystem } from './attribution';
+import { applyFacetRules, type FacetResult, type FacetRule } from './facetRules';
 
 export interface Facets {
   systemCount: number;
@@ -30,6 +31,8 @@ export interface Facets {
   carriedModels: number;
   /** App-shipped artwork (`/images/star_types/…`). Informational: the hub hosts none of it (C-06). */
   appArtwork: number;
+  /** Rule-driven facets - custom calendars, weather kinds, and whatever is added later. */
+  rules: FacetResult[];
 }
 
 /**
@@ -41,11 +44,12 @@ const DISTINGUISHING_ROLES = [
   'moon', 'belt', 'ring', 'station', 'ship', 'habitat', 'infrastructure'
 ] as const;
 
-export function computeFacets(doc: any): Facets {
+export function computeFacets(doc: any, rules?: FacetRule[]): Facets {
   const f: Facets = {
     systemCount: 0, bodyCount: 0, constructCount: 0,
     roleCounts: {}, tagNamespaces: {}, signals: {},
-    carriedImages: 0, carriedModels: 0, appArtwork: 0
+    carriedImages: 0, carriedModels: 0, appArtwork: 0,
+    rules: applyFacetRules(doc, rules)
   };
 
   f.systemCount = Array.isArray(doc?.systems) ? doc.systems.length : 0;
@@ -146,6 +150,10 @@ export function deriveTags(f: Facets, opts: { hasGmContent: boolean }): string[]
   // THE SAFETY PILL, and it is deliberately not a boast either way. "player-safe" is a promise the
   // hub can actually keep, because it is checked rather than claimed (bundle/gmContent.ts).
   tags.push(opts.hasGmContent ? 'gm-notes' : 'player-safe');
+
+  // Rule-driven facets earn a pill too, so "custom-calendars" becomes filterable the moment the
+  // rule exists - without this function knowing anything about calendars.
+  for (const r of f.rules) tags.push(r.id);
 
   // The engine's own tag namespaces are ready-made discovery axes: a map thick with `intrigue` is
   // a different night's play from one thick with `resource`. Only the strongly-present ones.
