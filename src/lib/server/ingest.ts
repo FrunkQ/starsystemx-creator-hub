@@ -22,6 +22,7 @@ import { readProvenance } from '$lib/bundle/provenance';
 import { detectGmContent } from '$lib/bundle/gmContent';
 import { computeFacets, deriveTags } from '$lib/bundle/facets';
 import { stripGmContent } from '$lib/bundle/strip';
+import { checkFreshness } from '$lib/bundle/freshness';
 import { zipSync, strToU8 } from 'fflate';
 import { normalise, type NormalisedNode } from '$lib/bundle/normalise';
 import { readZip, BundleReadError } from '$lib/bundle/read';
@@ -52,6 +53,8 @@ export type IngestResult =
       autoTags: string[];
       /** What the hub took out, when asked to strip. */
       stripped: string[];
+      /** Would re-saving in a current SSE give this map more to show? A suggestion, never a fault. */
+      resave: { worthResaving: boolean; reasons: string[] };
     };
 
 interface PendingAsset {
@@ -320,7 +323,12 @@ export async function ingest(
     missingProvenance: provenance.missing.map((m) => m.path),
     gmContent: gm.summary,
     autoTags,
-    stripped
+    stripped,
+    resave: checkFreshness({
+      createdWith: madeWith.createdWith,
+      legacyStamped: format.legacyStamped,
+      recommendBelow: gates.recommend_resave_below_version
+    })
   };
 }
 

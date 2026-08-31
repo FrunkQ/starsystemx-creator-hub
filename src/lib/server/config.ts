@@ -16,6 +16,7 @@ export interface Gates {
   max_bundle_format: number;
   accept_unstamped_bundles: boolean;
   block_cc_by_breach: boolean;
+  recommend_resave_below_version: string;
   legacy_bundle_format: number;
   attestation_text_version: number;
   max_screenshots_per_system: number;
@@ -49,6 +50,7 @@ export const GATE_FALLBACKS: Gates = {
   // Both ANSWERED by the owner 2026-08-28 - see db/migrations/0006 and docs/decisions.md.
   accept_unstamped_bundles: true,
   block_cc_by_breach: true,
+  recommend_resave_below_version: '',
   legacy_bundle_format: 1,
   attestation_text_version: 1,
   max_screenshots_per_system: 8,

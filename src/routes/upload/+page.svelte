@@ -120,6 +120,15 @@
     {#if result.ok && result.stripped?.length}
       <p>Removed for you: {result.stripped.join('; ')}. Your own copy is untouched.</p>
     {/if}
+    {#if result.ok && result.resave?.worthResaving}
+      <!-- A SUGGESTION, not a fault. The map published fine; this is what it would gain. -->
+      <p>
+        <strong>Worth a quick re-save.</strong> This looks like an older file -
+        {result.resave.reasons.join(', and ')}. Open it in Star System Explorer and save it again,
+        then upload once more: your page will show which build made it and pick up more of the
+        detail the hub can display.
+      </p>
+    {/if}
     {#if result.ok && result.gmContent?.length}
       <p>Published as a full GM map, including: {result.gmContent.join('; ')}.</p>
     {/if}
