@@ -2,7 +2,7 @@
   let { data } = $props();
 
   const BADGE_LABEL: Record<string, string> = {
-    creator: 'Creator - published a map here',
+    cartographer: 'Cartographer - charted something and shared it',
     featured: 'Featured - a map people loved'
   };
 </script>

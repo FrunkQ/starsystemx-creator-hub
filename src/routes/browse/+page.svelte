@@ -31,7 +31,7 @@
 </script>
 
 <svelte:head>
-  <title>Browse maps - StarSystemX Creator Hub</title>
+  <title>Browse maps - {data.site.name}</title>
   <meta name="description" content="Star systems and campaign starmaps to download and open in Star System Explorer." />
 </svelte:head>
 

@@ -188,6 +188,39 @@ The one thing lost is labelling precision — the hub can say "no GM-only conten
 stamp to close that, **for the label only**: a stamp arrives inside a stranger's file and is a
 claim, so detection stays the control.
 
+### D-17. Users are **Explorers**, and the publish badge is **Cartographer**
+
+The owner, 2026-08-28: *"we can our users not Creators but Explorers - we are journeying together."*
+It fits a tool called Star System Explorer, and it says *journeying* rather than *producing*.
+
+**Changed:** user-facing copy, including the two mentions in the signed-off terms (a term of
+address, not a substantive clause — but the owner should re-read, since he signed that text).
+
+**Not changed:** every database identifier — `creators`, `creator_id`, `creator_badges`,
+`creator_identities`. Renaming them is a migration touching every table, every query and every type,
+for **zero** user-visible benefit. The words people read set the tone; the column names do not. The
+repo, Worker and R2 bucket names stay too, for the same reason plus the disruption of moving them.
+
+**The badge had to change name, and that is not cosmetic.** It was `creator`, awarded for
+publishing. If *everyone* is an Explorer then a badge saying "Explorer" rewards nothing and means
+nothing — so it is now **`cartographer`**: an explorer who charted something and gave the chart to
+other people, which is exactly what the badge is for. Free to rename because no badge rows exist yet.
+
+### D-18. Site name and URL are config rows — and the URL fixes a live bug
+
+The owner: *"explorers.starsystemx.com will be its formal URL once we are all done"* and *"have it a
+config item as we will likely go through a few as we transition URLs."*
+
+`site_name` and `site_url` are config rows. **`site_url` empty falls back to the request's own
+origin**, so the hub is correct on workers.dev, on a custom domain, and on localhost with no
+configuration at all. Setting it pins previews to the canonical host during a transition.
+
+**This was not cosmetic — it fixed a real bug.** `og:image` was a RELATIVE url. Open Graph requires
+absolute ones, and Discord, Twitter and Facebook do not resolve relative: **every shared link would
+have previewed with no picture.** For a hub whose entire product is link-sharing, and whose design
+says the OG preview *"matters more than any in-page richness"*, that is the most expensive small bug
+available — and it was live. Now absolute, with `og:url`, `og:site_name` and a canonical link.
+
 ---
 
 ## Still open — the owner's to answer

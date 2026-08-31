@@ -1,4 +1,5 @@
 <script lang="ts">
+  let { data } = $props();
   // The terms, as written and owner-signed-off 2026-08-28.
   //
   // TWO THINGS NOT TO "TIDY":
@@ -13,8 +14,8 @@
 </script>
 
 <svelte:head>
-  <title>Terms of use - StarSystemX Creator Hub</title>
-  <meta name="description" content="The terms for sharing and downloading star systems on the StarSystemX Creator Hub." />
+  <title>Terms of use - {data.site.name}</title>
+  <meta name="description" content="The terms for sharing and downloading star systems here." />
 </svelte:head>
 
 <article class="prose">
@@ -23,7 +24,7 @@
 
   <h2>What this is</h2>
   <p>
-    The Creator Hub is a place to share star systems and campaigns built with Star System Explorer,
+    {data.site.name} is a place to share star systems and campaigns built with Star System Explorer,
     so other people can download them and play. It is free, it is small, and it is run by the same
     person who makes the app.
   </p>
@@ -56,7 +57,7 @@
   <p>
     Content can be removed and accounts suspended or banned at our discretion — for anything in the
     list above, for copyright problems, or for behaviour that makes the place worse: spam, harassment
-    of other creators, gaming the limits, or being persistently, deliberately annoying. We will
+    of other explorers, gaming the limits, or being persistently, deliberately annoying. We will
     usually say why, because that is decent, but this is a free service run by one person and the
     discretion is real. A banned image stays banned even if the account that uploaded it is deleted.
   </p>
@@ -72,7 +73,7 @@
   <p>
     There is one deliberate delay: deletion takes effect after a seven-day hold, in case the request
     came from a hijacked account rather than from you — say so if you want it faster and can show it
-    is really you. Two honest limits: where another creator independently uploaded the same file for
+    is really you. Two honest limits: where another explorer independently uploaded the same file for
     their own map, their copy is their upload and stays; and copies people downloaded before you
     deleted are on their machines and beyond anyone's reach. Sharing between maps is something people
     do by hand here — we do not track it and we are not going to chase it.

@@ -6,6 +6,8 @@
   // the format gate in src/lib/bundle/format.ts speaking, not a placeholder.
   import { ATTESTATION_TEXT, ATTESTATION_NOTE } from '$lib/attestation';
 
+  let { data } = $props();
+
   let file = $state<File | null>(null);
   let attested = $state(false);
   // Set only after the hub has DETECTED GM content and the creator has said they meant it.
@@ -35,7 +37,7 @@
   }
 </script>
 
-<svelte:head><title>Share a map - StarSystemX Creator Hub</title></svelte:head>
+<svelte:head><title>Share a map - {data.site.name}</title></svelte:head>
 
 <h1>Share a map</h1>
 <p class="lede">

@@ -1,12 +1,13 @@
 <script lang="ts">
+  let { data } = $props();
   // A page of its own because a copyright claim arrives from someone who has never seen this site
   // before, is probably annoyed, and should not have to read the terms to find out where to write.
   import TakedownAddress from '$lib/components/TakedownAddress.svelte';
 </script>
 
 <svelte:head>
-  <title>Report a copyright problem - StarSystemX Creator Hub</title>
-  <meta name="description" content="How to report content on the StarSystemX Creator Hub that should not be here." />
+  <title>Report a copyright problem - {data.site.name}</title>
+  <meta name="description" content="How to report content that should not be here." />
 </svelte:head>
 
 <article class="prose">

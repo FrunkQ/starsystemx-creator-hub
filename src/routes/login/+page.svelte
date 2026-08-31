@@ -1,9 +1,9 @@
 <script lang="ts">
-  let { form } = $props();
+  let { data, form } = $props();
 </script>
 
 <svelte:head>
-  <title>Sign in - StarSystemX Creator Hub</title>
+  <title>Sign in - {data.site.name}</title>
   <meta name="robots" content="noindex" />
 </svelte:head>
 

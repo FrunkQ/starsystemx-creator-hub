@@ -4,7 +4,7 @@
 </script>
 
 <svelte:head>
-  <title>StarSystemX Creator Hub - star systems and campaigns to download</title>
+  <title>{data.site.name} - star systems and campaigns to download</title>
   <meta name="description" content="Star systems and campaign starmaps made by other people, free to download and open in Star System Explorer." />
 </svelte:head>
 

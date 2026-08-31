@@ -23,7 +23,7 @@
 
 <header>
   <nav>
-    <a class="wordmark" href="/">StarSystemX <span>Creator Hub</span></a>
+    <a class="wordmark" href="/">{data?.site?.name ?? 'StarSystemX Explorers'}</a>
     <div class="spacer"></div>
     <a href="/browse">Browse</a>
     <a href="/upload">Share a map</a>

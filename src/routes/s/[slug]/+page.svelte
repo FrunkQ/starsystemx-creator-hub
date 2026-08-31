@@ -26,15 +26,23 @@
 </script>
 
 <svelte:head>
-  <title>{s.title} - StarSystemX Creator Hub</title>
+  <title>{s.title} - {data.site.name}</title>
   <meta name="description" content={s.summary ?? 'A star system for Star System Explorer, free to download.'} />
   <!-- OG previews are why the cover image matters more than any in-page richness (design 2). -->
   <meta property="og:title" content={s.title} />
   <meta property="og:description" content={s.summary ?? 'Free to download and open in Star System Explorer.'} />
   <meta property="og:type" content="article" />
+  <meta property="og:site_name" content={data.site.name} />
+  <!-- ABSOLUTE, and that is not a detail: Open Graph ignores relative urls, so a relative og:image
+       means Discord and Twitter show a link with NO PICTURE. For a hub whose product is
+       link-sharing, that is the most expensive small bug available. -->
+  <meta property="og:url" content="{data.site.url}/s/{s.slug}" />
+  <link rel="canonical" href="{data.site.url}/s/{s.slug}" />
   {#if data.coverServable && s.cover_sha256}
-    <meta property="og:image" content="/asset/{s.cover_sha256}" />
+    <meta property="og:image" content="{data.site.url}/asset/{s.cover_sha256}" />
     <meta name="twitter:card" content="summary_large_image" />
+  {:else}
+    <meta name="twitter:card" content="summary" />
   {/if}
 </svelte:head>
 

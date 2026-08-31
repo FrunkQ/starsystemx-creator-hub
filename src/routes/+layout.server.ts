@@ -1,4 +1,6 @@
 import type { LayoutServerLoad } from './$types';
+import { db } from '$lib/server/db';
+import { loadSite, DEFAULT_SITE_NAME } from '$lib/server/site';
 
 // Analytics, and deliberately the smallest possible amount of it.
 //
@@ -13,9 +15,16 @@ import type { LayoutServerLoad } from './$types';
 //
 // Absent token = no script tag at all. A page whose job is to LOAD FAST does not get a third-party
 // script it did not ask for.
-export const load: LayoutServerLoad = async ({ platform, locals }) => {
-  const token = (platform?.env as unknown as { PUBLIC_CF_BEACON_TOKEN?: string })?.PUBLIC_CF_BEACON_TOKEN;
+export const load: LayoutServerLoad = async ({ platform, locals, url }) => {
+  const env = platform?.env;
+  const token = (env as unknown as { PUBLIC_CF_BEACON_TOKEN?: string })?.PUBLIC_CF_BEACON_TOKEN;
+  // Site identity, so a host change is a config edit rather than a release.
+  const site = env?.SUPABASE_URL
+    ? await loadSite(db(env), url)
+    : { name: DEFAULT_SITE_NAME, url: url.origin };
+
   return {
+    site,
     cfBeaconToken: token && /^[a-zA-Z0-9]{8,64}$/.test(token) ? token : null,
     // Only what the chrome needs. Never the whole viewer object - it carries state the nav has no
     // business knowing, and a layout payload is serialised into every page.

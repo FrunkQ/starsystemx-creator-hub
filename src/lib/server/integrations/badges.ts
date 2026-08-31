@@ -12,8 +12,14 @@ import type { Gates } from './../config';
 import * as outbox from './outbox';
 
 export const BADGES = {
-  /** Published at least one public map. The entry-level community badge. */
-  creator: 'creator',
+  /**
+   * Published at least one public map.
+   *
+   * NOT called `explorer`: everyone who signs up is an Explorer, so a badge saying so would mean
+   * nothing and reward nothing. A cartographer is an explorer who charted something and gave the
+   * chart to other people - which is exactly what this badge is for.
+   */
+  cartographer: 'cartographer',
   /** A published map has passed a heart threshold. */
   featured: 'featured'
 } as const;
@@ -29,7 +35,7 @@ export async function deriveBadges(sb: Db, creatorId: string): Promise<Badge[]> 
 
   const rows = published ?? [];
   const badges: Badge[] = [];
-  if (rows.length > 0) badges.push(BADGES.creator);
+  if (rows.length > 0) badges.push(BADGES.cartographer);
   if (rows.some((r) => (r.hearts_count ?? 0) >= FEATURED_HEARTS)) badges.push(BADGES.featured);
   return badges;
 }
@@ -72,7 +78,7 @@ export async function reconcile(sb: Db, gates: Gates, creatorId: string): Promis
     .maybeSingle();
   if (!identity) return; // no linked Discord account: nothing to push, and that is fine
 
-  const roleFor: Partial<Record<Badge, string>> = { [BADGES.creator]: gates.discord_role_creator };
+  const roleFor: Partial<Record<Badge, string>> = { [BADGES.cartographer]: gates.discord_role_creator };
 
   for (const [badge, roleId] of Object.entries(roleFor)) {
     if (!roleId) continue;
