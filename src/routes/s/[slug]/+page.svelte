@@ -61,8 +61,9 @@
     </a>
   </p>
   <p class="download-note">
-    Free. No account needed. Opens directly in Star System Explorer -
-    <a href="https://starsystemx.com" rel="noopener">get it here</a> if you have not already.
+    Free. No account needed. Opens directly in
+    <a href="https://starsystemx.com" target="_blank" rel="noopener">Star System Explorer</a>,
+    which runs in your browser - nothing to install.
   </p>
 
   {#if data.withheldCount > 0}

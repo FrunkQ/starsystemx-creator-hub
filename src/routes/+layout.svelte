@@ -34,7 +34,7 @@
     {:else}
       <a href="/login">Sign in</a>
     {/if}
-    <a class="cta" href="https://starsystemx.com" rel="noopener">Get Star System Explorer</a>
+    <a class="cta" href="https://starsystemx.com" target="_blank" rel="noopener">Open Star System Explorer</a>
   </nav>
 </header>
 
@@ -50,7 +50,7 @@
       orbits, climates, atmospheres and all - and then handing them to your players.
       Everything on this hub opens directly in it.
     </p>
-    <a class="cta" href="https://starsystemx.com" rel="noopener">Open Star System Explorer</a>
+    <a class="cta" href="https://starsystemx.com" target="_blank" rel="noopener">Open Star System Explorer</a>
   </div>
   <div class="small">
     <!-- Written and owner-signed-off 2026-08-28. `acceptable-use` is a 308 to the relevant section
