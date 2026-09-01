@@ -29,7 +29,10 @@
     <a href="/upload">Share a map</a>
     {#if data?.viewer}
       <a href="/account">{data.viewer.handle}</a>
-      {#if data.viewer.role === 'admin'}<a href="/admin/review">Review</a>{/if}
+      {#if data.viewer.role === 'admin'}
+        <a href="/admin/review">Review</a>
+        <a href="/admin/debug">Debug</a>
+      {/if}
       <form method="POST" action="/logout"><button class="linkish" type="submit">Sign out</button></form>
     {:else}
       <a href="/login">Sign in</a>

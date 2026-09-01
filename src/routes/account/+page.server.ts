@@ -1,4 +1,4 @@
-import type { PageServerLoad } from './$types';
+import type { PageServerLoad, Actions } from './$types';
 import { error } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import { loadGates } from '$lib/server/config';
@@ -23,12 +23,32 @@ export const load: PageServerLoad = async ({ platform, locals }) => {
         .eq('creator_id', locals.viewer.id).is('revoked_at', null)
     ]);
 
+  // Connected apps. NEVER select token_hash - nothing needs it and a page payload is serialised.
+  const { data: tokens } = await sb.from('app_tokens')
+    .select('id, name, created_at, last_used_at')
+    .eq('creator_id', locals.viewer.id).is('revoked_at', null)
+    .order('created_at', { ascending: false });
+
   return {
     me,
     identities: identities ?? [],
     badges: (badgeRows ?? []).map((b) => b.badge),
     systems: mine ?? [],
     grants: grants ?? [],
+    tokens: tokens ?? [],
     integrations: { discord: gates.discord_enabled, patreon: gates.patreon_enabled }
   };
+};
+
+export const actions: Actions = {
+  revokeToken: async ({ request, platform, locals }) => {
+    const env = platform?.env;
+    if (!env || !locals.viewer) throw error(401, 'Sign in first.');
+    const id = String((await request.formData()).get('id') ?? '');
+    // Scoped to the owner: a token id is not a capability to revoke somebody else's.
+    await db(env).from('app_tokens')
+      .update({ revoked_at: new Date().toISOString() })
+      .eq('id', id).eq('creator_id', locals.viewer.id);
+    return { revoked: true };
+  }
 };

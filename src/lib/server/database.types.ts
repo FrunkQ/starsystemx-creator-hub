@@ -243,6 +243,51 @@ export type UploadEventRow = {
   created_at: string;
 }
 
+export type DeviceCodeRow = {
+  device_code_hash: string;
+  user_code: string;
+  client: string;
+  client_version: string | null;
+  creator_id: string | null;
+  approved_at: string | null;
+  consumed_at: string | null;
+  last_polled_at: string | null;
+  poll_count: number;
+  created_at: string;
+  expires_at: string;
+};
+
+export type DebugInviteRow = {
+  id: string;
+  token_hash: string;
+  created_by: string | null;
+  note: string | null;
+  created_at: string;
+  expires_at: string;
+  used_at: string | null;
+};
+
+export type DebugUploadRow = {
+  id: string;
+  invite_id: string | null;
+  filename: string;
+  byte_size: number;
+  user_note: string | null;
+  storage_key: string;
+  uploaded_at: string;
+};
+
+export type AppTokenRow = {
+  id: string;
+  token_hash: string;
+  creator_id: string;
+  name: string;
+  scopes: string[];
+  created_at: string;
+  last_used_at: string | null;
+  revoked_at: string | null;
+};
+
 export type AdminActionRow = {
   id: string;
   actor_id: string | null;
@@ -280,6 +325,10 @@ export interface Database {
       entitlements: Table<EntitlementRow>;
       creator_badges: Table<CreatorBadgeRow>;
       integration_outbox: Table<IntegrationOutboxRow>;
+      device_codes: Table<DeviceCodeRow>;
+      app_tokens: Table<AppTokenRow>;
+      debug_invites: Table<DebugInviteRow>;
+      debug_uploads: Table<DebugUploadRow>;
     };
     Views: { [_ in never]: never };
     Functions: {

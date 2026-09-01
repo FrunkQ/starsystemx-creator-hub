@@ -49,6 +49,34 @@
 {/if}
 
 <div class="panel">
+  <h2>Connected apps</h2>
+  {#if !data.tokens.length}
+    <p class="muted">
+      None. Star System Explorer can connect itself so you can publish without leaving the app.
+    </p>
+  {:else}
+    <table>
+      <thead><tr><th>App</th><th>Connected</th><th>Last used</th><th></th></tr></thead>
+      <tbody>
+        {#each data.tokens as t (t.id)}
+          <tr>
+            <td>{t.name}</td>
+            <td>{t.created_at.slice(0, 10)}</td>
+            <td>{t.last_used_at ? t.last_used_at.slice(0, 10) : 'never'}</td>
+            <td>
+              <form method="POST" action="?/revokeToken">
+                <input type="hidden" name="id" value={t.id} />
+                <button class="danger" type="submit">Disconnect</button>
+              </form>
+            </td>
+          </tr>
+        {/each}
+      </tbody>
+    </table>
+  {/if}
+</div>
+
+<div class="panel">
   <h2>Linked accounts</h2>
   {#if !data.integrations.discord && !data.integrations.patreon}
     <p class="muted">
