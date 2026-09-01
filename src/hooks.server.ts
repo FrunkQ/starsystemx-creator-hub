@@ -4,9 +4,29 @@ import { db, authClient } from '$lib/server/db';
 import { viewerFromToken } from '$lib/server/auth';
 import { creatorForToken } from '$lib/server/devicePairing';
 import { ACCESS_COOKIE, REFRESH_COOKIE, setSession, clearSession } from '$lib/server/session';
+import { PUBLIC_CORS, preflight } from '$lib/server/cors';
+
+/**
+ * The endpoints the SSE app reaches CROSS-ORIGIN. All public, all uncredentialed.
+ *
+ * Matched here rather than per-route because a `throw error(404)` never reaches the route's own
+ * header code - so a missing map would answer with no CORS headers at all, and the app would see an
+ * indistinguishable-from-offline failure instead of a clean 404. Handling it in one place covers
+ * the error paths, which are exactly the ones a client most needs to be able to read.
+ */
+function isPublicApi(pathname: string): boolean {
+  return pathname === '/api/attestation'
+    || pathname === '/api/maps'
+    || pathname.startsWith('/api/maps/')
+    || pathname.startsWith('/api/download/')
+    || pathname.startsWith('/asset/');
+}
 
 export const handle: Handle = async ({ event, resolve }) => {
   event.locals.viewer = null;
+
+  // Preflight, before anything else touches the request.
+  if (event.request.method === 'OPTIONS' && isPublicApi(event.url.pathname)) return preflight();
 
   const env = event.platform?.env;
   if (!env?.SUPABASE_URL) return resolve(event);
@@ -61,5 +81,13 @@ export const handle: Handle = async ({ event, resolve }) => {
     }
   }
 
-  return resolve(event);
+  const response = await resolve(event);
+
+  // Applied to the RESPONSE, so errors carry it too. Never applied to anything that reads
+  // `locals.viewer` - upload, review, admin and the private asset route stay same-origin only.
+  if (isPublicApi(event.url.pathname)) {
+    for (const [k, v] of Object.entries(PUBLIC_CORS)) response.headers.set(k, v);
+  }
+
+  return response;
 };
