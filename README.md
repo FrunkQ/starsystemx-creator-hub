@@ -33,11 +33,11 @@ That single framing settles most page design:
 store, one-click download, OG previews — plus the gate config table, the hash ledger, the admin
 review tool and reports, which ship *with* this phase and not after it.
 
-**Uploads are deliberately closed.** The engine has not yet stamped a `bundleFormat` integer into
-the bundle or shipped a canonical fixture (phase 0, engine-side). Until it does,
-`KNOWN_BUNDLE_FORMATS` is empty and every upload is refused politely, by design — the hub will not
-read a format it has never been tested against into a public database. Opening it is a two-line
-change: see `docs/decisions.md` D-01.
+**Uploads are OPEN** (2026-09-01). The engine ships `bundleFormat: 1` on every save and two
+canonical fixtures — a campaign and a single system, both real saves — which are checked in under
+`tests/fixtures/` and exercised against the actual parser by `tests/fixture.test.ts`. That suite is
+the contract between the two repositories: when SSE changes the layout it regenerates the fixtures
+and bumps the format, and this goes red on a fixture it does not understand.
 
 **Creators write up their own maps** and add screenshots (which go through the same review queue as
 anything else), then publish. **Patreon and Discord hooks are built and switched off** — the schema

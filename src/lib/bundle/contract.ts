@@ -53,12 +53,16 @@ export function extOf(path: string): string {
 /**
  * The bundle formats this deploy has been TESTED against a real fixture.
  *
- * EMPTY ON PURPOSE. The `bundleFormat` stamp and the canonical fixture are engine-side work and
- * have not landed. An empty set means every upload is refused politely at the gate, which is the
- * correct behaviour for a parser that has never seen the thing it claims to parse - and far better
- * than parsing something we do not understand into a public database.
+ * OPENED 2026-09-01, on evidence rather than on hope. The engine shipped `bundleFormat: 1` stamped
+ * on every save in every container (v3.0.244), plus two canonical fixtures which are REAL saves -
+ * a campaign and a single system - now checked in under `tests/fixtures/` and exercised by
+ * `tests/fixture.test.ts` against the actual parser.
  *
- * WHEN THE FIXTURE ARRIVES: drop it in `tests/fixtures/`, add its integer here, and run the suite.
- * That is the whole handover.
+ * Between them those fixtures cover a real glTF under a real sha256 path, one hull flown by two
+ * ships, a body image with full provenance and one with none, a remote URL that must survive
+ * untouched, and an app-shipped graphic that must NOT be extracted.
+ *
+ * ADDING A FORMAT HERE IS A CLAIM THAT THE PARSER HAS BEEN RUN AGAINST ONE. Do not add an integer
+ * because a release note mentions it.
  */
-export const KNOWN_BUNDLE_FORMATS: readonly number[] = [];
+export const KNOWN_BUNDLE_FORMATS: readonly number[] = [1];

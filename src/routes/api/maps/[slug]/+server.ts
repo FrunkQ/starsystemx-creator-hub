@@ -2,6 +2,7 @@
 import type { RequestHandler } from './$types';
 import { json, error } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
+import { PUBLIC_CORS, preflight } from '$lib/server/cors';
 import * as ledger from '$lib/server/ledger';
 
 export const GET: RequestHandler = async ({ platform, params, setHeaders }) => {
@@ -22,7 +23,7 @@ export const GET: RequestHandler = async ({ platform, params, setHeaders }) => {
     .select('sha256, caption, ordinal').eq('system_id', map.id).order('ordinal');
   const approved = await ledger.approvedOnly(sb, (shots ?? []).map((s) => s.sha256 as string));
 
-  setHeaders({ 'cache-control': 'public, max-age=60' });
+  setHeaders({ 'cache-control': 'public, max-age=60', ...PUBLIC_CORS });
   return json({
     slug: map.slug,
     title: map.title,
@@ -51,3 +52,5 @@ export const GET: RequestHandler = async ({ platform, params, setHeaders }) => {
     download: '/api/download/' + map.slug
   });
 };
+
+export const OPTIONS: RequestHandler = async () => preflight();

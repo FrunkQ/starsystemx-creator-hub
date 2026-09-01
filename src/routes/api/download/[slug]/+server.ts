@@ -6,6 +6,7 @@ import type { RequestHandler } from './$types';
 import { error } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import { packForDownload } from '$lib/server/pack';
+import { withCors, preflight } from '$lib/server/cors';
 
 export const GET: RequestHandler = async ({ params, platform }) => {
   const env = platform?.env;
@@ -31,11 +32,16 @@ export const GET: RequestHandler = async ({ params, platform }) => {
   );
 
   return new Response(packed.bytes as unknown as ArrayBuffer, {
-    headers: {
+    // CORS: the SSE app fetches this cross-origin for `?hub=<slug>`. Without it the browser refuses
+    // the response before the answer is read, and one-click open cannot work at all.
+    headers: withCors({
       'content-type': packed.filename.endsWith('.json') ? 'application/json' : 'application/zip',
       'content-disposition': 'attachment; filename="' + packed.filename + '"',
       // Never cache a download: what it contains depends on the ledger, and the ledger changes.
       'cache-control': 'no-store'
-    }
+    })
   });
 };
+
+/** Preflight. A 404 here fails the real request as surely as a missing header would. */
+export const OPTIONS: RequestHandler = async () => preflight();

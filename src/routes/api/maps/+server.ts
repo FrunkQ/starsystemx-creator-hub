@@ -6,6 +6,7 @@
 import type { RequestHandler } from './$types';
 import { json, error } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
+import { PUBLIC_CORS, preflight } from '$lib/server/cors';
 
 const PAGE = 30;
 
@@ -37,7 +38,7 @@ export const GET: RequestHandler = async ({ platform, url, setHeaders }) => {
     throw error(503, 'could not read the library');
   }
 
-  setHeaders({ 'cache-control': 'public, max-age=60' });
+  setHeaders({ 'cache-control': 'public, max-age=60', ...PUBLIC_CORS });
   return json({
     maps: data ?? [],
     page,
@@ -47,3 +48,5 @@ export const GET: RequestHandler = async ({ platform, url, setHeaders }) => {
     coverPath: '/asset/{sha256}'
   });
 };
+
+export const OPTIONS: RequestHandler = async () => preflight();

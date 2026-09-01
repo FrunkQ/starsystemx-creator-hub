@@ -19,10 +19,12 @@ async function withKnownFormats(formats: number[], fn: (check: typeof checkBundl
 afterEach(() => { vi.resetModules(); vi.doUnmock('../src/lib/bundle/contract'); });
 
 describe('the format gate as it ships today', () => {
-  it('refuses everything, because no fixture has been verified yet', () => {
-    const v = checkBundleFormat({ bundleFormat: 1 }, OPTS);
-    expect(v.ok).toBe(false);
-    if (!v.ok) expect(v.code).toBe('no-parser-yet');
+  it('ACCEPTS format 1, because the engine fixtures have been run through the parser', () => {
+    // Opened 2026-09-01. The claim behind this line is tests/fixture.test.ts, which exercises the
+    // engine's own canonical saves - not a release note saying the stamp exists.
+    expect(checkBundleFormat({ bundleFormat: 1 }, OPTS)).toEqual({
+      ok: true, format: 1, legacyStamped: false
+    });
   });
 
   it('refuses an unstamped bundle by default', () => {

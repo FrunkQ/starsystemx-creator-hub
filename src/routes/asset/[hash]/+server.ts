@@ -9,6 +9,7 @@ import { error } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import * as ledger from '$lib/server/ledger';
 import * as r2 from '$lib/server/r2';
+import { PUBLIC_CORS, preflight } from '$lib/server/cors';
 
 const HEX64 = /^[0-9a-f]{64}$/;
 
@@ -38,8 +39,13 @@ export const GET: RequestHandler = async ({ params, platform, setHeaders }) => {
     'cache-control': 'public, max-age=31536000, immutable',
     'x-content-type-options': 'nosniff',
     // Belt and braces: even an image route should not be able to run anything.
-    'content-security-policy': "default-src 'none'; sandbox"
+    'content-security-policy': "default-src 'none'; sandbox",
+    // Public and uncredentialed, like the download. An app that fetches a cover rather than using
+    // an <img> tag needs this, and there is nothing here to protect.
+    ...PUBLIC_CORS
   });
 
   return new Response(object.body);
 };
+
+export const OPTIONS: RequestHandler = async () => preflight();

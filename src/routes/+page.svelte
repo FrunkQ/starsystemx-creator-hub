@@ -25,8 +25,8 @@
   <div class="panel notice">
     <h3>Nothing published yet</h3>
     <p>
-      The hub is not open for uploads yet. When it is, maps shared by other people will appear here.
-      In the meantime, Star System Explorer itself is free to use.
+      Nobody has shared a map yet. <a href="/upload">Be the first</a> — or open Star System
+      Explorer and build one.
     </p>
   </div>
 {:else}

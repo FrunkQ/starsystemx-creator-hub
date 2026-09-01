@@ -1,9 +1,9 @@
 <script lang="ts">
   // Upload, with the preview of what will publish (decision 1).
   //
-  // The upload is CLOSED today and says so plainly: the hub has no reference save to test its
-  // reader against, and it will not read a format it has never seen into a public library. That is
-  // the format gate in src/lib/bundle/format.ts speaking, not a placeholder.
+  // OPEN since 2026-09-01. The format gate accepts bundleFormat 1, because the engine's canonical
+  // fixtures have been run through the parser (tests/fixture.test.ts) - not because a release note
+  // said the stamp existed.
   import { ATTESTATION_TEXT, ATTESTATION_NOTE } from '$lib/attestation';
 
   let { data } = $props();
@@ -43,15 +43,6 @@
 <p class="lede">
   Upload a save from Star System Explorer and it gets a page anyone can download from in one click.
 </p>
-
-<div class="panel notice">
-  <h3>Uploads are not open yet</h3>
-  <p>
-    The hub is waiting on a reference save from Star System Explorer to test its reader against.
-    Until it has one it will not read a save format it has never seen into a public library.
-    The form below works; it will refuse politely and tell you exactly that.
-  </p>
-</div>
 
 <form class="panel" onsubmit={submit}>
   <label>

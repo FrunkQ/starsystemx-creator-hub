@@ -43,6 +43,8 @@ export type IngestResult =
   | {
       ok: true;
       systemId: string;
+      /** The page path component. The app needs this to link somebody to what they just published. */
+      slug: string;
       novelHashes: string[];
       withheldCount: number;
       flagged: boolean;
@@ -301,7 +303,7 @@ export async function ingest(
   const systemId = opts.replacesSystemId ?? crypto.randomUUID();
   const coverHash = pickCover(doc, pending);
 
-  await writeRows(sb, {
+  const slug = await writeRows(sb, {
     systemId, viewer, kind, format: format.format, shaped, pending, provenance,
     coverHash, publishGmTree: gm.hasGmContent,
     sourceBytes: bytes.length, isUpdate: !!opts.replacesSystemId, flagged, novelCount: novel.length,
@@ -316,6 +318,7 @@ export async function ingest(
   return {
     ok: true,
     systemId,
+    slug,
     novelHashes: novel.map((n) => n.sha256),
     withheldCount: pending.filter((p) => known.get(p.sha256) !== 'approved').length,
     flagged,
@@ -381,7 +384,7 @@ interface WriteArgs {
   attestation: { accepted: boolean; textVersion: number; textShown: string };
 }
 
-async function writeRows(sb: Db, a: WriteArgs): Promise<void> {
+async function writeRows(sb: Db, a: WriteArgs): Promise<string> {
   const { systemId, viewer, kind, format, shaped, pending, provenance, coverHash } = a;
 
   const slug = await uniqueSlug(sb, shaped.title, systemId);
@@ -474,6 +477,8 @@ async function writeRows(sb: Db, a: WriteArgs): Promise<void> {
     novel_hashes: a.novelCount, total_hashes: pending.length,
     bytes: a.sourceBytes, is_update: a.isUpdate, flagged: a.flagged
   });
+
+  return slug;
 }
 
 async function uniqueSlug(sb: Db, title: string, systemId: string): Promise<string> {
