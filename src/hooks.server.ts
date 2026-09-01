@@ -85,8 +85,19 @@ export const handle: Handle = async ({ event, resolve }) => {
 
   // Applied to the RESPONSE, so errors carry it too. Never applied to anything that reads
   // `locals.viewer` - upload, review, admin and the private asset route stay same-origin only.
+  //
+  // A CLONE, not `response.headers.set(...)`. On Workers a Response coming back from `resolve()`
+  // can carry IMMUTABLE headers, and mutating those fails SILENTLY - the call returns, nothing
+  // throws, and the header simply is not there. Measured against the live deploy: the first
+  // version of this did nothing at all. Rebuilding the response is the only reliable way.
   if (isPublicApi(event.url.pathname)) {
-    for (const [k, v] of Object.entries(PUBLIC_CORS)) response.headers.set(k, v);
+    const headers = new Headers(response.headers);
+    for (const [k, v] of Object.entries(PUBLIC_CORS)) headers.set(k, v);
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers
+    });
   }
 
   return response;
