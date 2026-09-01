@@ -20,7 +20,7 @@ export const load: PageServerLoad = async ({ params, platform, setHeaders }) => 
   if (!system || system.state !== 'public' || system.visibility !== 'public') throw error(404, 'Not found');
 
   const [{ data: bodies }, { data: constructs }, { data: creator }, { data: assets }] = await Promise.all([
-    sb.from('bodies').select('node_id, parent_id, name, kind, role_hint, tags, image_sha256, snippet')
+    sb.from('bodies').select('node_id, parent_id, name, kind, role_hint, tags, image_sha256, snippet, system_id')
       .eq('system_id', system.id).order('name'),
     sb.from('constructs').select('node_id, parent_id, name, kind, role_hint, tags, image_sha256, model_sha256, snippet')
       .eq('system_id', system.id).order('name'),

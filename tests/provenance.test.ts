@@ -220,3 +220,34 @@ describe('the write-up carried in the save', () => {
     expect(n.tags).toEqual(['ok']);
   });
 });
+
+// ------------------------------------------------------------------------------------------------
+// Node tags. Regression: these were filtered for `typeof t === 'string'` and the engine's are
+// OBJECTS, so every node in the database had an empty tag list.
+// ------------------------------------------------------------------------------------------------
+describe('reading a node\'s tags', () => {
+  it('reads the engine shape, which is {key, value} objects', () => {
+    const n = normalise({
+      nodes: [{ id: 'a', name: 'A', tags: [
+        { key: 'orbit/spin-orbit-resonance', value: '3:2' },
+        { key: 'world/terran' }
+      ] }]
+    });
+    expect(n.bodies[0].tags).toEqual(['orbit/spin-orbit-resonance=3:2', 'world/terran']);
+  });
+
+  it('keeps the value, because "constant lightning" is the interesting half', () => {
+    const n = normalise({ nodes: [{ id: 'a', tags: [{ key: 'weather/lightning', value: 'constant' }] }] });
+    expect(n.bodies[0].tags[0]).toBe('weather/lightning=constant');
+  });
+
+  it('still accepts plain strings, so a simpler future format cannot empty this again', () => {
+    const n = normalise({ nodes: [{ id: 'a', tags: ['legacy-tag'] }] });
+    expect(n.bodies[0].tags).toEqual(['legacy-tag']);
+  });
+
+  it('ignores junk without throwing', () => {
+    const n = normalise({ nodes: [{ id: 'a', tags: [null, 42, {}, { value: 'no key' }, { key: '' }] }] });
+    expect(n.bodies[0].tags).toEqual([]);
+  });
+});

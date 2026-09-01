@@ -38,6 +38,38 @@ export interface NormalisedBundle {
 
 const str = (v: unknown): string | null => (typeof v === 'string' && v ? v : null);
 
+/**
+ * A node's tags, flattened for storage.
+ *
+ * ============================================================================================
+ * THE ENGINE'S TAGS ARE OBJECTS, NOT STRINGS: `{ key: 'weather/lightning', value: 'constant' }`.
+ * This originally filtered for `typeof t === 'string'`, which silently discarded EVERY ONE - so
+ * every node in the database had an empty tag list and the Tags column on a real 161-body map was
+ * blank from top to bottom.
+ *
+ * It went unnoticed because `facets.ts` reads `t.key` correctly, so the PILLS were right while the
+ * per-node tags were empty. Two readers of the same field, one of them wrong, and the working one
+ * masked the broken one.
+ * ============================================================================================
+ *
+ * Stored as `key` or `key=value` so a value-carrying tag keeps its value, the array stays `text[]`
+ * (and so stays GIN-indexable for search), and the display side can split on the first `=`.
+ */
+function readNodeTags(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  const out: string[] = [];
+  for (const t of raw) {
+    // A plain string is accepted too - cheap, and it means a future format change that simplifies
+    // tags does not silently empty this again.
+    if (typeof t === 'string' && t) { out.push(t); continue; }
+    const key = typeof t?.key === 'string' ? t.key.trim() : '';
+    if (!key) continue;
+    const value = t?.value;
+    out.push(value == null || value === '' ? key : key + '=' + String(value));
+  }
+  return [...new Set(out)].slice(0, 40);
+}
+
 /** A construct is anything the engine marks as one; everything else is a body. */
 const isConstruct = (node: any) => String(node?.kind ?? '') === 'construct';
 
@@ -49,7 +81,7 @@ function toNode(node: any): NormalisedNode {
     name: String(node?.name ?? node?.id ?? 'unnamed'),
     kind: String(node?.kind ?? 'unknown'),
     role_hint: str(node?.roleHint),
-    tags: Array.isArray(node?.tags) ? node.tags.filter((t: unknown) => typeof t === 'string') : [],
+    tags: readNodeTags(node?.tags),
     image_path:
       imageUrl && imageUrl.startsWith(IMAGES_DIR) && !imageUrl.startsWith(PLAYER_IMAGES_DIR)
         ? imageUrl : null,

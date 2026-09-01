@@ -10,6 +10,7 @@
   //   5. the copy-paste snippets, which are SECONDARY: the cheap way to lift one body without
   //      taking the whole map. They serve the same funnel - a snippet used is SSE opened.
   import SnippetBlock from '$lib/components/SnippetBlock.svelte';
+  import NodeTree from '$lib/components/NodeTree.svelte';
   import { formatBytes } from '$lib/bundle/facets';
   let { data } = $props();
 
@@ -121,25 +122,9 @@
     </div>
   {/if}
 
-  <table>
-    <thead>
-      <tr><th>Name</th><th>Kind</th><th>Role</th><th>Tags</th></tr>
-    </thead>
-    <tbody>
-      {#each data.bodies as b (b.node_id)}
-        <tr>
-          <td>{b.name}</td><td>{b.kind}</td><td>{b.role_hint ?? ''}</td>
-          <td>{#each b.tags as t}<span class="tag">{t}</span> {/each}</td>
-        </tr>
-      {/each}
-      {#each data.constructs as c (c.node_id)}
-        <tr>
-          <td>{c.name}</td><td>{c.kind}</td><td>{c.role_hint ?? ''}</td>
-          <td>{#each c.tags as t}<span class="tag">{t}</span> {/each}</td>
-        </tr>
-      {/each}
-    </tbody>
-  </table>
+  <!-- A TREE, not a flat table. 161 alphabetised rows put a barycentre between two unrelated
+       stars and asked nobody to read any of it; the parent/child data was there all along. -->
+  <NodeTree nodes={[...data.bodies, ...data.constructs]} />
 
   <!-- 5. Snippets: secondary, and collapsed by default so they never compete with the download. -->
   <h2>Copy one piece</h2>
