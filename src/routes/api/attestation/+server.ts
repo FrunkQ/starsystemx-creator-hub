@@ -11,8 +11,11 @@ import { ATTESTATION_TEXT, ATTESTATION_NOTE, ATTESTATION_TEXT_VERSION } from '$l
 import { PUBLIC_CORS, preflight } from '$lib/server/cors';
 
 export const GET: RequestHandler = async ({ setHeaders }) => {
-  // Cacheable, but not for long: a wording change should reach apps within the hour.
-  setHeaders({ 'cache-control': 'public, max-age=3600', ...PUBLIC_CORS });
+  // FIVE MINUTES, not an hour. This is small static text, so the saving from a long cache is
+  // negligible - and the cost is real: a stale copy at the edge outlives a fix by its full max-age,
+  // which is exactly what happened when CORS was added (a pre-fix copy kept being served with
+  // Age: 324 while the corrected one sat behind it). Short cache, fast correction.
+  setHeaders({ 'cache-control': 'public, max-age=300', ...PUBLIC_CORS });
   return json({
     version: ATTESTATION_TEXT_VERSION,
     text: ATTESTATION_TEXT,
