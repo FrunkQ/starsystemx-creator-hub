@@ -413,6 +413,68 @@ save contents and the manifest still earns its place for assets.
 
 ---
 
+## R-14. A paste target for hub clips — the hub half is live, the engine half does not exist
+
+**What the hub does.** Every row of a map page's tree has a copy control. Copying a row puts a
+**clip** on the clipboard: that object and everything beneath it — a star with all its planets, a
+planet with its moons, or one body — as JSON, with asset references and GM notes already stripped.
+
+**What the engine does with it: nothing, yet.** Measured 2026-09-03 on main and `sse2-hubside`: the
+only clipboard reads in the app are the gas-giant recipe (`giantRecipe.ts`) and the hub link
+(`NewStarmapModal.svelte`). Nothing reads a node. **So the hub's Copy has led nowhere since it
+shipped** — the flat "Copy JSON" it replaced had the same problem, and nobody noticed because nobody
+tried to paste one. Recorded so the gap is visible rather than assumed closed.
+
+### The format
+
+```jsonc
+{
+  "sseClip": 1,                 // the marker AND the version. Refuse anything else, with a reason.
+  "source": { "site": "StarSystemX Explorers", "url": "https://…/s/<slug>", "title": "…" },
+  "root": "<node id>",          // the first entry in `nodes`
+  "nodes": [
+    { "id": "…", "parentId": null, "name": "…", "kind": "body", "roleHint": "planet", "orbit": {…}, … },
+    { "id": "…", "parentId": "<root id>", "roleHint": "moon", … }
+  ]
+}
+```
+
+Three rules, from the hub's `src/lib/bundle/clip.ts`:
+
+1. **Depth-first, parents first.** A one-pass insert always finds the parent already present.
+2. **The root's `parentId` is `null`.** Where it lands is the paste target's decision, not the
+   source map's.
+3. **Ids are the SOURCE map's ids**, carried only so `parentId` resolves within the clip. **Mint new
+   ones and remap** — one clip pasted twice, or two clips from the same map, collide otherwise.
+
+Nodes are the engine's own node shape minus `image`, `model` and `gmNotes`. The hub does not touch
+orbits, masses or anything else: what was in the file is what is in the clip.
+
+### What the paste target has to do
+
+- **Recognise it or refuse with a reason.** `giantRecipe.ts` already does this right for recipes —
+  parse, say what was wrong, never fail silently. Same shape here. `sseClip` above 1 means "made by
+  a newer hub than this app understands".
+- **Land the root under the selected body**, or as a new root when nothing is selected (a star clip
+  with no selection is the obvious case). This is a reparent — **G64 is building exactly that
+  machinery**: re-express the orbit about the new host, restamp `orbit.hostMu`, then let
+  `hierarchyRebuild` and `barycenterReconcile` settle it. Build R-14 ON G64, not beside it.
+- **Keep the orbits within the clip as they are.** A moon's orbit about its planet came from a real
+  save and is internally consistent; only the root's host changed.
+- **Steer, don't stop.** A 2 Msun star pasted under Earth is allowed and tagged, never refused.
+- **Tolerate a dangling reference.** A node may name a custom calendar, gas or tag category the
+  receiving campaign lacks — the clip carries nodes, not definitions. Tag it; keep the node.
+- **Carry the credit.** `source.url` should survive on the pasted object — a tag such as
+  `origin/hub` with the url as its value — so a body lifted from someone's map still says whose map.
+  The attribution culture, applied one body at a time.
+- **A text field as well as a paste event.** Firefox will not hand a page the clipboard; the recipe
+  paste already uses a field for this reason.
+
+**Where it goes in the UI is the engine's call.** The natural home is beside "Add body": *Paste
+from the library*.
+
+---
+
 ## What the hub will NOT ask the engine to do
 
 Recorded so nobody builds them by mistake:

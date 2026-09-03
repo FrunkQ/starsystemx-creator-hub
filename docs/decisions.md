@@ -221,6 +221,27 @@ have previewed with no picture.** For a hub whose entire product is link-sharing
 says the OG preview *"matters more than any in-page richness"*, that is the most expensive small bug
 available — and it was live. Now absolute, with `og:url`, `og:site_name` and a canonical link.
 
+### D-19. Copying is per-row and takes the subtree; the flat snippet list is gone
+
+The owner, 2026-09-03: *"we could now converge hierarchy with selector ... At each level there
+should be the copy icon ... That copy will copy that and all its children ready for pasting into
+SSE."*
+
+The tree had replaced a 161-row table, and the "Copy one piece" list beneath it still had 172 flat
+blocks — the same wall, one section lower. It is deleted. Every tree row now carries its own copy
+control, and a branch copies itself and everything under it as one **clip** (`bundle/clip.ts`): an
+envelope with a format number, the source page, and the nodes parents-first with the root
+unparented. A leaf opens to its own JSON, which is the drill-down to a single body; a branch has a
+small code toggle for the same. Orbit order or A to Z, never flattened.
+
+**The envelope, not bare JSON, is the decision worth recording.** A paste target has to recognise
+what it is given, and raw node JSON is indistinguishable from any other JSON. `sseClip: 1` is the
+marker, and the number lets the format change without breaking the old one.
+
+**And a finding, not a decision: the engine has no paste target.** Measured on main and the hubside
+branch — nothing in the app reads a node from the clipboard. The old "Copy JSON" never had a
+consumer either. Written up as R-14 so the gap is owned rather than assumed closed.
+
 ---
 
 ## Still open — the owner's to answer

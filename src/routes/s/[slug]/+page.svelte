@@ -6,10 +6,9 @@
   //   1. the download, above the fold and above the description
   //   2. what it is, briefly
   //   3. the cover image - the ONLY picture (decision 3)
-  //   4. the data
-  //   5. the copy-paste snippets, which are SECONDARY: the cheap way to lift one body without
-  //      taking the whole map. They serve the same funnel - a snippet used is SSE opened.
-  import SnippetBlock from '$lib/components/SnippetBlock.svelte';
+  //   4. the data, as a tree - and every row of it can be copied, with everything beneath it, for
+  //      pasting into SSE. That is SECONDARY: the cheap way to lift one body or one star without
+  //      taking the whole map. It serves the same funnel - a clip used is SSE opened.
   import NodeTree from '$lib/components/NodeTree.svelte';
   import { formatBytes } from '$lib/bundle/facets';
   let { data } = $props();
@@ -123,18 +122,16 @@
   {/if}
 
   <!-- A TREE, not a flat table. 161 alphabetised rows put a barycentre between two unrelated
-       stars and asked nobody to read any of it; the parent/child data was there all along. -->
-  <NodeTree nodes={[...data.bodies, ...data.constructs]} />
-
-  <!-- 5. Snippets: secondary, and collapsed by default so they never compete with the download. -->
-  <h2>Copy one piece</h2>
+       stars and asked nobody to read any of it; the parent/child data was there all along.
+       Copying lives on the rows: a branch copies itself and everything under it. -->
   <p class="muted">
-    Take a single body or construct without the whole map. Paste it into your own campaign in
-    Star System Explorer.
+    Open a star to see what orbits it. Copy any row to take that object - or that object and
+    everything beneath it - into your own campaign in Star System Explorer.
   </p>
-  {#each [...data.bodies, ...data.constructs] as n (n.node_id)}
-    <SnippetBlock name={n.name} snippet={n.snippet} />
-  {/each}
+  <NodeTree
+    nodes={[...data.bodies, ...data.constructs]}
+    source={{ site: data.site.name, url: data.site.url + '/s/' + s.slug, title: s.title }}
+  />
 
   <div class="foot-actions">
     <button onclick={() => (reportOpen = !reportOpen)}>Report a problem with this map</button>

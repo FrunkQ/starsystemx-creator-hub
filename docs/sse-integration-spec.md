@@ -130,6 +130,19 @@ download: keeping the bytes faithful is what makes the content-hash dedup reason
 
 ---
 
+## 2b. Clips — copying part of a map
+
+The map page's tree lets a visitor copy any row — one body, or a star and everything under it — as a
+**clip**: a JSON envelope marked `sseClip: 1`. The full shape and the paste rules are R-14 in
+`sse-requirements.md`. The hub strips `image`, `model` and `gmNotes` before copying; nothing else is
+altered, and ids are the source map's own.
+
+**The engine has no paste target yet.** Until R-14 ships, a clip is text Star System Explorer does
+not recognise. The hub does not hide its copy controls in the meantime — the format is fixed and the
+app catching up is the plan — but nobody should describe the round trip as working.
+
+---
+
 ## 3. Uploads and updates — the round trip
 
 ```

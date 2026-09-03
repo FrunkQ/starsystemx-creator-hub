@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.5.0 — 2026-09-03
+
+### One tree, with copying on every row
+
+The map page's contents were a 161-row alphabetical table with a second 172-block list of JSON
+snippets under it. Both are gone. What is in a map is now a tree - a star, its planets, their moons -
+collapsed by default and summarised where it is collapsed ("12 planets, 30 moons"), with a flat icon
+for what each thing is, orbit order or A to Z, and expand/collapse all.
+
+Every row has a copy control. Copying a branch copies it and everything beneath it as a **clip**
+(`src/lib/bundle/clip.ts`): a versioned envelope, the source page, the nodes parents-first with the
+root unparented. A leaf opens to its own JSON. The old snippet list and `SnippetBlock` are deleted.
+
+### The paste side does not exist
+
+Copying has led nowhere since it shipped: nothing in Star System Explorer reads a node from the
+clipboard, on main or the hub branch. Written up as R-14 in `docs/sse-requirements.md`, to be built
+on the engine's G64 reparent work. Until it lands, a clip is text the app does not recognise.
+
+### Since 0.4.0, unrecorded here until now
+
+- Node tags were silently empty: the engine's tags are `{key, value}` objects and the reader kept
+  only strings. Fixed; takes effect on re-upload.
+- Device-code pairing (`/api/device/*`, `/link`), app tokens on `/account`, direct save/load for SSE.
+- Admin one-shot debug upload links (`/admin/debug`).
+- CORS on the public reads, applied at the hook by cloning the response.
+- The bundle format gate opened on the real fixtures: `KNOWN_BUNDLE_FORMATS = [1]`.
+- Site name and url as config rows; `og:image` made absolute.
+
 ## 0.4.0 — 2026-08-28
 
 ### A rule-driven facet system, so it can grow without a deploy
