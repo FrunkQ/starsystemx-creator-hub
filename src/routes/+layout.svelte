@@ -3,6 +3,7 @@
   // arriving from a Discord link may never have heard of Star System Explorer, and the page's job
   // is to fix that in one screen and then get out of the way.
   import '../app.css';
+  import { version } from '$app/environment';
   let { children, data } = $props();
 </script>
 
@@ -62,5 +63,7 @@
     <a href="/terms">Terms</a>
     <a href="/acceptable-use">Acceptable use</a>
     <a href="/takedown">Report a copyright problem</a>
+    <!-- Which build this is, from package.json (svelte.config.js). Ops, not decoration. -->
+    <span title="hub version">v{version}</span>
   </div>
 </footer>

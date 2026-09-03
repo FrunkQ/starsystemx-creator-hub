@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.7.2 — 2026-09-03
+
+### The build says which version it is
+
+Verifying a deploy meant guessing from behaviour, and the guess was wrong once today: the client
+chunk names change on every build regardless of content, so they cannot tell 0.7.1 from 0.7.0. Now
+the footer shows the version and every response carries an `x-hub-version` header, both read from
+`package.json` at build time. "Is the fix live?" is one curl.
+
 ## 0.7.1 — 2026-09-03
 
 ### The generated cover showed once, then vanished

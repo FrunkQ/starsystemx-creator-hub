@@ -1,5 +1,6 @@
 // Resolve the viewer once per request. Everything else reads `locals.viewer`.
 import type { Handle } from '@sveltejs/kit';
+import { version } from '$app/environment';
 import { db, authClient } from '$lib/server/db';
 import { viewerFromToken } from '$lib/server/auth';
 import { creatorForToken } from '$lib/server/devicePairing';
@@ -83,22 +84,25 @@ export const handle: Handle = async ({ event, resolve }) => {
 
   const response = await resolve(event);
 
-  // Applied to the RESPONSE, so errors carry it too. Never applied to anything that reads
-  // `locals.viewer` - upload, review, admin and the private asset route stay same-origin only.
-  //
   // A CLONE, not `response.headers.set(...)`. On Workers a Response coming back from `resolve()`
   // can carry IMMUTABLE headers, and mutating those fails SILENTLY - the call returns, nothing
   // throws, and the header simply is not there. Measured against the live deploy: the first
   // version of this did nothing at all. Rebuilding the response is the only reliable way.
+  const headers = new Headers(response.headers);
+
+  // Every response says which build produced it. Verifying a deploy is then one curl, instead of
+  // an inference from behaviour - which was wrong once (0.7.2).
+  headers.set('x-hub-version', version);
+
+  // CORS, applied to the RESPONSE so errors carry it too. Never applied to anything that reads
+  // `locals.viewer` - upload, review, admin and the private asset route stay same-origin only.
   if (isPublicApi(event.url.pathname)) {
-    const headers = new Headers(response.headers);
     for (const [k, v] of Object.entries(PUBLIC_CORS)) headers.set(k, v);
-    return new Response(response.body, {
-      status: response.status,
-      statusText: response.statusText,
-      headers
-    });
   }
 
-  return response;
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers
+  });
 };
