@@ -2,8 +2,10 @@ import type { PageServerLoad } from './$types';
 import { error } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import * as ledger from '$lib/server/ledger';
+import { ensureCover } from '$lib/server/cover';
+import { loadSite } from '$lib/server/site';
 
-export const load: PageServerLoad = async ({ params, platform, setHeaders }) => {
+export const load: PageServerLoad = async ({ params, platform, setHeaders, url }) => {
   const env = platform?.env;
   if (!env?.SUPABASE_URL) throw error(500, 'not configured');
 
@@ -31,6 +33,18 @@ export const load: PageServerLoad = async ({ params, platform, setHeaders }) => 
   const { data: shots } = await sb.from('system_screenshots')
     .select('sha256, caption, ordinal').eq('system_id', system.id).order('ordinal');
 
+  // A map with no picture gets one drawn from itself on first view (server/cover.ts, D-21) - the
+  // backfill for anything uploaded before the hub could draw. Once per map; never fails the page.
+  let backfilled: string | null = null;
+  if (!system.cover_sha256) {
+    const site = await loadSite(sb, url);
+    backfilled = await ensureCover(
+      env, sb, system, [...(bodies ?? []), ...(constructs ?? [])],
+      creator?.handle ?? null, site.name
+    );
+    system.cover_sha256 = backfilled;
+  }
+
   // HOW MANY PICTURES ARE STILL WAITING (design 6.2). The map is public and downloadable either
   // way; saying how many are withheld is what stops a gap reading as a bug.
   // Screenshots go through the same ledger as bundled assets, so they are counted the same way.
@@ -51,6 +65,10 @@ export const load: PageServerLoad = async ({ params, platform, setHeaders }) => 
     withheldCount,
     // Only approved screenshots reach a public page. An unreviewed one is simply not there yet.
     screenshots: (shots ?? []).filter((s2) => approved.has(s2.sha256 as string)),
-    coverServable: system.cover_sha256 ? approved.has(system.cover_sha256) : false
+    // A cover drawn just now is approved by construction (D-21) but is not in the set computed
+    // above, so it is servable on this very first view too - not blank once and fine thereafter.
+    coverServable: system.cover_sha256
+      ? approved.has(system.cover_sha256) || system.cover_sha256 === backfilled
+      : false
   };
 };

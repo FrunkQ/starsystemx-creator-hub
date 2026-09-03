@@ -10,6 +10,7 @@ import { loadGates } from '$lib/server/config';
 import { checkPreflight } from '$lib/server/gates';
 import { mayContribute } from '$lib/server/auth';
 import { ingest } from '$lib/server/ingest';
+import { loadSite } from '$lib/server/site';
 import { gatesForTier } from '$lib/server/entitlements';
 import { tolerantWrite } from '$lib/server/tolerant';
 import type { UploadEventRow } from '$lib/server/database.types';
@@ -89,8 +90,9 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 
   let result;
   try {
+    const site = await loadSite(sb, new URL(request.url));
     result = await ingest(env, sb, viewer!, gates, bytes, {
-      confirmGmTree, stripGm, confirmStale, replacesSystemId, attestation
+      confirmGmTree, stripGm, confirmStale, replacesSystemId, attestation, siteName: site.name
     });
   } catch (e) {
     console.error('ingest failed', e);

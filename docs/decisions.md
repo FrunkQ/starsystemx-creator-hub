@@ -270,6 +270,29 @@ count at all, and one of them is a privacy decision:
 demand; a rollup is a second copy of the truth to keep in step, and it earns its place only when the
 queries get slow.
 
+### D-21. A map with no picture gets one the hub drew — and it skips the review queue
+
+The owner, 2026-09-03: *"outstanding work to make this super smooth… e.g. autogen a basic cover
+picture."* Most saves carry no picture at all (C-06: the Local Neighbourhood map has sixty node
+images and not one is in the bundle), and a page with no picture is a Discord embed with no picture.
+
+**Built as `src/lib/cover/`:** a software rasteriser, a 5×7 bitmap font and a forty-line PNG
+encoder over `fflate`, because a Worker has no Canvas and refuses to compile WebAssembly at runtime,
+and an Open Graph image must be a raster. The card is the primary star with its children on tilted
+orbits, the title, the counts and the byline — drawn from the same rows the page shows, so it can
+only say true things, and drawn deterministically so the same map yields the same bytes and a
+re-upload reuses the asset.
+
+**The exception worth recording:** the generated cover enters the ledger **already approved**.
+"An unreviewed asset is never served" is the hub's founding rule, and this is a deliberate carve-out
+from it: the picture is not user content — no stranger's bytes, nothing a reviewer could object to
+— and withholding it would defeat its only purpose. It cannot launder anything, because a hash
+already in the ledger keeps the verdict it has. It is used only when the creator chose nothing
+(`coverAssetId`) and the guess found nothing; the moment a real picture exists it is never used.
+
+**It is a card, not art.** Capitals in a pixel font, one colour per role. Good enough to recognise a
+map in a feed, and honest about being generated rather than pretending to be a screenshot.
+
 ---
 
 ## Still open — the owner's to answer

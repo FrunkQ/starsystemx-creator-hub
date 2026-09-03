@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.7.0 — 2026-09-03
+
+### A map with no picture gets one drawn from itself
+
+Most saves carry no picture the hub can host, so their pages - and every Discord embed of them -
+had no image. Now, when the creator chose no cover and the bundle carries nothing to guess from,
+the hub draws a card: the primary star, its planets and belts on tilted orbits with their moons,
+the title, the counts, and the byline. Drawn deterministically from the map's own rows, so the
+same map yields the same bytes and a re-upload reuses the asset.
+
+Built with no dependencies a Worker cannot satisfy: a small rasteriser, a 5x7 bitmap font and a
+PNG encoder over `fflate` (`src/lib/cover/`). It enters the ledger already approved - a deliberate
+exception, recorded as D-21, because it is not user content. Any real picture always wins.
+
 ## 0.6.0 — 2026-09-03
 
 ### The engine's stream F, mirrored - including the bug that blocked a creator's own screenshot

@@ -27,6 +27,7 @@ import { checkFreshness } from '$lib/bundle/freshness';
 import { zipSync, strToU8 } from 'fflate';
 import { normalise, type NormalisedNode } from '$lib/bundle/normalise';
 import { readZip, BundleReadError } from '$lib/bundle/read';
+import { storeGeneratedCover, GENERATED_COVER_PATH } from './cover';
 import { sha256Hex, claimedHashFromModelPath } from '$lib/bundle/hash';
 import {
   DOC_NAME, IMAGES_DIR, MODELS_DIR, PLAYER_IMAGES_DIR, ATTRIBUTIONS_NAME,
@@ -90,6 +91,8 @@ export async function ingest(
      * replace it anyway. Only meaningful with `replacesSystemId`.
      */
     confirmStale?: boolean;
+    /** The hub's display name, for the corner of a generated cover. */
+    siteName?: string;
     /**
      * The creator's provenance attestation. REQUIRED. There is no way to disprove "I made this
      * myself", so the hub does the one thing it honestly can: it asks plainly and records the
@@ -330,11 +333,24 @@ export async function ingest(
   const facets = computeFacets(doc);
   const autoTags = deriveTags(facets, { hasGmContent: gm.hasGmContent });
   const systemId = opts.replacesSystemId ?? crypto.randomUUID();
-  const coverHash = pickCover(doc, pending);
+
+  // NO PICTURE AT ALL? Draw one (cover/generate.ts, D-21). The creator's own choice or any carried
+  // picture always wins; this is only for the map that would otherwise preview blank everywhere
+  // it is shared. Drawn from the same rows the page shows, so it can only say true things.
+  let coverHash = pickCover(doc, pending);
+  let generatedCover = false;
+  if (!coverHash) {
+    coverHash = await storeGeneratedCover(env, sb, {
+      title: shaped.title, creator: viewer.handle, site: opts.siteName ?? 'StarSystemX Explorers',
+      systems: facets.systemCount, bodies: facets.bodyCount, constructs: facets.constructCount,
+      nodes: [...shaped.bodies, ...shaped.constructs]
+    });
+    generatedCover = true;
+  }
 
   const slug = await writeRows(sb, {
     systemId, viewer, kind, format: format.format, shaped, pending, provenance,
-    coverHash, publishGmTree: gm.hasGmContent,
+    coverHash, generatedCover, publishGmTree: gm.hasGmContent,
     sourceBytes: bytes.length, isUpdate: !!opts.replacesSystemId, flagged, novelCount: novel.length,
     createdWith: madeWith.createdWith, legacyStamped: format.legacyStamped,
     revision: madeWith.revision, exportMode: madeWith.exportMode,
@@ -411,6 +427,8 @@ interface WriteArgs {
   pending: PendingAsset[];
   provenance: ReturnType<typeof checkProvenance>;
   coverHash: string | null;
+  /** The cover is one the hub drew, so it gets a `cover` row rather than riding on a bundle path. */
+  generatedCover: boolean;
   publishGmTree: boolean;
   sourceBytes: number;
   isUpdate: boolean;
@@ -475,6 +493,14 @@ async function writeRows(sb: Db, a: WriteArgs): Promise<string> {
     await sb.from('system_assets').insert(pending.map((p) => ({
       system_id: systemId, sha256: p.sha256, role: p.role, bundle_path: p.path, node_ref: null
     })));
+  }
+  // The generated cover holds a reference like any asset, so the refcount and the garbage sweep
+  // see it. Its "path" is not a bundle member and pack.ts never finds it in the zip - which is
+  // right: a download carries what the creator saved, not what the hub drew.
+  if (a.generatedCover && coverHash) {
+    await sb.from('system_assets').insert({
+      system_id: systemId, sha256: coverHash, role: 'cover', bundle_path: GENERATED_COVER_PATH, node_ref: null
+    });
   }
 
   const byPath = new Map(pending.map((p) => [p.path, p.sha256]));

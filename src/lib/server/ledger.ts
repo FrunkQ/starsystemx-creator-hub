@@ -55,6 +55,23 @@ export async function registerNovel(
   if (error) throw new Error(`could not register assets: ${error.message}`);
 }
 
+/**
+ * A picture the HUB drew (cover/generate.ts) enters the ledger already approved - docs/decisions.md
+ * D-21. It is not user content: no stranger's bytes, nothing to moderate, and withholding it would
+ * defeat its only purpose, which is that a map previews with a picture from the first minute.
+ *
+ * Idempotent: the same map draws the same bytes, and a hash already present keeps whatever verdict
+ * it has - which also means a generated cover can never launder a banned hash, because a banned
+ * hash is by definition already present.
+ */
+export async function registerGenerated(sb: Db, sha256: string, byteSize: number): Promise<void> {
+  const { error } = await sb.from('assets').upsert({
+    sha256, kind: 'image', byte_size: byteSize, mime: 'image/png',
+    review_state: 'approved', review_note: 'Drawn by the hub from the map itself (D-21).', flagged: false
+  }, { onConflict: 'sha256', ignoreDuplicates: true });
+  if (error) throw new Error(`could not register the generated cover: ${error.message}`);
+}
+
 /** Only these may be served or packed into a download (design 6.2). */
 export async function approvedOnly(sb: Db, hashes: string[]): Promise<Set<string>> {
   const known = await lookup(sb, hashes);
