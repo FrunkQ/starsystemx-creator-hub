@@ -95,6 +95,7 @@ npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
 |---|---|---|
 | `SUPABASE_URL` | everything | now |
 | `SUPABASE_SERVICE_ROLE_KEY` | everything | now |
+| `VISITOR_SALT` | the anonymous visitor hash on downloads (D-20) | before the usage numbers are relied on; any long random string |
 | `CRON_SECRET` | the outbox drain | when Discord goes on |
 | `DISCORD_CLIENT_ID` / `DISCORD_CLIENT_SECRET` | linking accounts | when Discord goes on |
 | `DISCORD_BOT_TOKEN` | assigning roles | when Discord goes on |

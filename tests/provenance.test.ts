@@ -251,3 +251,52 @@ describe('reading a node\'s tags', () => {
     expect(n.bodies[0].tags).toEqual([]);
   });
 });
+
+// ------------------------------------------------------------------------------------------------
+// C-07: an in-app capture is exempt from "missing provenance" - and ONLY from that.
+// ------------------------------------------------------------------------------------------------
+const capture = (extra: Record<string, unknown> = {}) => ({
+  nodes: [],
+  playerAssets: [{ id: 'p1', name: 'Beauty shot', dataUrl: 'assets/images/player/p1.png', capturedInApp: true, ...extra }]
+});
+
+describe('a screenshot the app took of the map (C-07)', () => {
+  it('does not block publishing: the file it shows is the credit', () => {
+    // Without this a creator is refused permission to publish by their OWN screenshot.
+    const v = checkProvenance(capture());
+    expect(v.missing).toHaveLength(0);
+    expect(v.mayPublish).toBe(true);
+    expect(v.entries[0].capturedInApp).toBe(true);
+  });
+
+  it('is still a breach when it CLAIMS CC-BY and names nobody', () => {
+    const v = checkProvenance(capture({ license: 'CC-BY 4.0' }));
+    expect(v.breaches).toHaveLength(1);
+    expect(checkProvenance(capture({ license: 'CC-BY 4.0' }), {}, { blockCcByBreach: true }).mayPublish).toBe(false);
+  });
+
+  it('exempts a literal true only - a hand-edited "yes" is not a capture', () => {
+    expect(checkProvenance(capture({ capturedInApp: 'yes' })).missing).toHaveLength(1);
+    expect(checkProvenance(capture({ capturedInApp: 1 })).missing).toHaveLength(1);
+  });
+});
+
+// ------------------------------------------------------------------------------------------------
+// What the engine stamps on a save since v3.0.247: the revision counter and the export label.
+// ------------------------------------------------------------------------------------------------
+describe('the revision counter and the export label', () => {
+  it('reads the counter, and treats a save without one as having none - never zero', () => {
+    expect(readProvenance({ revision: 7 }).revision).toBe(7);
+    expect(readProvenance({}).revision).toBeNull();
+    expect(readProvenance({ revision: -1 }).revision).toBeNull();
+    expect(readProvenance({ revision: '7' }).revision).toBeNull();
+    expect(readProvenance({ revision: 1.5 }).revision).toBeNull();
+  });
+
+  it('reads the label, and only the two values the engine writes', () => {
+    expect(readProvenance({ exportMode: 'player' }).exportMode).toBe('player');
+    expect(readProvenance({ exportMode: 'gm' }).exportMode).toBe('gm');
+    expect(readProvenance({ exportMode: 'GM' }).exportMode).toBeNull();
+    expect(readProvenance({}).exportMode).toBeNull();
+  });
+});

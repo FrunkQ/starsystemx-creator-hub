@@ -93,6 +93,10 @@ export type SystemRow = {
   // The CAPABILITY MARKER - which engine build wrote this. Never a parse gate.
   created_with: string | null;
   legacy_stamped: boolean;
+  // What the engine stamps on a save (0014): the campaign's own save counter, and the export-mode
+  // LABEL. Both null for older files; `revision` is also null for every single-system save.
+  revision: number | null;
+  export_mode: string | null;
   blurb: string | null;
   tags: string[];
   // Derived facets (db/migrations/0007). Facts the hub computed, kept separate from `tags` so a
@@ -233,13 +237,25 @@ export type ConfigRow = {
 
 export type UploadEventRow = {
   id: string;
-  creator_id: string;
+  // Null for a refusal before sign-in (0014).
+  creator_id: string | null;
   system_id: string | null;
   novel_hashes: number;
   total_hashes: number;
   bytes: number;
   is_update: boolean;
   flagged: boolean;
+  // 'ok' or 'refused'; `reason` is the refusal code (0014). Before 0014 only successes were kept.
+  outcome: string;
+  reason: string | null;
+  created_at: string;
+}
+
+// One row per download: a week-scoped visitor hash and nothing else (src/lib/server/visitor.ts).
+export type DownloadEventRow = {
+  id: string;
+  system_id: string;
+  visitor_hash: string;
   created_at: string;
 }
 
@@ -318,6 +334,7 @@ export interface Database {
       >;
       config: Table<ConfigRow>;
       upload_events: Table<UploadEventRow>;
+      download_events: Table<DownloadEventRow>;
       admin_actions: Table<AdminActionRow>;
       system_screenshots: Table<SystemScreenshotRow>;
       attestations: Table<AttestationRow>;
@@ -335,6 +352,8 @@ export interface Database {
       asset_refcount: { Args: { p_sha256: string }; Returns: number };
       increment_download: { Args: { p_system_id: string }; Returns: undefined };
       creator_tier: { Args: { p_creator_id: string }; Returns: AccountTier };
+      // The usage dashboard, one JSON document (0014). Shape: src/lib/stats.ts.
+      hub_stats: { Args: { p_days: number }; Returns: unknown };
     };
     Enums: {
       review_state: ReviewState;

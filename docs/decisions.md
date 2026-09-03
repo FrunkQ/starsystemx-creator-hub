@@ -242,6 +242,34 @@ marker, and the number lets the format change without breaking the old one.
 branch — nothing in the app reads a node from the clipboard. The old "Copy JSON" never had a
 consumer either. Written up as R-14 so the gap is owned rather than assumed closed.
 
+### D-20. Usage is counted from the hub's own tables, and a visitor is a hash that forgets after a week
+
+The owner, 2026-09-03: *"a bunch of data on usage — growth, etc. Not the host's analytics tools as
+we have more context and data to use — but just tracking anonymous downloads, different users, most
+popular maps/user, etc. … memory used — #failures/bad uploads."*
+
+Built as `/admin/stats`, fed by one SQL function (`hub_stats`, migration 0014) so the counting
+happens in Postgres and not in a Worker pulling rows over HTTP. Three things had to be added to
+count at all, and one of them is a privacy decision:
+
+- **Downloads as events.** `download_events` holds one row per download with a `visitor_hash` and
+  nothing else. The hash is `sha256(iso-week + secret salt + ip + user-agent)`. **The week is in
+  the hash on purpose:** within a week a visitor is exactly one visitor; across weeks the hashes do
+  not join, so nobody can be followed for longer than that. The dashboard says "visitor-weeks" for
+  any window longer than a week rather than pretending to a precision it does not have. **No
+  address is ever stored**, and the salt (`VISITOR_SALT`) is what makes that true rather than
+  approximately true.
+- **Refusals as events.** `upload_events` was only ever written on success. Every refusal now writes
+  a row with its code, so "bad uploads" is a table, not a guess.
+- **Writes that tolerate the migration not having run yet** (`src/lib/server/tolerant.ts`). A push
+  deploys in minutes; a migration runs when the owner pastes it. In between, a write naming a
+  column the table lacks drops that column and lands anyway. This was a real choice: the
+  alternative was every upload failing over a nicety until the SQL editor was opened.
+
+**Not built, deliberately:** a nightly rollup. At this scale the function runs in milliseconds on
+demand; a rollup is a second copy of the truth to keep in step, and it earns its place only when the
+queries get slow.
+
 ---
 
 ## Still open — the owner's to answer

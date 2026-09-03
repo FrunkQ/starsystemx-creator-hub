@@ -7,8 +7,9 @@ import { error } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import { packForDownload } from '$lib/server/pack';
 import { withCors, preflight } from '$lib/server/cors';
+import { visitorHash } from '$lib/server/visitor';
 
-export const GET: RequestHandler = async ({ params, platform }) => {
+export const GET: RequestHandler = async ({ params, platform, request }) => {
   const env = platform?.env;
   if (!env) throw error(500, 'not configured');
 
@@ -29,6 +30,16 @@ export const GET: RequestHandler = async ({ params, platform }) => {
       () => undefined,
       () => undefined
     )
+  );
+  // The counter stays (the cards sort by it). This is the HISTORY behind it: one row per download,
+  // carrying a week-scoped visitor hash and nothing else - never an address (server/visitor.ts).
+  // Same fire-and-forget; and before 0014 creates the table, it simply fails quietly.
+  platform?.context?.waitUntil?.(
+    visitorHash(request, env.VISITOR_SALT)
+      .then((visitor_hash) => Promise.resolve(sb.from('download_events').insert({
+        id: crypto.randomUUID(), system_id: system.id, visitor_hash
+      })))
+      .then(() => undefined, () => undefined)
   );
 
   return new Response(packed.bytes as unknown as ArrayBuffer, {

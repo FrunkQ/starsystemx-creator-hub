@@ -31,6 +31,7 @@
       <a href="/account">{data.viewer.handle}</a>
       {#if data.viewer.role === 'admin'}
         <a href="/admin/review">Review</a>
+        <a href="/admin/stats">Usage</a>
         <a href="/admin/debug">Debug</a>
       {/if}
       <form method="POST" action="/logout"><button class="linkish" type="submit">Sign out</button></form>

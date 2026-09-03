@@ -148,6 +148,33 @@ app's own artwork.
 
 ---
 
+## C-07. A screenshot the app took is exempt from "missing provenance" — and from nothing else
+
+Engine v3.0.263 (rule DATA-R35). A `PlayerAsset` can carry `capturedInApp: true`: the app rendered
+the map to a picture and stored it as one of the campaign's own graphics. The engine's
+`attributions.ts` exempts such an asset from the missing-provenance total, and **the hub must
+mirror that or the two sides disagree about the same file** — which they did, for two days.
+
+**Why the exemption is right, in the owner's words:** *"a screenshot represents the FILE and the
+FILE has the attributions — so anything that COULD be credited is, even if accidentally caught in
+shot."* The bundle is the unit of distribution; `ATTRIBUTIONS.md` rides inside it; whatever art a
+shot happens to show is credited on the page beside it.
+
+**Why it matters here:** the public gate is `missing.length === 0`, and a blank asset counts toward
+`missing`. Without the mirror, a creator who captured a beauty shot of their OWN map — the exact
+thing R-07 asked them to do — is refused permission to publish it. Blocked by their own screenshot,
+after the app told them it was fine.
+
+**The exemption is for an absence only.** A capture that claims CC-BY and names nobody is still a
+breach: a licence that states an obligation and then fails it is wrong whoever took the picture.
+And it exempts a literal `true` only — the field is a claim like every other, no weaker than the
+credit fields a hand-edited save could equally fill with a fiction, and no stronger.
+
+`noProvenance` in `src/lib/bundle/attribution.ts` is the ONE definition, used by both the gate and
+the reviewer's card, so those two can never disagree about what "missing" means.
+
+---
+
 ## The mirrored surface, in full
 
 | what | where |
@@ -157,7 +184,9 @@ app's own artwork.
 | the magic-number sniff (`PK\x03\x04`), never the extension | `contract.ts` `isZip` |
 | node fields sliced: `id`, `name`, `kind`, `roleHint`, `parentId`, `tags` | `normalise.ts` |
 | asset refs: `node.image.url`, `node.model.hash`, `playerAssets[].dataUrl` | `attribution.ts`, `normalise.ts` |
-| provenance fields: `title`, `credit`, `license`, `sourceUrl` | `attribution.ts` |
+| provenance fields: `title`, `credit`, `license`, `sourceUrl`, `capturedInApp` | `attribution.ts` |
+| the stamps: `bundleFormat`, `appVersion`, `baseMapVersion`, `revision`, `exportMode` | `format.ts`, `provenance.ts` |
+| the creator's cover: `coverAssetId` → `playerAssets[].dataUrl` | `ingest.ts` `pickCover` |
 
 **One trap carried over verbatim:** `assets/images/player/` *starts with* `assets/images/`, so any
 match on the image directory must exclude player images **explicitly** rather than by luck. The
@@ -165,11 +194,15 @@ engine's comment says so; the mirror repeats it; `tests/provenance.test.ts` cove
 
 ---
 
-## What is still owed by the engine (phase 0, Stream A — not the hub's work)
+## What the engine delivered (stream F, v3.0.243–264) — and the gate is open
 
-1. **A `bundleFormat` integer in the document.** Nothing in the bundle records its format version
-   today. `provenance.ts` stamps `appVersion`, but that is a build stamp, not a contract.
-2. **A canonical fixture bundle**, checked in, for the hub's parser to test against.
+1. **`bundleFormat: 1`** on zip AND plain `.json` saves (v3.0.243). Files written between v3.0.225
+   and v3.0.242 carry the delta shape and no stamp; the `accept_unstamped_bundles` gate covers them.
+2. **Two canonical fixtures**, real saves with real content hashes, checked into `tests/fixtures/`
+   and run through the hub's parser by `tests/fixture.test.ts`.
+3. `revision`, `exportMode` (v3.0.247), `coverAssetId` (v3.0.259), `capturedInApp` (v3.0.263) — all
+   read by the hub as of 0.6.0.
 
-Until both land, `KNOWN_BUNDLE_FORMATS` in `contract.ts` is **empty** and every upload is refused
-politely by the format gate. That is deliberate: see `decisions.md` D-01.
+`KNOWN_BUNDLE_FORMATS = [1]` since 2026-09-01. Still owed: R-13 (a manifest of what SSE ships, so
+the facet baselines stop being hand-copied lists) and R-14 (the paste target for clips) — both in
+`docs/sse-requirements.md`.

@@ -452,6 +452,10 @@ orbits, masses or anything else: what was in the file is what is in the clip.
 
 ### What the paste target has to do
 
+- **Accept a HIERARCHY, never just one object** — the owner's words, 2026-09-03. A clip is a
+  subtree: a star with its planets and their moons, or a planet with its moons, or a lone body as
+  the degenerate case. `nodes` is the whole subtree, parents first, and the target inserts all of
+  it under one chosen host. A target that takes only `nodes[0]` is not R-14.
 - **Recognise it or refuse with a reason.** `giantRecipe.ts` already does this right for recipes —
   parse, say what was wrong, never fail silently. Same shape here. `sseClip` above 1 means "made by
   a newer hub than this app understands".

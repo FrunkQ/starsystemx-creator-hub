@@ -28,6 +28,8 @@ export interface AttributionEntry {
   credit?: string;
   license?: string;
   sourceUrl?: string;
+  /** A screenshot the app took of the map itself (engine v3.0.263). See C-07. */
+  capturedInApp?: boolean;
 }
 
 /** Every node, with the name of the system holding it. Mirrors the engine's `nodesWithSystem`. */
@@ -92,15 +94,30 @@ export function collectAttributions(doc: any, modelMeta: Record<string, any> = {
     if (typeof url !== 'string' || !url.startsWith(PLAYER_IMAGES_DIR)) continue;
     images.push({
       path: url, kind: 'image', usedBy: [String(a?.name ?? a?.id ?? 'player asset')],
-      title: a.name, credit: a.credit, license: a.license, sourceUrl: a.sourceUrl
+      title: a.name, credit: a.credit, license: a.license, sourceUrl: a.sourceUrl,
+      // A literal true only. It is a claim like every other field, and a hand-edited save can
+      // set it on anything - no weaker than the credit fields themselves, and no stronger.
+      capturedInApp: a.capturedInApp === true
     });
   }
 
   return [...models.values(), ...images];
 }
 
-/** Nothing recorded at all. Mirrors the engine's `isBlank`. */
-export const noProvenance = (e: AttributionEntry) => !e.credit && !e.license && !e.sourceUrl;
+/**
+ * Nothing recorded at all. Mirrors the engine's `isBlank` - INCLUDING its one exemption (C-07).
+ *
+ * A screenshot the app took of the map (`capturedInApp`) has no author to credit but the creator,
+ * and whatever art it happens to show is credited by the bundle it travels in, because the bundle
+ * is the unit of distribution and ATTRIBUTIONS.md rides inside it. Without this exemption a creator
+ * who captured a beauty shot of their OWN map would be refused permission to publish it - blocked
+ * by their own screenshot - which is exactly the bug the engine fixed on its side in v3.0.263.
+ *
+ * The exemption is for an ABSENCE only. A capture that CLAIMS CC-BY and names nobody is still a
+ * breach (below): a licence that states an obligation and then fails it is wrong whoever took it.
+ */
+export const noProvenance = (e: AttributionEntry) =>
+  !e.capturedInApp && !e.credit && !e.license && !e.sourceUrl;
 
 /** CC-BY without a name: the one combination that is actively wrong, not merely unrecorded. */
 export const breachesCcBy = (e: AttributionEntry) =>

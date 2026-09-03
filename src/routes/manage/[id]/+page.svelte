@@ -40,6 +40,8 @@
   {s.state === 'public' ? 'Published' : 'Draft'}
   {#if s.created_with}· made with Star System Explorer {s.created_with}{/if}
   {#if s.legacy_stamped}· uploaded as a legacy save{/if}
+  {#if s.revision != null}· revision {s.revision}{/if}
+  {#if s.export_mode}· exported as the {s.export_mode === 'player' ? 'player' : 'GM'} view{/if}
 </p>
 
 {#if form?.message}

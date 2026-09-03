@@ -27,10 +27,24 @@ export interface BundleProvenance {
   createdWith: string | null;
   /** Which edition of the bundled starter maps this campaign descends from, if any. */
   baseMapVersion: number | null;
+  /**
+   * The campaign's own save counter (engine R-12, v3.0.247): one higher on every explicit save.
+   * Null for a single-system save - a system is a slice of a campaign and carries no counter of
+   * its own - and for every file written before the counter existed. Null means "nothing to
+   * compare", never zero.
+   */
+  revision: number | null;
+  /**
+   * The label the app wrote at export time (engine R-10). A LABEL, recorded and shown, and never
+   * consulted as a gate: the hub reads the file itself to decide what it contains (gmContent.ts).
+   */
+  exportMode: 'gm' | 'player' | null;
 }
 
 export function readProvenance(doc: unknown): BundleProvenance {
-  const d = doc as { appVersion?: unknown; baseMapVersion?: unknown } | null;
+  const d = doc as {
+    appVersion?: unknown; baseMapVersion?: unknown; revision?: unknown; exportMode?: unknown
+  } | null;
 
   const v = d?.appVersion;
   // Length-capped: it is displayed, and it arrives from a file a stranger wrote.
@@ -39,5 +53,11 @@ export function readProvenance(doc: unknown): BundleProvenance {
   const b = d?.baseMapVersion;
   const baseMapVersion = typeof b === 'number' && Number.isInteger(b) && b >= 0 ? b : null;
 
-  return { createdWith, baseMapVersion };
+  const r = d?.revision;
+  const revision = typeof r === 'number' && Number.isInteger(r) && r >= 0 ? r : null;
+
+  const m = d?.exportMode;
+  const exportMode = m === 'gm' || m === 'player' ? m : null;
+
+  return { createdWith, baseMapVersion, revision, exportMode };
 }

@@ -27,6 +27,11 @@ export interface HubEnv {
   SUPABASE_PUBLISHABLE_KEY: string;
   HUB_ASSETS: R2Bucket;
   HUB_BUNDLES: R2Bucket;
+  /**
+   * Salts the anonymous visitor hash on downloads (server/visitor.ts). Optional, but without it
+   * "cannot be turned back into an address" is only approximately true. `wrangler secret put VISITOR_SALT`.
+   */
+  VISITOR_SALT?: string;
 }
 
 export function db(env: HubEnv): Db {

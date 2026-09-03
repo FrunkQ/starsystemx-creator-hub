@@ -1,5 +1,36 @@
 # Changelog
 
+## 0.6.0 — 2026-09-03
+
+### The engine's stream F, mirrored - including the bug that blocked a creator's own screenshot
+
+SSE v3.0.243-264 shipped everything `docs/sse-requirements.md` asked for except R-13 and R-14. The
+hub had integrated the format stamp and the fixtures, and nothing else. Now:
+
+- **`capturedInApp`** - a screenshot the app took of the map no longer counts as "missing
+  provenance" (C-07). Without this the hub refused to publish a map whose cover was the creator's
+  own beauty shot, after the app had told them it was fine.
+- **`coverAssetId`** - the cover the creator chose in the app is used first; the guess is the fallback.
+- **`revision`** - stored, and an update carrying a LOWER revision than the published copy is
+  refused with `stale-revision` and both numbers, unless `confirmStale=on`. Single-system saves
+  carry no counter and are never checked.
+- **`exportMode`** - stored and shown as a label; never a gate.
+- `/m/<slug>` redirects to `/s/<slug>`, because the engine's config still says `/m/`.
+- The upload accepts the file under `file` as well as `bundle`, which is what the engine posts.
+
+### A usage dashboard at /admin/stats
+
+Growth per week, downloads and distinct visitors, most downloaded maps and cartographers, storage
+against the R2 free allowance, refused uploads by reason, the review queue and open reports. One SQL
+function, no chart library. Downloads are now EVENTS with a week-scoped visitor hash and no address
+(D-20); refusals are events carrying their code.
+
+### Migration 0014 - and the code runs ahead of it on purpose
+
+A write that names a column the database does not have yet drops that column and lands anyway
+(`src/lib/server/tolerant.ts`), so uploads keep working between the deploy and the owner running
+the migration. The stats page says plainly when its function is missing.
+
 ## 0.5.0 — 2026-09-03
 
 ### One tree, with copying on every row

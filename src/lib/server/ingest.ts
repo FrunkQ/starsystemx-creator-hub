@@ -15,9 +15,10 @@
 // THE LIMIT OF (a), NAMED HONESTLY: the whole bundle is read into Worker memory. `max_bundle_bytes`
 // is therefore a real memory ceiling and not just a cost control, and it is why that gate defaults
 // to 50 MB rather than something ambitious.
-import type { Db } from './database.types';
+import type { Db, SystemRow, UploadEventRow } from './database.types';
 import { checkBundleFormat } from '$lib/bundle/format';
-import { checkProvenance } from '$lib/bundle/attribution';
+import { checkProvenance, noProvenance, breachesCcBy } from '$lib/bundle/attribution';
+import { tolerantWrite } from './tolerant';
 import { readProvenance } from '$lib/bundle/provenance';
 import { detectGmContent } from '$lib/bundle/gmContent';
 import { computeFacets, deriveTags } from '$lib/bundle/facets';
@@ -84,6 +85,11 @@ export async function ingest(
      */
     stripGm?: boolean;
     replacesSystemId?: string;
+    /**
+     * The creator has been told "this file is older than the copy already published" and wants to
+     * replace it anyway. Only meaningful with `replacesSystemId`.
+     */
+    confirmStale?: boolean;
     /**
      * The creator's provenance attestation. REQUIRED. There is no way to disprove "I made this
      * myself", so the hub does the one thing it honestly can: it asks plainly and records the
@@ -154,6 +160,29 @@ export async function ingest(
   // The CAPABILITY MARKER, kept separate from the contract number - which build made this map.
   // Never a parse gate; a future SSE loads an older map fine (bundle/provenance.ts).
   const madeWith = readProvenance(doc);
+
+  // ---- THE STALE-UPLOAD GUARD (engine R-12). ---------------------------------------------------
+  // An update carrying a LOWER revision than the published copy is almost always an older export
+  // found in a Downloads folder weeks later, and replacing the newer copy with it is precisely the
+  // data loss the counter was added to prevent. Refuse, name both numbers, and let the creator
+  // override knowingly. Absent on either side means there is nothing to compare: single-system
+  // saves carry no counter, older files carry none, and a database without the column yet
+  // (0014 unrun) reads as none.
+  if (opts.replacesSystemId && madeWith.revision !== null && !opts.confirmStale) {
+    const { data: prev } = await sb.from('systems')
+      .select('revision').eq('id', opts.replacesSystemId).maybeSingle();
+    const published = prev?.revision ?? null;
+    if (published !== null && madeWith.revision < published) {
+      return {
+        ok: false, code: 'stale-revision',
+        message:
+          'This file is revision ' + madeWith.revision + ' of the map, but the copy already published ' +
+          'is revision ' + published + ' - it looks like an older export. Upload the newer save, or ' +
+          'confirm that you want to replace the newer copy with this one.',
+        detail: { incoming: madeWith.revision, published }
+      };
+    }
+  }
 
   // ---- DOES THIS SAVE CARRY GM-ONLY CONTENT? Read from the file, not asked of the uploader ----
   // Design 3.1's rule is "never SILENTLY publish a GM tree". Detection is what makes that rule
@@ -308,6 +337,7 @@ export async function ingest(
     coverHash, publishGmTree: gm.hasGmContent,
     sourceBytes: bytes.length, isUpdate: !!opts.replacesSystemId, flagged, novelCount: novel.length,
     createdWith: madeWith.createdWith, legacyStamped: format.legacyStamped,
+    revision: madeWith.revision, exportMode: madeWith.exportMode,
     attestation: opts.attestation, facets, autoTags
   });
 
@@ -341,20 +371,29 @@ async function accountAge(sb: Db, id: string): Promise<number> {
 }
 
 /**
- * THE COVER IMAGE (design 7.4, an OPEN QUESTION - see docs/decisions.md Q-03).
+ * THE COVER IMAGE (design 7.4; docs/decisions.md Q-03).
  *
- * Nothing in the bundle designates a cover today. This is the fallback chain the hub uses in the
- * meantime, recommended to the owner rather than decided: the map background first, because a GM's
- * sector map is the picture they already chose to represent the campaign; then any player-view
- * graphic; then the first body picture. A bundle with no picture at all gets no cover, and the page
- * renders a generated card instead - no engine, no rendered preview, consistent with decision 3.
+ * THE CREATOR'S CHOICE FIRST. Since engine v3.0.259 a save can carry `coverAssetId`, pointing at one
+ * of the campaign's own player graphics - the star beside a picture in the app's library. Absent
+ * means "guess, exactly as before". A pointer at something the bundle does not carry (the engine
+ * refuses built-ins, but a hand-edited save can say anything) falls through to the guess rather
+ * than to a broken cover, because a cover that 404s is worse than none.
+ *
+ * Then the guess: the map background, because a GM's sector map is the picture they already chose
+ * to represent the campaign; then any player-view graphic; then the first body picture. A bundle
+ * with no picture at all gets no cover here, and the page renders a generated card instead.
  */
 function pickCover(doc: any, pending: PendingAsset[]): string | null {
   const byPath = new Map(pending.map((p) => [p.path, p.sha256]));
+  const playerAsset = (id: unknown) =>
+    id ? (doc?.playerAssets ?? []).find((a: any) => a?.id === id) : undefined;
+  const carried = (asset: any) => (asset?.dataUrl ? byPath.get(asset.dataUrl) : undefined);
 
-  if (doc?.mapBackground?.source === 'asset' && doc.mapBackground.assetId) {
-    const asset = (doc.playerAssets ?? []).find((a: any) => a?.id === doc.mapBackground.assetId);
-    const hit = asset?.dataUrl ? byPath.get(asset.dataUrl) : undefined;
+  const chosen = carried(playerAsset(doc?.coverAssetId));
+  if (chosen) return chosen;
+
+  if (doc?.mapBackground?.source === 'asset') {
+    const hit = carried(playerAsset(doc.mapBackground.assetId));
     if (hit) return hit;
   }
   const player = pending.find((p) => p.role === 'player_image');
@@ -379,6 +418,8 @@ interface WriteArgs {
   novelCount: number;
   createdWith: string | null;
   legacyStamped: boolean;
+  revision: number | null;
+  exportMode: string | null;
   facets: ReturnType<typeof computeFacets>;
   autoTags: string[];
   attestation: { accepted: boolean; textVersion: number; textShown: string };
@@ -389,7 +430,10 @@ async function writeRows(sb: Db, a: WriteArgs): Promise<string> {
 
   const slug = await uniqueSlug(sb, shaped.title, systemId);
 
-  const { error: sysError } = await sb.from('systems').upsert({
+  // A TOLERANT write: the columns added by 0014 (`revision`, `export_mode`) exist in the code the
+  // moment it deploys and in the database the moment the owner runs the migration, and those are
+  // not the same moment. See tolerant.ts - the row lands either way.
+  const { error: sysError } = await tolerantWrite({
     id: systemId,
     slug,
     creator_id: viewer.id,
@@ -414,8 +458,10 @@ async function writeRows(sb: Db, a: WriteArgs): Promise<string> {
     carried_models: a.facets.carriedModels,
     role_counts: a.facets.roleCounts,
     tag_namespaces: a.facets.tagNamespaces,
-    facet_results: a.facets.rules
-  });
+    facet_results: a.facets.rules,
+    revision: a.revision,
+    export_mode: a.exportMode
+  }, (row) => Promise.resolve(sb.from('systems').upsert(row as Partial<SystemRow>)));
   if (sysError) throw new Error('could not save the map: ' + sysError.message);
 
   // Replace-in-place on an update: the rows are derived, so rewriting them is simpler and safer
@@ -439,8 +485,10 @@ async function writeRows(sb: Db, a: WriteArgs): Promise<string> {
       sha256: byPath.get(e.path),
       title: e.title ?? null, credit: e.credit ?? null,
       license: e.license ?? null, source_url: e.sourceUrl ?? null,
-      no_provenance: !e.credit && !e.license && !e.sourceUrl,
-      cc_by_breach: /cc[- ]?by/i.test(e.license ?? '') && !e.credit
+      // The same two predicates the gate uses - ONE definition, so the reviewer's card and the
+      // publish gate can never disagree about what "missing" means (C-07 changed it once already).
+      no_provenance: noProvenance(e),
+      cc_by_breach: breachesCcBy(e)
     }))
     .filter((c) => !!c.sha256);
   if (claims.length) await sb.from('asset_claims').insert(claims);
@@ -472,11 +520,14 @@ async function writeRows(sb: Db, a: WriteArgs): Promise<string> {
     text_shown: a.attestation.textShown
   });
 
-  await sb.from('upload_events').insert({
+  // Tolerant for the same reason as the systems row - and this one MATTERS before 0014 runs: the
+  // daily-allowance gate counts these rows, so a silently failed insert would be an uncounted upload.
+  await tolerantWrite({
     id: crypto.randomUUID(), creator_id: viewer.id, system_id: systemId,
     novel_hashes: a.novelCount, total_hashes: pending.length,
-    bytes: a.sourceBytes, is_update: a.isUpdate, flagged: a.flagged
-  });
+    bytes: a.sourceBytes, is_update: a.isUpdate, flagged: a.flagged,
+    outcome: 'ok', reason: null
+  }, (row) => Promise.resolve(sb.from('upload_events').insert(row as Partial<UploadEventRow>)));
 
   return slug;
 }
