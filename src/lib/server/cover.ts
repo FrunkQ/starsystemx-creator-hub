@@ -12,6 +12,9 @@ import { renderCover, type CoverFacts, type CoverNode } from '$lib/cover/generat
 
 export const GENERATED_COVER_PATH = 'hub/generated-cover.png';
 
+/** The primary key of `system_assets`, as the upsert's conflict target. Pinned to the migration by a test. */
+export const SYSTEM_ASSETS_KEY = 'system_id,bundle_path';
+
 /** Draw the card, put it in R2 if absent, register it approved. Returns the hash. */
 export async function storeGeneratedCover(env: HubEnv, sb: Db, facts: CoverFacts): Promise<string> {
   const png = renderCover(facts);
@@ -45,10 +48,16 @@ export async function ensureCover(
       nodes
     });
     await sb.from('systems').update({ cover_sha256: hash }).eq('id', system.id);
-    await sb.from('system_assets').upsert(
+    // THE CONFLICT TARGET MUST BE THE TABLE'S ACTUAL PRIMARY KEY, which is (system_id, bundle_path)
+    // - see db/migrations/0001. The first version of this named (system_id, sha256), PostgREST
+    // refused the upsert, supabase-js reported it in `error` rather than throwing, and the row
+    // silently never landed. The cover then showed on the FIRST view of a page (approved by
+    // construction) and on no view after it. tests/schema.test.ts pins the key to the migration.
+    const { error } = await sb.from('system_assets').upsert(
       { system_id: system.id, sha256: hash, role: 'cover', bundle_path: GENERATED_COVER_PATH, node_ref: null },
-      { onConflict: 'system_id,sha256', ignoreDuplicates: true }
+      { onConflict: SYSTEM_ASSETS_KEY, ignoreDuplicates: true }
     );
+    if (error) console.warn('generated cover stored but not linked to its map', error.message);
     return hash;
   } catch (e) {
     console.warn('could not backfill a cover', e);

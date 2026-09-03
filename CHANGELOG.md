@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.7.1 — 2026-09-03
+
+### The generated cover showed once, then vanished
+
+Found by looking at the live page twice. The backfill upserted the cover's `system_assets` row on a
+conflict target of `(system_id, sha256)`; the table's primary key is `(system_id, bundle_path)`, so
+PostgREST refused the row, supabase-js reported it in `error` rather than throwing, and the link
+never landed. On the first view the cover was approved by construction; on every view after, the
+page looked up approval through the link table, found nothing, and showed no picture - and no
+Open Graph image, which is the one that matters. Fixed at both ends: the right conflict target, and
+the page now asks the ledger about the cover hash directly. `tests/schema.test.ts` pins the upsert
+key to the migration text so it cannot drift again.
+
 ## 0.7.0 — 2026-09-03
 
 ### A map with no picture gets one drawn from itself

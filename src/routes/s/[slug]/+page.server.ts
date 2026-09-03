@@ -48,9 +48,14 @@ export const load: PageServerLoad = async ({ params, platform, setHeaders, url }
   // HOW MANY PICTURES ARE STILL WAITING (design 6.2). The map is public and downloadable either
   // way; saying how many are withheld is what stops a gap reading as a bug.
   // Screenshots go through the same ledger as bundled assets, so they are counted the same way.
+  // The cover hash is asked about DIRECTLY, not only through `system_assets`. A cover that came in
+  // with the bundle is in that table anyway (the Set dedupes it); a generated one may not be - the
+  // first backfills wrote `cover_sha256` and then failed to link the row - and the ledger, not the
+  // link table, is what decides whether a picture may be shown.
   const hashes = [...new Set([
     ...(assets ?? []).map((a) => a.sha256 as string),
-    ...(shots ?? []).map((s2) => s2.sha256 as string)
+    ...(shots ?? []).map((s2) => s2.sha256 as string),
+    ...(system.cover_sha256 ? [system.cover_sha256] : [])
   ])];
   const approved = await ledger.approvedOnly(sb, hashes);
   const withheldCount = hashes.length - approved.size;
