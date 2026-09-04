@@ -259,6 +259,14 @@ export type UploadEventRow = {
   created_at: string;
 }
 
+// Requests and bytes per day and category (0016), for the usage page's limits panel.
+export type TrafficDailyRow = {
+  day: string;
+  category: string;
+  requests: number;
+  bytes: number;
+}
+
 // One row per download: a week-scoped visitor hash and nothing else (src/lib/server/visitor.ts).
 export type DownloadEventRow = {
   id: string;
@@ -343,6 +351,7 @@ export interface Database {
       config: Table<ConfigRow>;
       upload_events: Table<UploadEventRow>;
       download_events: Table<DownloadEventRow>;
+      traffic_daily: Table<TrafficDailyRow>;
       admin_actions: Table<AdminActionRow>;
       system_screenshots: Table<SystemScreenshotRow>;
       attestations: Table<AttestationRow>;
@@ -362,6 +371,8 @@ export interface Database {
       creator_tier: { Args: { p_creator_id: string }; Returns: AccountTier };
       // The usage dashboard, one JSON document (0014). Shape: src/lib/stats.ts.
       hub_stats: { Args: { p_days: number }; Returns: unknown };
+      // A batch of traffic buckets from one Worker isolate, added to their day and category (0016).
+      bump_traffic: { Args: { p_rows: unknown }; Returns: undefined };
     };
     Enums: {
       review_state: ReviewState;

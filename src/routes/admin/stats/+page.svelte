@@ -1,8 +1,30 @@
 <script lang="ts">
   // The usage dashboard. One RPC, every panel; no chart library (the page rule: fast to load).
   import { formatBytes } from '$lib/bundle/facets';
-  import { R2_FREE_BYTES, type HubStats, type Count } from '$lib/stats';
+  import { R2_FREE_BYTES, LIMITS, type HubStats, type Count } from '$lib/stats';
   let { data } = $props();
+
+  // WHERE IT STARTS TO COST (owner, 2026-09-04). Each meter is drawn to 125% of its allowance so
+  // the red line - the free level - sits inside the bar with headroom visible beyond it.
+  const today = new Date().toISOString().slice(0, 10);
+  const traffic = $derived(data.stats?.traffic ?? []);
+  const requestsToday = $derived(traffic.filter((t) => t.day === today).reduce((a, t) => a + Number(t.requests), 0));
+  const byDay = $derived.by(() => {
+    const m = new Map<string, { requests: number; bytes: number; page: number; api: number; asset: number; download: number }>();
+    for (const t of traffic) {
+      const d = m.get(t.day) ?? { requests: 0, bytes: 0, page: 0, api: 0, asset: 0, download: 0 };
+      d.requests += Number(t.requests); d.bytes += Number(t.bytes);
+      if (t.category in d) (d as Record<string, number>)[t.category] += Number(t.requests);
+      m.set(t.day, d);
+    }
+    return [...m.entries()].sort((a, b) => (a[0] < b[0] ? 1 : -1));
+  });
+  const busiestDay = $derived(byDay.reduce((a, [, d]) => Math.max(a, d.requests), 0));
+  const month = $derived(data.stats?.month);
+  const project = (used: number) => {
+    const elapsed = Math.max(1, Number(month?.days_elapsed ?? 1));
+    return Math.round((used / elapsed) * Number(month?.days_in_month ?? 30));
+  };
 
   const s = $derived(data.stats as HubStats | null);
   const n = (v: Count | null | undefined) => Number(v ?? 0);
@@ -30,6 +52,18 @@
 </script>
 
 <svelte:head><title>Usage - admin</title></svelte:head>
+
+{#snippet meter(label: string, used: number, limit: number, note: string, show: (v: number) => string)}
+  {@const pct = (used / limit) * 100}
+  <div class="meter" class:warn={pct > 70} class:bad={pct >= 100}>
+    <div class="head"><span>{label}</span><b>{show(used)} <em>of {show(limit)}</em></b></div>
+    <div class="track">
+      <div class="fill" style="width: {Math.min(125, pct) * 0.8}%"></div>
+      <div class="line" title="the free level"></div>
+    </div>
+    <div class="note">{pct.toFixed(pct < 10 ? 2 : 0)}% · {note}</div>
+  </div>
+{/snippet}
 
 <h1>Usage</h1>
 
@@ -115,13 +149,38 @@
     </section>
   </div>
 
-  <h2>Storage</h2>
-  <div class="bar"><div class="fill" style="width: {storagePct.toFixed(1)}%" class:warn={storagePct > 70} class:bad={storagePct > 90}></div></div>
+  <h2>Where it starts to cost</h2>
   <p class="muted">
-    <b>{formatBytes(storageUsed)}</b> of the {formatBytes(R2_FREE_BYTES)} free allowance ({storagePct.toFixed(1)}%) ·
-    {fmt(s.storage.asset_count)} assets, {formatBytes(n(s.storage.asset_bytes))} ·
-    {fmt(s.storage.bundle_count)} bundles, {formatBytes(n(s.storage.bundle_bytes))}
+    The red line is the free level. Bandwidth out of Cloudflare is free and has no line; the
+    database-to-Worker traffic Supabase meters (5 GB a month) cannot be measured from here.
+    {#if !s.traffic}<strong>Request counting starts once migration 0016 has run.</strong>{/if}
   </p>
+  <div class="meters">
+    {@render meter('Requests today', requestsToday, LIMITS.workersRequestsPerDay, 'Workers free plan, per day, resets at midnight UTC', fmt)}
+    {@render meter('Busiest day, last month', busiestDay, LIMITS.workersRequestsPerDay, 'the day that came closest', fmt)}
+    {@render meter('Stored', storageUsed, LIMITS.r2Bytes, fmt(s.storage.asset_count) + ' assets ' + formatBytes(n(s.storage.asset_bytes)) + ' · ' + fmt(s.storage.bundle_count) + ' bundles ' + formatBytes(n(s.storage.bundle_bytes)), formatBytes)}
+    {@render meter('R2 reads this month', project(n(month?.reads)), LIMITS.r2ReadsPerMonth, 'assets and downloads served, projected to month end (' + fmt(month?.reads) + ' so far)', fmt)}
+    {@render meter('R2 writes this month', project(n(month?.writes)), LIMITS.r2WritesPerMonth, 'assets and bundles stored, projected (' + fmt(month?.writes) + ' so far)', fmt)}
+    {@render meter('Database', n(s.storage.db_bytes), LIMITS.supabaseDbBytes, 'Supabase free plan', formatBytes)}
+  </div>
+  <p class="muted">
+    Data served this month: <b>{formatBytes(n(month?.bytes))}</b> over {fmt(month?.requests)} requests. Free, and worth watching: it grows before everything else does.
+  </p>
+
+  {#if byDay.length}
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Day</th><th>Requests</th><th>Pages</th><th>API</th><th>Assets</th><th>Downloads</th><th>Served</th></tr></thead>
+        <tbody>
+          {#each byDay.slice(0, 14) as [day, d] (day)}
+            <tr class:bad={d.requests > LIMITS.workersRequestsPerDay}>
+              <td>{day}</td><td>{fmt(d.requests)}</td><td>{fmt(d.page)}</td><td>{fmt(d.api)}</td><td>{fmt(d.asset)}</td><td>{fmt(d.download)}</td><td>{formatBytes(d.bytes)}</td>
+            </tr>
+          {/each}
+        </tbody>
+      </table>
+    </div>
+  {/if}
 
   <div class="two">
     <section>
@@ -169,9 +228,18 @@
   th { color: var(--ink-faint); font-weight: 500; font-size: 0.82rem; }
   td.bad { color: var(--bad); }
   .two { display: grid; gap: 22px; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
-  .bar { height: 10px; background: var(--panel-2); border: 1px solid var(--edge); border-radius: 6px; overflow: hidden; margin: 6px 0; }
+  .meters { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); margin: 0 0 14px; }
+  .meter { background: var(--panel); border: 1px solid var(--edge); border-radius: var(--radius); padding: 10px 12px; }
+  .meter .head { display: flex; justify-content: space-between; gap: 10px; font-size: 0.9rem; color: var(--ink-dim); }
+  .meter .head b { color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .meter .head em { color: var(--ink-faint); font-style: normal; font-weight: 400; }
+  .track { position: relative; height: 10px; background: var(--panel-2); border: 1px solid var(--edge); border-radius: 6px; margin: 8px 0 6px; overflow: hidden; }
   .fill { height: 100%; background: var(--accent); }
-  .fill.warn { background: var(--warn); }
-  .fill.bad { background: var(--bad); }
+  .meter.warn .fill { background: var(--warn); }
+  .meter.bad .fill { background: var(--bad); }
+  /* THE RED LINE: the free level, at 80% of the track so the headroom beyond it is visible. */
+  .line { position: absolute; top: -1px; bottom: -1px; left: 80%; width: 2px; background: var(--bad); }
+  .meter .note { color: var(--ink-faint); font-size: 0.8rem; }
+  tr.bad td { color: var(--bad); }
   code { background: var(--panel-2); border: 1px solid var(--edge); border-radius: 4px; padding: 1px 5px; font-size: 0.85em; }
 </style>

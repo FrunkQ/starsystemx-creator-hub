@@ -16,10 +16,31 @@ export interface HubStats {
     slug: string; title: string; handle: string; download_count: Count; hearts_count: Count; downloads_period: Count;
   }>;
   top_creators: Array<{ handle: string; maps: Count; downloads: Count; hearts: Count; bundle_bytes: Count }>;
-  storage: { asset_bytes: Count; asset_count: Count; bundle_bytes: Count; bundle_count: Count };
+  storage: { asset_bytes: Count; asset_count: Count; bundle_bytes: Count; bundle_count: Count; db_bytes?: Count };
   failures: Array<{ reason: string; n: Count }>;
   queue: { pending: Count; oldest_pending: string | null; flagged: Count; open_reports: Count };
+  // 0016. Absent until that migration has run.
+  traffic?: Array<{ day: string; category: string; requests: Count; bytes: Count }>;
+  month?: { requests: Count; bytes: Count; reads: Count; writes: Count; days_elapsed: Count; days_in_month: Count };
 }
 
 /** The R2 free allowance, which is the number the storage panel is measured against. */
 export const R2_FREE_BYTES = 10 * 1024 * 1024 * 1024;
+
+/**
+ * WHERE IT STARTS TO COST. The free allowances the hub runs inside, as of 2026-09. Bandwidth out
+ * of Cloudflare and R2 egress are free and have no line here. Supabase egress (5 GB a month, the
+ * traffic between Postgres and the Worker) is real but cannot be measured from the hub.
+ */
+export const LIMITS = {
+  /** Workers Free: requests per day, reset at midnight UTC. */
+  workersRequestsPerDay: 100_000,
+  /** R2 Free: stored bytes. */
+  r2Bytes: R2_FREE_BYTES,
+  /** R2 Free: class B (read) operations a month - here, asset and download requests. */
+  r2ReadsPerMonth: 10_000_000,
+  /** R2 Free: class A (write) operations a month - here, novel assets and bundles stored. */
+  r2WritesPerMonth: 1_000_000,
+  /** Supabase Free: database size. */
+  supabaseDbBytes: 500 * 1024 * 1024
+};

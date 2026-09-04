@@ -36,6 +36,8 @@ export const GET: RequestHandler = async ({ params, platform, setHeaders }) => {
   // of our control - a cached copy in a visitor's browser is the accepted cost of immutability.
   setHeaders({
     'content-type': object.httpMetadata?.contentType ?? 'application/octet-stream',
+    // Stated, not left for the runtime: the traffic gauge (server/traffic.ts) reads it.
+    'content-length': String(object.size),
     'cache-control': 'public, max-age=31536000, immutable',
     'x-content-type-options': 'nosniff',
     // Belt and braces: even an image route should not be able to run anything.

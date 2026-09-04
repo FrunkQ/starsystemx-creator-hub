@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.9.0 — 2026-09-04
+
+### Where it starts to cost
+
+The usage page now counts requests and bytes served, by day and by kind, and draws each free
+allowance as a red line: Workers requests per day, R2 storage, R2 reads and writes projected to
+month end, and the database's size. Bandwidth is free on Cloudflare and has no line; the
+Supabase-to-Worker traffic cannot be measured from the hub and says so. Counting is batched inside
+the Worker so it costs a fraction of what it measures. Migration 0016.
+
 ## 0.8.0 — 2026-09-04
 
 ### Design your cover

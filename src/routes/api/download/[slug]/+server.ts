@@ -47,6 +47,7 @@ export const GET: RequestHandler = async ({ params, platform, request }) => {
     // the response before the answer is read, and one-click open cannot work at all.
     headers: withCors({
       'content-type': packed.filename.endsWith('.json') ? 'application/json' : 'application/zip',
+      'content-length': String(packed.bytes.length),
       'content-disposition': 'attachment; filename="' + packed.filename + '"',
       // Never cache a download: what it contains depends on the ledger, and the ledger changes.
       'cache-control': 'no-store'

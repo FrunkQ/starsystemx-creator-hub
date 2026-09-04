@@ -6,6 +6,7 @@ import { viewerFromToken } from '$lib/server/auth';
 import { creatorForToken } from '$lib/server/devicePairing';
 import { ACCESS_COOKIE, REFRESH_COOKIE, setSession, clearSession } from '$lib/server/session';
 import { PUBLIC_CORS, preflight } from '$lib/server/cors';
+import { counter, categoryOf, flushIfDue } from '$lib/server/traffic';
 
 /**
  * The endpoints the SSE app reaches CROSS-ORIGIN. All public, all uncredentialed.
@@ -93,6 +94,15 @@ export const handle: Handle = async ({ event, resolve }) => {
   // Every response says which build produced it. Verifying a deploy is then one curl, instead of
   // an inference from behaviour - which was wrong once (0.7.2).
   headers.set('x-hub-version', version);
+
+  // Traffic, for the usage page's "where it starts to cost" panel (server/traffic.ts). Counted
+  // from the response the visitor gets and flushed in batches, so counting costs a fraction of
+  // what it measures. Static files never reach this code and are not billed either.
+  const category = categoryOf(event.url.pathname);
+  if (category !== 'other') {
+    counter.record(category, Number(headers.get('content-length') ?? 0));
+    flushIfDue(sb, event.platform?.context);
+  }
 
   // CORS, applied to the RESPONSE so errors carry it too. Never applied to anything that reads
   // `locals.viewer` - upload, review, admin and the private asset route stay same-origin only.

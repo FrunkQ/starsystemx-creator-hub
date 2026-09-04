@@ -333,6 +333,25 @@ the owner's phrase, shared, homage) — and the browse page now filters on the c
 as the derived ones, by kind, and offers a "narrow it down" strip of the tags that best split a
 crowded result.
 
+### D-23. Traffic is counted in the Worker and flushed in batches; the free tiers are red lines
+
+Owner, 2026-09-04: *"track the data transfer and have the free level set as a RED line - to avoid!
+... so we can determine roughly how close we are getting to the account limits and when it's going
+to cost me."*
+
+What actually costs: Workers requests per day, R2 storage and operations, Supabase database size
+and egress. Bandwidth out of Cloudflare and R2 egress are free. So `traffic_daily` (0016) counts
+requests and bytes by day and category, and `/admin/stats` draws each allowance as a meter with
+the free level as a red line at 80% of the track, so headroom past it is visible.
+
+**The counting must not cost more than it measures.** One database write per request would double
+the Supabase traffic in order to count it. Counts accumulate in the Worker isolate and flush as one
+RPC every twenty requests or forty-five seconds; an isolate evicted before its flush loses at most
+that. It is a gauge, not a ledger, and the page says "roughly" for a reason.
+
+**What it cannot see:** Supabase egress (Postgres to Worker), which is the one Supabase meter with
+teeth. Stated on the page rather than guessed at.
+
 ---
 
 ## Still open — the owner's to answer
