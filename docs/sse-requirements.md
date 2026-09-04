@@ -548,6 +548,33 @@ creator can see, from their own page, where their work went.
 **Not asked:** any check that the credited map still exists, or that the paste was permitted. The
 hub's terms make sharing the point of uploading; this is about naming, not gating.
 
+### R-16 addendum (hub 0.12.0): the link is to the OBJECT, and a copy of a copy names its original
+
+Owner, 2026-09-04: *"Could it link to the right point on the explorer hub - so if a user uses it or
+REUSES it you could link right back to the true source (also if it has been appended and updated,
+ownership is kind of shared)."*
+
+Two more things now ride in `source`, and one more thing to record:
+
+1. **`source.url` is a deep link**: `https://…/s/<slug>#node=<id>`. The map page opens that
+   branch, scrolls to the object and lights it. Store it as it arrives; do not trim the fragment.
+2. **`source.chain`** (optional): where the object was BEFORE the map it is being copied from,
+   deepest first — present when the copied root carries an `origin/hub` tag from an earlier paste.
+   ```jsonc
+   "source": { "site": "…", "url": "https://…/s/gamma#node=e2", "title": "Gamma", "creator": "carol",
+               "chain": [ { "url": "https://…/s/alpha#node=earth", "title": "Alpha", "creator": "alice" },
+                          { "url": "https://…/s/beta#node=e",      "title": "Beta",  "creator": "bob" } ] }
+   ```
+3. **Record `chain` on the `contentCredits` entry** exactly as received, and print the lineage in
+   `ATTRIBUTIONS.md`: *"Earth — from Alpha by alice, via Beta by bob, via Gamma by carol."* When
+   `chain` is absent, print the single line as before.
+
+**What the hub does with it:** the page shows *"Includes work from Alpha by alice (via Beta by bob,
+Gamma by carol)"* and lists every cartographer whose hands the content passed through — that is
+the shared ownership, made visible. And the ORIGINAL map's page lists *"Used in: Gamma by carol"*,
+because the hub can see which public maps credit it (0019). Nothing for the engine to do for that
+half; it falls out of recording the chain faithfully.
+
 ---
 
 ## What the hub will NOT ask the engine to do

@@ -25,7 +25,7 @@ import { computeFacets, deriveTags } from '$lib/bundle/facets';
 import { stripGmContent } from '$lib/bundle/strip';
 import { checkFreshness } from '$lib/bundle/freshness';
 import { zipSync, strToU8 } from 'fflate';
-import { normalise, type NormalisedNode } from '$lib/bundle/normalise';
+import { normalise, creditSlugs, type NormalisedNode } from '$lib/bundle/normalise';
 import { readZip, BundleReadError } from '$lib/bundle/read';
 import { storeGeneratedCover, linkCover, coverNodeFrom, coverFacts } from './cover';
 import { coverOptionsFrom, type CoverOptions } from '$lib/cover/generate';
@@ -499,8 +499,10 @@ async function writeRows(sb: Db, a: WriteArgs): Promise<string> {
     revision: a.revision,
     export_mode: a.exportMode,
     cover_options: a.coverOptions,
-    // Whose work this map includes, as the engine recorded it on paste (R-16, 0018).
-    content_credits: shaped.contentCredits.length ? shaped.contentCredits : null
+    // Whose work this map includes, as the engine recorded it on paste (R-16, 0018) - and the
+    // hub maps it points at, by slug, so the original's page can say "used in" (0019).
+    content_credits: shaped.contentCredits.length ? shaped.contentCredits : null,
+    content_credit_slugs: creditSlugs(shaped.contentCredits)
   }, (row) => Promise.resolve(sb.from('systems').upsert(row as Partial<SystemRow>)));
   if (sysError) throw new Error('could not save the map: ' + sysError.message);
 

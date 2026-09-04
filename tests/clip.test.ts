@@ -46,7 +46,8 @@ describe('the clip envelope', () => {
     const clip = buildClip(sol, 'earth', src)!;
     expect(clip.sseClip).toBe(1);
     expect(clip.root).toBe('earth');
-    expect(clip.source).toEqual(src);
+    // The url names the OBJECT, not the page (0.12.0).
+    expect(clip.source).toEqual({ ...src, url: 'https://x/s/sol#node=earth' });
   });
 
   it('nulls the root parentId: where it lands is the paste target s decision', () => {

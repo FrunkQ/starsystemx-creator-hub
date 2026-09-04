@@ -26,10 +26,10 @@
   // THE TREE REMEMBERS. Which branches you opened and how you sorted are kept per map in this
   // browser (localStorage), so coming back to a map finds it as you left it. A convenience, not
   // state that matters: it is wrapped in try/catch and the page is right without it.
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import RoleIcon from './RoleIcon.svelte';
-  import { COPY_ICON, TICK_ICON, CODE_ICON, orderRoles } from './roleIcons';
-  import { buildClip, clipText, type ClipSource } from '$lib/bundle/clip';
+  import { COPY_ICON, TICK_ICON, CODE_ICON, LINK_ICON, orderRoles } from './roleIcons';
+  import { buildClip, clipText, deepLink, nodeFromHash, type ClipSource, type CreditLike } from '$lib/bundle/clip';
 
   interface Node {
     node_id: string;
@@ -42,7 +42,12 @@
     distance?: number | null;
   }
 
-  let { nodes, source, openDepth = 1 }: { nodes: Node[]; source: ClipSource; openDepth?: number } = $props();
+  let { nodes, source, credits = [], openDepth = 1 }: {
+    nodes: Node[]; source: ClipSource; credits?: CreditLike[]; openDepth?: number
+  } = $props();
+
+  // The row a deep link (#node=<id>) points at: its branch is opened, it is scrolled to and lit.
+  let hit = $state<string | null>(null);
 
   type Sort = 'distance' | 'name';
   let sort = $state<Sort>('distance');
@@ -72,7 +77,33 @@
         if (saved.open && typeof saved.open === 'object') { open = saved.open; epoch += 1; }
       }
     } catch { /* no memory is fine */ }
+
+    // A DEEP LINK lands on the object, not the page: open every branch above it, scroll to it,
+    // light it for a moment. This is what a credit's "true source" link resolves to.
+    const target = nodeFromHash(location.hash);
+    if (target && nodes.some((n) => n.node_id === target)) {
+      const parentOf = new Map(nodes.map((n) => [n.node_id, n.parent_id]));
+      const next = { ...open };
+      for (let id: string | null = target; id; id = parentOf.get(id) ?? null) next[id] = true;
+      open = next;
+      epoch += 1;
+      hit = target;
+      tick().then(() => {
+        document.querySelector('[data-node="' + CSS.escape(target) + '"]')?.scrollIntoView({ block: 'center' });
+        setTimeout(() => { if (hit === target) hit = null; }, 3500);
+      });
+    }
   });
+
+  async function copyLink(id: string) {
+    try {
+      await navigator.clipboard.writeText(deepLink(source.url, id));
+      copiedId = 'link:' + id;
+      setTimeout(() => { if (copiedId === 'link:' + id) copiedId = null; }, 1600);
+    } catch {
+      copiedId = null;
+    }
+  }
 
   function remember() {
     try {
@@ -141,7 +172,7 @@
   }
 
   async function copy(id: string) {
-    const clip = buildClip(nodes, id, source);
+    const clip = buildClip(nodes, id, source, credits);
     if (!clip) return;
     try {
       await navigator.clipboard.writeText(clipText(clip));
@@ -160,6 +191,10 @@
 
 {#snippet actions(node: TreeNode, isBranch: boolean)}
   <span class="acts">
+    <button type="button" class:done={copiedId === 'link:' + node.node_id} title="Copy a link to this object"
+      onclick={(e) => { swallow(e); copyLink(node.node_id); }}>
+      <svg viewBox="0 0 24 24"><path d={copiedId === 'link:' + node.node_id ? TICK_ICON : LINK_ICON} /></svg>
+    </button>
     {#if isBranch}
       <button type="button" class:on={shown[node.node_id]} title="Show this object's JSON"
         onclick={(e) => { swallow(e); shown[node.node_id] = !shown[node.node_id]; }}>
@@ -201,7 +236,8 @@
 
 {#snippet branch(node: TreeNode, depth: number)}
   {#if node.children.length}
-    <details open={isOpen(node.node_id, depth)} style="--depth: {depth}" ontoggle={(e) => toggled(node.node_id, e)}>
+    <details open={isOpen(node.node_id, depth)} style="--depth: {depth}" data-node={node.node_id}
+      class:hit={hit === node.node_id} ontoggle={(e) => toggled(node.node_id, e)}>
       <summary>
         <RoleIcon role={node.role_hint} kind={node.kind} />
         <span class="name">{node.name}</span>
@@ -222,7 +258,9 @@
     </details>
   {:else}
     <!-- A leaf opens to its own JSON: that IS the drill-down to a single body. -->
-    <details style="--depth: {depth}" ontoggle={(e) => { shown[node.node_id] = e.currentTarget.open; }}>
+    <details style="--depth: {depth}" data-node={node.node_id} class:hit={hit === node.node_id}
+      open={hit === node.node_id ? true : undefined}
+      ontoggle={(e) => { shown[node.node_id] = e.currentTarget.open; }}>
       <summary>
         <RoleIcon role={node.role_hint} kind={node.kind} />
         <span class="name">{node.name}</span>
@@ -279,6 +317,8 @@
   }
   summary::marker { color: var(--ink-faint); }
   summary:hover { background: var(--panel-2); }
+  /* The row a deep link landed on: lit, then let go. */
+  details.hit > summary { background: var(--panel-2); box-shadow: inset 3px 0 0 var(--accent); }
   .name { color: var(--ink); font-weight: 550; }
   .role { color: var(--ink-faint); font-size: 0.85rem; }
   .dist { color: var(--ink-faint); font-size: 0.8rem; font-variant-numeric: tabular-nums; }

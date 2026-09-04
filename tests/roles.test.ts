@@ -54,9 +54,9 @@ describe('the credits a map carries for other people\'s work (R-16)', () => {
       { title: 'Bad url', url: 'javascript:alert(1)' }
     ] });
     expect(n.contentCredits).toEqual([
-      { title: 'Local Neighbourhood', creator: 'frunk', url: 'https://x/s/local-neighbourhood', site: 'Explorers' },
-      { title: 'No url', creator: null, url: null, site: null },
-      { title: 'Bad url', creator: null, url: null, site: null }
+      { title: 'Local Neighbourhood', creator: 'frunk', url: 'https://x/s/local-neighbourhood', site: 'Explorers', chain: [] },
+      { title: 'No url', creator: null, url: null, site: null, chain: [] },
+      { title: 'Bad url', creator: null, url: null, site: null, chain: [] }
     ]);
   });
 

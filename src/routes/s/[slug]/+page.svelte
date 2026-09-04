@@ -23,10 +23,26 @@
   // the fixed order every row of the tree uses, so the eye learns one layout.
   const roles = $derived(orderRoles((s.role_counts ?? {}) as Record<string, number>));
 
-  // Other cartographers' work in this map, as the engine recorded it on paste (R-16).
-  const credits = $derived(
-    (Array.isArray(s.content_credits) ? s.content_credits : []) as { title: string; creator: string | null; url: string | null }[]
-  );
+  // Other cartographers' work in this map, as the engine recorded it on paste (R-16). Each credit
+  // may carry a CHAIN - where the work was before the map it was pasted from, deepest first - so a
+  // copy of a copy still names its original.
+  type Origin = { url: string; title: string | null; creator: string | null };
+  type Credit = { title: string; creator: string | null; url: string | null; chain?: Origin[] };
+  type Stop = { url: string | null; title: string | null; creator: string | null };
+  const credits = $derived((Array.isArray(s.content_credits) ? s.content_credits : []) as Credit[]);
+  // The original of each credit, and the maps it passed through on the way here.
+  const lineage = (c: Credit): { original: Stop; via: Stop[] } => {
+    const chain = c.chain ?? [];
+    return chain.length ? { original: chain[0], via: [...chain.slice(1), c] } : { original: c, via: [] };
+  };
+  // Everyone whose hands this map's content passed through - the owner's "ownership is shared".
+  const cartographers = $derived.by(() => {
+    const names = new Set<string>();
+    for (const c of credits) { for (const o of [...(c.chain ?? []), c]) if (o.creator) names.add(o.creator); }
+    const mine = data.creator?.display_name ?? data.creator?.handle;
+    if (mine) names.delete(mine);
+    return [...names];
+  });
 </script>
 
 <svelte:head>
@@ -132,10 +148,26 @@
   <!-- CREDIT FOLLOWS CONTENT. When this map was built partly from clips pasted out of other maps,
        the engine recorded whose (R-16) and the hub says so, with a way back. -->
   {#if credits.length}
+    <div class="credits">
+      <p>
+        Includes work from
+        {#each credits as c, i (c.title + (c.url ?? ''))}
+          {@const l = lineage(c)}
+          {#if l.original.url}<a href={l.original.url}>{l.original.title ?? c.title}</a>{:else}{l.original.title ?? c.title}{/if}{#if l.original.creator} by {l.original.creator}{/if}{#if l.via.length} (via {#each l.via as v, j}{#if v.url}<a href={v.url}>{v.title ?? 'a map'}</a>{:else}{v.title ?? 'a map'}{/if}{#if v.creator} by {v.creator}{/if}{j < l.via.length - 1 ? ', ' : ''}{/each}){/if}{i < credits.length - 1 ? '; ' : '.'}
+        {/each}
+      </p>
+      {#if cartographers.length}
+        <p class="shared">Cartographers whose work is in this map: {cartographers.join(', ')}{#if data.creator}, and {data.creator.display_name ?? data.creator.handle}{/if}.</p>
+      {/if}
+    </div>
+  {/if}
+
+  <!-- The other direction: where this map's work has gone. -->
+  {#if data.usedIn.length}
     <p class="credits">
-      Includes work from
-      {#each credits as c, i (c.title + (c.url ?? ''))}
-        {#if c.url}<a href={c.url}>{c.title}</a>{:else}{c.title}{/if}{#if c.creator} by {c.creator}{/if}{i < credits.length - 1 ? ', ' : '.'}
+      Used in
+      {#each data.usedIn as u, i (u.slug)}
+        <a href="/s/{u.slug}">{u.title}</a>{#if u.creator} by {u.creator}{/if}{i < data.usedIn.length - 1 ? ', ' : '.'}
       {/each}
     </p>
   {/if}
@@ -149,6 +181,7 @@
   </p>
   <NodeTree
     nodes={[...data.bodies, ...data.constructs]}
+    {credits}
     source={{
       site: data.site.name, url: data.site.url + '/s/' + s.slug, title: s.title,
       creator: data.creator?.display_name ?? data.creator?.handle ?? null
@@ -197,6 +230,8 @@
   .rc :global(.role-icon) { opacity: 0.7; }
   .pills { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 18px; }
   .credits { color: var(--ink-dim); margin: 0 0 18px; font-size: 0.92rem; }
+  .credits p { margin: 0 0 6px; }
+  .shared { color: var(--ink-faint); }
   .pills a.tag { text-decoration: none; }
   .pills a.tag:hover { border-color: var(--accent); }
   .foot-actions { margin-top: 36px; }

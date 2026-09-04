@@ -42,6 +42,22 @@ create? If not we need to engineer that in."* `origin/hub` is a breadcrumb, not 
 0018) and shows *"Includes work from Local Neighbourhood by frunk"* with the link on the map's
 page. Credit follows content through as many hands as it passes.
 
+**Addendum (hub 0.12.0) - two more fields, one more line to print.** `source.url` is now a DEEP
+LINK to the object (`…/s/<slug>#node=<id>`; store it whole, fragment included - the hub's page
+opens and lights that row). And when the copied object had itself been pasted in from somewhere,
+`source.chain` lists where it was before, deepest first:
+
+```jsonc
+"source": { "site": "…", "url": "https://…/s/gamma#node=e2", "title": "Gamma", "creator": "carol",
+            "chain": [ { "url": "https://…/s/alpha#node=earth", "title": "Alpha", "creator": "alice" },
+                       { "url": "https://…/s/beta#node=e",      "title": "Beta",  "creator": "bob" } ] }
+```
+
+Record `chain` on the `contentCredits` entry as received and print the lineage in
+`ATTRIBUTIONS.md`: *"from Alpha by alice, via Beta by bob, via Gamma by carol"*. The hub then shows
+the lineage on the page and lists every cartographer in it, and the original map's page lists
+"Used in". Full text: R-16 addendum in the hub's `docs/sse-requirements.md`.
+
 ## One hub-side thing you may notice in clips
 
 The clip now keeps app-shipped models and images (`/models/nasa/iss.glb` with its NASA credit,

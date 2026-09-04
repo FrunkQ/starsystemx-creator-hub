@@ -373,6 +373,28 @@ campaign and print it in the attributions file. The hub reads that list back on 
 from their own page where their work went, and the person who used it never has to remember to
 say so.
 
+### D-25. A credit links to the object, carries its chain, and is visible from both ends
+
+Owner, 2026-09-04: *"Could it link to the right point on the explorer hub - so if a user uses it or
+REUSES it you could link right back to the true source (also if it has been appended and updated
+ownership is kind of shared)."*
+
+**The unique address of any object on the hub is `/s/<slug>#node=<id>`.** Slugs never change
+(containment design, section 6) and node ids are the engine's own stable ids, so the pair is a
+permanent identifier for any point in any hierarchy, readable by a person and resolvable by the
+page: open the branch, scroll, light the row. No opaque id was minted; one that survives nothing
+the deep link does not survive would be a second name for the same thing.
+
+**The chain.** A pasted root carries `origin/hub=<url>` (R-14 rule 5), and the map's own credits
+say who that url belonged to and where it was before. So a clip copied out of a copy carries
+`source.chain`, deepest first, and R-16's addendum asks the engine to record and print it. The
+page renders the lineage and lists every cartographer in it — the owner's "shared ownership", as a
+fact on the page rather than a sentiment.
+
+**Both ways.** Credits are also stored as the slugs they point at (`content_credit_slugs`, 0019),
+so the ORIGINAL map's page can list "Used in" with one indexed query. A cartographer sees where
+their work went without anyone having to tell them.
+
 ---
 
 ## Still open — the owner's to answer

@@ -32,8 +32,20 @@ export const load: PageServerLoad = async ({ params, platform, setHeaders, url }
     sb.from('system_assets').select('sha256').eq('system_id', system.id)
   ]);
 
-  const { data: shots } = await sb.from('system_screenshots')
-    .select('sha256, caption, ordinal').eq('system_id', system.id).order('ordinal');
+  const [{ data: shots }, { data: reusers }] = await Promise.all([
+    sb.from('system_screenshots').select('sha256, caption, ordinal').eq('system_id', system.id).order('ordinal'),
+    // "USED IN": public maps whose credits point at this one (0019). The other half of "credit
+    // follows content" - a cartographer sees where their work went. Fails quietly before 0019.
+    sb.from('systems').select('slug, title, creator_id')
+      .eq('state', 'public').eq('visibility', 'public').neq('id', system.id)
+      .contains('content_credit_slugs', [system.slug]).limit(20)
+  ]);
+  const reuserIds = [...new Set((reusers ?? []).map((r) => r.creator_id))];
+  const { data: reuserCreators } = reuserIds.length
+    ? await sb.from('creators').select('id, handle, display_name').in('id', reuserIds)
+    : { data: [] as { id: string; handle: string; display_name: string | null }[] };
+  const nameOf = new Map((reuserCreators ?? []).map((c) => [c.id, c.display_name ?? c.handle]));
+  const usedIn = (reusers ?? []).map((r) => ({ slug: r.slug, title: r.title, creator: nameOf.get(r.creator_id) ?? null }));
 
   // A map with no picture gets one drawn from itself on first view (server/cover.ts, D-21) - the
   // backfill for anything uploaded before the hub could draw. Once per map; never fails the page.
@@ -74,6 +86,7 @@ export const load: PageServerLoad = async ({ params, platform, setHeaders, url }
     creator,
     bodies: bodies ?? [],
     constructs: constructs ?? [],
+    usedIn,
     withheldCount,
     // Only approved screenshots reach a public page. An unreviewed one is simply not there yet.
     screenshots: (shots ?? []).filter((s2) => approved.has(s2.sha256 as string)),

@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.12.0 — 2026-09-04
+
+### Credit points at the object, follows a copy of a copy, and runs both ways
+
+A clip's source link now names the object itself - `/s/<slug>#node=<id>` - and the map page opens
+that branch, scrolls to it and lights it. Every tree row has a "copy link" control. When the
+copied object had itself been pasted in from somewhere, the clip carries the chain back to the
+original, deepest first, so a copy of a copy still names the true source; the page shows "from
+Alpha by alice (via Beta by bob)" and lists every cartographer whose hands the content passed
+through. And the original map's page lists "Used in", because the hub can see which public maps
+credit it. Migration 0019.
+
 ## 0.11.0 — 2026-09-04
 
 ### Small objects

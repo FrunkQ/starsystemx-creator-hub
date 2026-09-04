@@ -42,7 +42,18 @@ export interface ContentCredit {
   creator: string | null;
   url: string | null;
   site: string | null;
+  /**
+   * Where the work was BEFORE the map it was pasted from, deepest first - a copy of a copy still
+   * names its original, and everyone it passed through (the owner's "ownership is kind of shared").
+   */
+  chain: { url: string; title: string | null; creator: string | null }[];
 }
+
+/** `/s/<slug>` out of a hub url, whichever host. Mirrors clip.ts; kept here to avoid a server import cycle. */
+const slugOf = (url: string | null): string | null => {
+  const m = /\/s\/([a-z0-9-]+)/i.exec(url ?? '');
+  return m ? m[1].toLowerCase() : null;
+};
 
 export interface NormalisedBundle {
   title: string;
@@ -72,15 +83,40 @@ function readContentCredits(raw: unknown): ContentCredit[] {
     const key = title + '|' + (url ?? '');
     if (seen.has(key)) continue;
     seen.add(key);
+    const chain = Array.isArray(c?.chain)
+      ? c.chain
+          .filter((o: any) => typeof o?.url === 'string' && /^https?:\/\//.test(o.url))
+          .slice(0, 10)
+          .map((o: any) => ({
+            url: String(o.url).slice(0, 300),
+            title: typeof o?.title === 'string' && o.title.trim() ? o.title.trim().slice(0, 120) : null,
+            creator: typeof o?.creator === 'string' && o.creator.trim() ? o.creator.trim().slice(0, 80) : null
+          }))
+      : [];
     out.push({
       title,
       creator: typeof c?.creator === 'string' && c.creator.trim() ? c.creator.trim().slice(0, 80) : null,
       url,
-      site: typeof c?.site === 'string' && c.site.trim() ? c.site.trim().slice(0, 80) : null
+      site: typeof c?.site === 'string' && c.site.trim() ? c.site.trim().slice(0, 80) : null,
+      chain
     });
     if (out.length >= 50) break;
   }
   return out;
+}
+
+/** Every hub map the credits point at, by slug - so "used in" is one indexed query (0019). */
+export function creditSlugs(credits: ContentCredit[]): string[] {
+  const out = new Set<string>();
+  for (const c of credits) {
+    const s = slugOf(c.url);
+    if (s) out.add(s);
+    for (const o of c.chain) {
+      const t = slugOf(o.url);
+      if (t) out.add(t);
+    }
+  }
+  return [...out];
 }
 
 const str = (v: unknown): string | null => (typeof v === 'string' && v ? v : null);

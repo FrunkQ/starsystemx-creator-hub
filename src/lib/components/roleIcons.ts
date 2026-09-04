@@ -83,3 +83,4 @@ export function orderRoles(counts: Record<string, number>): [string, number][] {
 export const COPY_ICON = 'M8 4h9a2 2 0 0 1 2 2v9M6 8h9a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2Z';
 export const TICK_ICON = 'M5 12.5l4.5 4.5L19 7.5';
 export const CODE_ICON = 'M8 7l-5 5 5 5M16 7l5 5-5 5';
+export const LINK_ICON = 'M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7';

@@ -26,6 +26,59 @@ export interface ClipNode {
   parent_id: string | null;
   /** The node as stored: bundle-carried asset references and GM notes already stripped (normalise.ts). */
   snippet: unknown;
+  /** Stored as `key` or `key=value`. An `origin/hub=<url>` tag means this node was itself pasted. */
+  tags?: string[];
+}
+
+/** One earlier home of a copied object: where it was before the map it is being copied from. */
+export interface ClipOrigin {
+  url: string;
+  title: string | null;
+  creator: string | null;
+}
+
+/** What a map says about the work it includes (systems.content_credits, read from the save). */
+export interface CreditLike {
+  title: string;
+  creator: string | null;
+  url: string | null;
+  chain?: ClipOrigin[] | null;
+}
+
+/** The address of one object on its map's page: the page opens that branch and scrolls to it. */
+export const deepLink = (pageUrl: string, nodeId: string): string =>
+  pageUrl.split('#')[0] + '#node=' + encodeURIComponent(nodeId);
+
+/** The node a page url points at, or null. */
+export function nodeFromHash(hash: string): string | null {
+  const m = /^#node=(.+)$/.exec(hash ?? '');
+  if (!m) return null;
+  try { return decodeURIComponent(m[1]); } catch { return null; }
+}
+
+/** `/s/<slug>` out of a hub url, whichever host and whatever follows. */
+export function slugOfUrl(url: string | null | undefined): string | null {
+  const m = /\/s\/([a-z0-9-]+)/i.exec(url ?? '');
+  return m ? m[1].toLowerCase() : null;
+}
+
+/**
+ * THE TRUE SOURCE, when the copied object was itself pasted in from somewhere (owner, 2026-09-04:
+ * "link right back to the true source ... if it has been appended and updated ownership is kind of
+ * shared"). The engine stamps a pasted root with `origin/hub=<url>` (R-14 rule 5); the map's own
+ * content credits (R-16) say who that url belonged to and, if THAT was a copy too, where it came
+ * from before. The chain is deepest source first: the original, then each map it passed through.
+ * The map being copied from now is not in it - that is `source` itself.
+ */
+export function originChain(root: ClipNode, credits: CreditLike[] = []): ClipOrigin[] {
+  const tag = (root.tags ?? []).find((t) => t.startsWith('origin/hub='));
+  if (!tag) return [];
+  const url = tag.slice('origin/hub='.length).trim();
+  if (!url) return [];
+  const slug = slugOfUrl(url);
+  const credit = credits.find((c) => c.url && (c.url === url || (slug !== null && slugOfUrl(c.url) === slug)));
+  const earlier = credit?.chain?.filter((o) => o && typeof o.url === 'string') ?? [];
+  return [...earlier, { url, title: credit?.title ?? null, creator: credit?.creator ?? null }];
 }
 
 export interface ClipSource {
@@ -41,6 +94,11 @@ export interface ClipSource {
    * The engine records it as a content credit on paste (docs/sse-requirements.md R-16).
    */
   creator?: string | null;
+  /**
+   * Earlier homes of the copied object, deepest first, when it was itself pasted in from
+   * somewhere. Empty for an object made in the map it is copied from. See `originChain`.
+   */
+  chain?: ClipOrigin[];
 }
 
 export interface SseClip {
@@ -88,9 +146,16 @@ export function subtreeOf(nodes: ClipNode[], rootId: string): ClipNode[] {
   return out;
 }
 
-export function buildClip(nodes: ClipNode[], rootId: string, source: ClipSource): SseClip | null {
+export function buildClip(
+  nodes: ClipNode[], rootId: string, source: ClipSource, credits: CreditLike[] = []
+): SseClip | null {
   const subtree = subtreeOf(nodes, rootId);
   if (!subtree.length) return null;
+
+  // The address is the OBJECT, not the page: a credit that links to the page of a 192-node map
+  // points at nothing in particular. And the chain, so a copy of a copy still names the original.
+  const chain = originChain(subtree[0], credits);
+  source = { ...source, url: deepLink(source.url, rootId), ...(chain.length ? { chain } : {}) };
 
   const out: Record<string, unknown>[] = [];
   for (const n of subtree) {
