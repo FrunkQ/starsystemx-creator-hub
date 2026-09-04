@@ -56,6 +56,10 @@
   {#if s.revision != null}· revision {s.revision}{/if}
   {#if s.export_mode}· exported as the {s.export_mode === 'player' ? 'player' : 'GM'} view{/if}
 </p>
+<p class="actions">
+  <a href="/upload?replaces={s.id}">Upload a new version</a>
+  {#if s.state === 'public'}· <a href="/s/{s.slug}">See the page</a>{/if}
+</p>
 
 {#if form?.message}
   <div class="panel notice bad"><p>{form.message}</p></div>
@@ -206,7 +210,8 @@
 
 <style>
   h1 { margin: 0 0 4px; }
-  .by { margin: 0 0 20px; color: var(--ink-faint); }
+  .by { margin: 0 0 6px; color: var(--ink-faint); }
+  .actions { margin: 0 0 20px; color: var(--ink-faint); }
   h2 { margin: 0 0 10px; font-size: 1.1rem; }
   .muted { color: var(--ink-dim); margin: 0 0 12px; max-width: 62ch; }
   label { display: block; margin: 12px 0; color: var(--ink-dim); }

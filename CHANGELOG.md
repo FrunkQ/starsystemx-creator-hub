@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.12.1 — 2026-09-04
+
+### Upload a new version from the website
+
+Until now a map could only be updated from inside Star System Explorer. The manage page has
+"Upload a new version": the same upload page, told which map it is replacing, so the address stays
+the same, a chosen cover or designed card is kept, and an older file than the published copy is
+stopped with both revision numbers and a deliberate "replace anyway".
+
 ## 0.12.0 — 2026-09-04
 
 ### Credit points at the object, follows a copy of a copy, and runs both ways

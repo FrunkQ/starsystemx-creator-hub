@@ -13,6 +13,9 @@
   // Set only after the hub has DETECTED GM content and the creator has said they meant it.
   let confirmGmTree = $state(false);
   let stripGm = $state(false);
+  // Set only after the hub has said "this file is OLDER than the published copy" and the creator
+  // has said they mean it (R-12, the stale-upload guard).
+  let confirmStale = $state(false);
   let busy = $state(false);
   let result = $state<any>(null);
 
@@ -23,8 +26,11 @@
     result = null;
     const body = new FormData();
     body.set('bundle', file);
+    // A NEW VERSION of an existing map: same slug, same page, new rows (data.replacing).
+    if (data.replacing) body.set('replaces', data.replacing.id);
     if (confirmGmTree) body.set('confirmGmTree', 'on');
     if (stripGm) body.set('stripGm', 'on');
+    if (confirmStale) body.set('confirmStale', 'on');
     if (attested) body.set('attest', 'on');
     try {
       const res = await fetch('/api/upload', { method: 'POST', body });
@@ -37,12 +43,22 @@
   }
 </script>
 
-<svelte:head><title>Share a map - {data.site.name}</title></svelte:head>
+<svelte:head><title>{data.replacing ? 'Upload a new version' : 'Share a map'} - {data.site.name}</title></svelte:head>
 
-<h1>Share a map</h1>
-<p class="lede">
-  Upload a save from Star System Explorer and it gets a page anyone can download from in one click.
-</p>
+{#if data.replacing}
+  <h1>Upload a new version</h1>
+  <p class="lede">
+    Replacing <strong>{data.replacing.title}</strong>{#if data.replacing.revision != null} (currently
+    revision {data.replacing.revision}){/if}. Its address stays the same, so every link already shared
+    keeps working; the page, the tree and the download become this file. A screenshot you chose as
+    the cover, or a card you designed, is kept.
+  </p>
+{:else}
+  <h1>Share a map</h1>
+  <p class="lede">
+    Upload a save from Star System Explorer and it gets a page anyone can download from in one click.
+  </p>
+{/if}
 
 <form class="panel" onsubmit={submit}>
   <label>
@@ -64,9 +80,24 @@
   </fieldset>
 
   <button class="primary" type="submit" disabled={!file || !attested || busy}>
-    {busy ? 'Reading...' : 'Upload'}
+    {busy ? 'Reading...' : data.replacing ? 'Upload this version' : 'Upload'}
   </button>
 </form>
+
+{#if result?.code === 'stale-revision'}
+  <!-- The stale-upload guard (R-12). The file is older than what is published; almost always an
+       old export found in a Downloads folder. Name both numbers and let the creator decide. -->
+  <div class="panel notice bad">
+    <h3>This file is older than the published copy</h3>
+    <p>{result.message}</p>
+    <div class="choices">
+      <button onclick={() => { confirmStale = true; submit(new Event('x')); }} disabled={busy}>
+        Replace the newer copy with this one anyway
+      </button>
+      <p class="why">Or find the newer save and upload that instead - nothing has changed yet.</p>
+    </div>
+  </div>
+{/if}
 
 {#if result?.code === 'gm-content'}
   <!-- The one case where the creator IS asked - because the hub found evidence, and can say
@@ -104,10 +135,13 @@
       </p>
     </div>
   </div>
-{:else if result}
+{:else if result && result.code !== 'stale-revision'}
   <div class="panel notice" class:bad={!result.ok}>
-    <h3>{result.ok ? 'Uploaded' : 'Not uploaded'}</h3>
-    <p>{result.message ?? 'Your map is saved as a draft.'}</p>
+    <h3>{result.ok ? (data.replacing ? 'New version uploaded' : 'Uploaded') : 'Not uploaded'}</h3>
+    <p>{result.message ?? (data.replacing ? 'The page, the tree and the download are now this file.' : 'Your map is saved as a draft.')}</p>
+    {#if result.ok && result.slug}
+      <p><a href="/manage/{result.systemId}">Manage it</a> · <a href="/s/{result.slug}">See the page</a></p>
+    {/if}
     {#if result.ok && result.stripped?.length}
       <p>Removed for you: {result.stripped.join('; ')}. Your own copy is untouched.</p>
     {/if}
