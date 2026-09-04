@@ -384,6 +384,14 @@ destroying work.
 
 ## R-13. A machine-readable manifest of what SSE ships
 
+> **How much it bites today (2026-09-04), so it can be sequenced honestly:** less than it did.
+> Since B112 (v3.0.225) a new save omits the shipped registries, so the hub's hand-copied baselines
+> only matter for files written before that — and those baselines are currently correct. The
+> other thing the manifest would settle, telling app artwork from an upload, the hub does today by
+> path prefix (`/images/...`, `/models/...`), which has not failed on a real file. **So: after the
+> paste UI, not before it.** The paste UI closes a loop users can see; this closes one only the
+> maintainers can.
+
 **What:** one static JSON, served from the app, listing the content that ships with the build —
 calendar names, tag category ids, star-type image paths, starter model paths, and later the shipped
 gases/liquids/fuels.
@@ -413,7 +421,20 @@ save contents and the manifest still earns its place for assets.
 
 ---
 
-## R-14. A paste target for hub clips — the hub half is live, the engine half does not exist
+## R-14. A paste target for hub clips — SHIPPED engine-side in v3.0.292, UI pending
+
+> **Status 2026-09-04.** The engine's `src/lib/io/hubClip.ts` takes the whole subtree, refuses a
+> cycle, re-mints every id and rewrites it wherever it sits (an autopilot leg, an avoid-list, a
+> docking target — not only `parentId`), re-hosts a body root through the G64 reparent, and stamps
+> `origin/hub`. Every kind works: a construct is a body with `kind: 'construct'`, so stations,
+> hab rings, ringworlds, ships and belts all arrive as themselves. The owner confirmed a paste.
+> **Two recorded asymmetries, both fine by the hub:** a construct root gets a plain attach (parent,
+> host and `hostMu` restamped, elements kept) rather than the body root's state re-expression —
+> right for something placed in "Low Orbit"; and a pasted ship's autopilot is stood down and
+> tagged, because its route's stops were never copied. That is rule 5 below done properly.
+> **Still to build:** the paste UI — onto the selection in the system view with a text box for
+> Firefox, system-then-body from the starmap. The hub side (0.10.0) now keeps app-shipped models
+> and images in the clip; see the format note below.
 
 **What the hub does.** Every row of a map page's tree has a copy control. Copying a row puts a
 **clip** on the clipboard: that object and everything beneath it — a star with all its planets, a
