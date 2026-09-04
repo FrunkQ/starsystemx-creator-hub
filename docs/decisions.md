@@ -352,6 +352,27 @@ that. It is a gauge, not a ledger, and the page says "roughly" for a reason.
 **What it cannot see:** Supabase egress (Postgres to Worker), which is the one Supabase meter with
 teeth. Stated on the page rather than guessed at.
 
+### D-24. Small objects are a hub-side role, and credit follows a clip as an attribution
+
+Owner, 2026-09-04: *"we will need an extra category for 'small objects' - i.e. sub-moons - people
+are starting to model the asteroid belt in detail ... below a certain mass - should be in a new
+category."* And: *"on cut and paste are we pushing through attributions with it?"*
+
+**Small objects.** The engine calls every orbiting rock a planet or a moon, which is right for the
+physics and wrong for a person reading "412 planets". Below **1e20 kg** - Vesta and Pallas stay,
+Hygiea and smaller go; Ceres is untouched - or under 250 km when the mass is missing, a planet or
+moon is shown as a **small object**. It is the hub's display axis, defined once in
+`bundle/roles.ts` and used by the stored role, the counts, the pills, the tree and the cover; the
+engine's `roleHint` is untouched in the save and in every clip. If the engine ever grows a role of
+its own for these, the hub reads that instead of inferring.
+
+**Credit.** `origin/hub` on a pasted root is a breadcrumb, not a credit. The clip's `source` now
+carries the cartographer's name, and R-16 asks the engine to record a `contentCredits` entry on the
+campaign and print it in the attributions file. The hub reads that list back on upload
+(`content_credits`, 0018) and says "includes work from X by Y" with the link - so a creator can see
+from their own page where their work went, and the person who used it never has to remember to
+say so.
+
 ---
 
 ## Still open — the owner's to answer

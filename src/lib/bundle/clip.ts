@@ -35,6 +35,12 @@ export interface ClipSource {
   url: string;
   /** The map's title. */
   title: string;
+  /**
+   * WHO MADE THE MAP (owner, 2026-09-04: "are we pushing through attributions with it?"). The
+   * cartographer's name, so the campaign this lands in can credit a person and not only a url.
+   * The engine records it as a content credit on paste (docs/sse-requirements.md R-16).
+   */
+  creator?: string | null;
 }
 
 export interface SseClip {

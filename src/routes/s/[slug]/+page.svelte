@@ -22,6 +22,11 @@
   // Role counts are the human axis - "12 planets, 4 stations" says what "230 bodies" cannot. In
   // the fixed order every row of the tree uses, so the eye learns one layout.
   const roles = $derived(orderRoles((s.role_counts ?? {}) as Record<string, number>));
+
+  // Other cartographers' work in this map, as the engine recorded it on paste (R-16).
+  const credits = $derived(
+    (Array.isArray(s.content_credits) ? s.content_credits : []) as { title: string; creator: string | null; url: string | null }[]
+  );
 </script>
 
 <svelte:head>
@@ -124,6 +129,17 @@
     </div>
   {/if}
 
+  <!-- CREDIT FOLLOWS CONTENT. When this map was built partly from clips pasted out of other maps,
+       the engine recorded whose (R-16) and the hub says so, with a way back. -->
+  {#if credits.length}
+    <p class="credits">
+      Includes work from
+      {#each credits as c, i (c.title + (c.url ?? ''))}
+        {#if c.url}<a href={c.url}>{c.title}</a>{:else}{c.title}{/if}{#if c.creator} by {c.creator}{/if}{i < credits.length - 1 ? ', ' : '.'}
+      {/each}
+    </p>
+  {/if}
+
   <!-- A TREE, not a flat table. 161 alphabetised rows put a barycentre between two unrelated
        stars and asked nobody to read any of it; the parent/child data was there all along.
        Copying lives on the rows: a branch copies itself and everything under it. -->
@@ -133,7 +149,10 @@
   </p>
   <NodeTree
     nodes={[...data.bodies, ...data.constructs]}
-    source={{ site: data.site.name, url: data.site.url + '/s/' + s.slug, title: s.title }}
+    source={{
+      site: data.site.name, url: data.site.url + '/s/' + s.slug, title: s.title,
+      creator: data.creator?.display_name ?? data.creator?.handle ?? null
+    }}
   />
 
   <div class="foot-actions">
@@ -177,6 +196,7 @@
   .rc { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
   .rc :global(.role-icon) { opacity: 0.7; }
   .pills { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 18px; }
+  .credits { color: var(--ink-dim); margin: 0 0 18px; font-size: 0.92rem; }
   .pills a.tag { text-decoration: none; }
   .pills a.tag:hover { border-color: var(--accent); }
   .foot-actions { margin-top: 36px; }

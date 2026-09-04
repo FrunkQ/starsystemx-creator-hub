@@ -15,6 +15,7 @@
 // ============================================================================================
 import { nodesWithSystem } from './attribution';
 import { applyFacetRules, type FacetResult, type FacetRule } from './facetRules';
+import { displayRole } from './roles';
 
 export interface Facets {
   systemCount: number;
@@ -41,8 +42,12 @@ export interface Facets {
  * the ones that matter. Uggi's 25 stations are what tell you what kind of map it is.
  */
 const DISTINGUISHING_ROLES = [
-  'moon', 'belt', 'ring', 'station', 'ship', 'habitat', 'infrastructure'
+  'moon', 'belt', 'ring', 'small object', 'station', 'ship', 'habitat', 'infrastructure'
 ] as const;
+
+/** The pill a role earns. Roles are words; pills are slugs. */
+const pillFor = (role: string) =>
+  role === 'infrastructure' ? 'infrastructure' : role.replace(/ /g, '-') + 's';
 
 export function computeFacets(doc: any, rules?: FacetRule[]): Facets {
   const f: Facets = {
@@ -60,7 +65,9 @@ export function computeFacets(doc: any, rules?: FacetRule[]): Facets {
     // A barycentre is scaffolding, not an object anyone came to look at. Counted as neither.
     else if (kind === 'body') f.bodyCount++;
 
-    const role = String(node?.roleHint ?? '').toLowerCase();
+    // The same rule normalise.ts stores: a planet or moon under the small-object mass counts as a
+    // SMALL OBJECT (bundle/roles.ts), so "412 planets" becomes "412 small objects" everywhere.
+    const role = (displayRole(node) ?? '').toLowerCase();
     if (role) f.roleCounts[role] = (f.roleCounts[role] ?? 0) + 1;
 
     for (const t of node?.tags ?? []) {
@@ -131,7 +138,7 @@ export function deriveTags(f: Facets, opts: { hasGmContent: boolean }): string[]
   // already covered by `multi-star`.
   for (const role of DISTINGUISHING_ROLES) {
     const n = f.roleCounts[role] ?? 0;
-    if (n > 0) tags.push(role === 'infrastructure' ? 'infrastructure' : role + 's');
+    if (n > 0) tags.push(pillFor(role));
   }
   // Uggi's 54 constructs against TRAPPIST-1's none. Worth its own pill.
   if (f.constructCount >= 20) tags.push('built-up');

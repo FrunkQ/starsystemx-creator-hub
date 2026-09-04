@@ -498,7 +498,9 @@ async function writeRows(sb: Db, a: WriteArgs): Promise<string> {
     facet_results: a.facets.rules,
     revision: a.revision,
     export_mode: a.exportMode,
-    cover_options: a.coverOptions
+    cover_options: a.coverOptions,
+    // Whose work this map includes, as the engine recorded it on paste (R-16, 0018).
+    content_credits: shaped.contentCredits.length ? shaped.contentCredits : null
   }, (row) => Promise.resolve(sb.from('systems').upsert(row as Partial<SystemRow>)));
   if (sysError) throw new Error('could not save the map: ' + sysError.message);
 

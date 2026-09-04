@@ -6,7 +6,7 @@ import { vocabularyFrom } from '$lib/vocabulary';
 const FACET_GROUPS = [
   { label: 'Shape', tags: ['campaign', 'large-campaign', 'single-system', 'built-up', 'multi-star'] },
   // No 'stars'/'planets': every map has them, so they filter nothing (see facets.ts).
-  { label: 'Contains', tags: ['moons', 'belts', 'rings', 'stations', 'ships', 'habitats', 'infrastructure'] },
+  { label: 'Contains', tags: ['moons', 'belts', 'rings', 'small-objects', 'stations', 'ships', 'habitats', 'infrastructure'] },
   { label: 'Worlds', tags: ['life', 'habitable', 'oceans', 'ice'] },
   { label: 'Artwork', tags: ['has-artwork', 'has-3d-models'] },
   { label: 'Safe to show players', tags: ['player-safe', 'gm-notes'] }

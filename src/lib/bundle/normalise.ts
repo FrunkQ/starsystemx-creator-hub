@@ -10,6 +10,7 @@
 // until `KNOWN_BUNDLE_FORMATS` is non-empty, and that should not happen until a canonical fixture
 // has been run through it.
 import { IMAGES_DIR, PLAYER_IMAGES_DIR } from './contract';
+import { displayRole } from './roles';
 
 export interface NormalisedNode {
   node_id: string;
@@ -35,6 +36,14 @@ export interface NormalisedNode {
   map_y: number | null;
 }
 
+/** Another cartographer's work this map includes, as the engine records it on paste (R-16). */
+export interface ContentCredit {
+  title: string;
+  creator: string | null;
+  url: string | null;
+  site: string | null;
+}
+
 export interface NormalisedBundle {
   title: string;
   summary: string | null;
@@ -43,6 +52,35 @@ export interface NormalisedBundle {
   systemNames: string[];
   bodies: NormalisedNode[];
   constructs: NormalisedNode[];
+  /** Who else's work is in here. Empty for a map that pasted nothing. */
+  contentCredits: ContentCredit[];
+}
+
+/**
+ * `contentCredits` from the document (docs/sse-requirements.md R-16): a claim the engine wrote on
+ * paste, read here so the page can say "includes work from X by Y" and link back. Length-capped
+ * and de-duplicated: it is displayed, and it arrives from a file a stranger wrote.
+ */
+function readContentCredits(raw: unknown): ContentCredit[] {
+  if (!Array.isArray(raw)) return [];
+  const out: ContentCredit[] = [];
+  const seen = new Set<string>();
+  for (const c of raw) {
+    const title = typeof c?.title === 'string' ? c.title.trim().slice(0, 120) : '';
+    if (!title) continue;
+    const url = typeof c?.url === 'string' && /^https?:\/\//.test(c.url) ? c.url.slice(0, 300) : null;
+    const key = title + '|' + (url ?? '');
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({
+      title,
+      creator: typeof c?.creator === 'string' && c.creator.trim() ? c.creator.trim().slice(0, 80) : null,
+      url,
+      site: typeof c?.site === 'string' && c.site.trim() ? c.site.trim().slice(0, 80) : null
+    });
+    if (out.length >= 50) break;
+  }
+  return out;
 }
 
 const str = (v: unknown): string | null => (typeof v === 'string' && v ? v : null);
@@ -97,7 +135,9 @@ function toNode(node: any, placement?: Placement): NormalisedNode {
     parent_id: parentId,
     name: String(node?.name ?? node?.id ?? 'unnamed'),
     kind: String(node?.kind ?? 'unknown'),
-    role_hint: str(node?.roleHint),
+    // The engine's roleHint, with the hub's one refinement: a planet or moon under the
+    // small-object mass is a SMALL OBJECT (bundle/roles.ts). The snippet keeps the engine's word.
+    role_hint: displayRole(node),
     tags: readNodeTags(node?.tags),
     image_path:
       imageUrl && imageUrl.startsWith(IMAGES_DIR) && !imageUrl.startsWith(PLAYER_IMAGES_DIR)
@@ -215,7 +255,10 @@ export function normalise(doc: any): NormalisedBundle {
         .map((t: string) => t.trim().toLowerCase()).filter(Boolean).slice(0, 12)
     : [];
 
-  return { title, summary, description, tags, systemNames, bodies, constructs };
+  return {
+    title, summary, description, tags, systemNames, bodies, constructs,
+    contentCredits: readContentCredits(doc?.contentCredits)
+  };
 }
 
 const clamp = (v: string | null, max: number) => (v === null ? null : v.slice(0, max));

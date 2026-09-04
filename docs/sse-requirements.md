@@ -505,6 +505,51 @@ from the library*.
 
 ---
 
+## R-16. A pasted clip carries its credit as an ATTRIBUTION, not only a tag
+
+**Owner, 2026-09-04:** *"on cut and paste are we pushing through attributions with it to store on
+the map they create? If not we need to engineer that in."* Today the paste stamps `origin/hub`
+with the url on the root. That is a breadcrumb; it is not a credit. The hub's whole culture is
+that the people whose work you use get named, and a clip is somebody's work.
+
+**What the hub now sends.** `source` in the clip gained `creator` — the cartographer's display
+name or handle — beside `site`, `url` and `title` (hub 0.11.0):
+
+```jsonc
+"source": { "site": "StarSystemX Explorers", "url": "https://…/s/local-neighbourhood",
+            "title": "Local Neighbourhood", "creator": "frunk" }
+```
+
+**What the engine should do on paste.**
+
+1. **Append a content credit to the campaign**, not to the node — a node can be deleted, renamed,
+   split; the credit is for the map. Proposed key, on the document:
+   ```jsonc
+   "contentCredits": [
+     { "title": "Local Neighbourhood", "creator": "frunk",
+       "url": "https://…/s/local-neighbourhood", "site": "StarSystemX Explorers",
+       "pastedAt": "2026-09-04T18:12:00Z", "nodeIds": ["…new ids…"] }
+   ]
+   ```
+   One entry per paste; the same source pasted twice is two entries (they name different nodes).
+   Keep the `origin/hub` tag as well — it is what tells a person *which* body came from where.
+2. **Print it in `ATTRIBUTIONS.md`** under its own heading — *"Content from other cartographers"*
+   — title, creator, link. The bundle is the unit of distribution; that file is where credit
+   lives; a pasted system deserves the same line an image does.
+3. **Carry it through save and load.** It is campaign data like any other block.
+4. **Absent `creator`** (an older hub, or a hub-side blank): credit the title and url and say
+   "cartographer not recorded" rather than inventing a name.
+
+**What the hub does with it.** On upload the hub reads `contentCredits`, stores them
+(`content_credits`, 0018) and shows *"Includes work from Local Neighbourhood by frunk"* with the
+link on the map's page. So credit follows content through as many hands as it passes — and a
+creator can see, from their own page, where their work went.
+
+**Not asked:** any check that the credited map still exists, or that the paste was permitted. The
+hub's terms make sharing the point of uploading; this is about naming, not gating.
+
+---
+
 ## What the hub will NOT ask the engine to do
 
 Recorded so nobody builds them by mistake:

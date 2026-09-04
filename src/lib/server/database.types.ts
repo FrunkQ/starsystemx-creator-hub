@@ -100,6 +100,8 @@ export type SystemRow = {
   // 0015: the creator's cover-designer choices (src/lib/cover/generate.ts CoverOptions), when the
   // cover is one the hub drew. Null means the cover is a real picture, or the plain default card.
   cover_options: unknown;
+  // 0018: other cartographers' work this map includes, read from the save (R-16). Null when none.
+  content_credits: unknown;
   blurb: string | null;
   tags: string[];
   // Derived facets (db/migrations/0007). Facts the hub computed, kept separate from `tags` so a

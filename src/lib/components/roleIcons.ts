@@ -28,6 +28,11 @@ const ICONS: Record<string, RoleIcon> = {
   moon: { label: 'moon', d: 'M12 3a6 6 0 0 0 9 9a9 9 0 1 1-9-9Z' },
   // Debris in an arc: the dash IS the drawing.
   belt: { label: 'belt', d: 'M3 15a9 9 0 0 1 18 0', dash: '0.1 3.2' },
+  // Three pebbles: an asteroid, a comet, a moonlet - anything under the small-object mass.
+  'small object': {
+    label: 'small object',
+    d: 'M8 7.5a2.5 2.5 0 1 1-5 0a2.5 2.5 0 0 1 5 0M21 8a3 3 0 1 1-6 0a3 3 0 0 1 6 0M15 17.5a3.5 3.5 0 1 1-7 0a3.5 3.5 0 0 1 7 0'
+  },
   ring: { label: 'ring', d: 'M21 12a9 3.5 0 1 1-18 0a9 3.5 0 0 1 18 0M12 12h.01' },
   // Two masses about a common point.
   barycenter: {
@@ -61,7 +66,7 @@ export function iconFor(roleHint: string | null | undefined, kind?: string | nul
  * lets the eye find "moons" in the same place on every row.
  */
 export const ROLE_ORDER = [
-  'planet', 'moon', 'ring', 'belt',
+  'planet', 'moon', 'ring', 'belt', 'small object',
   'megastructure', 'construct', 'habitat', 'infrastructure', 'station', 'ship',
   'star', 'barycenter'
 ];

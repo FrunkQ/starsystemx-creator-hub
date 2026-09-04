@@ -295,6 +295,7 @@ function drawSystem(r: Raster, facts: CoverFacts, p: Palette, box: { cx: number;
         break;
       }
       case 'moon': r.circle(x, y, 3, p.dim); break;
+      case 'small object': r.circle(x, y, 1.8, p.dim, 0.9); break;
       case 'belt': break; // the orbit IS the belt
       case 'ring': r.circle(x, y, 2.5, p.dim, 0.8); break;
       case 'star': {

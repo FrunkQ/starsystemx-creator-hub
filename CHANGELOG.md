@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.11.0 — 2026-09-04
+
+### Small objects
+
+A planet or moon under 1e20 kg (or under 250 km when the mass is missing) now counts as a small
+object - an asteroid modelled on its own, a moonlet, a sub-moon - so a belt built in detail reads
+as "412 small objects" rather than "412 planets". Vesta and Ceres stay what they were. One rule
+drives the stored role, the counts, the pills, the tree and the cover. Takes effect on re-upload.
+
+### Credit follows content
+
+A clip now carries the cartographer's name beside the map's title and link, and the hub reads
+`contentCredits` back out of a save and shows "Includes work from X by Y" with a link. The
+engine's half - recording the credit on paste and printing it in the attributions file - is R-16.
+Migration 0018.
+
 ## 0.10.1 — 2026-09-04
 
 ### Map pages locked up
