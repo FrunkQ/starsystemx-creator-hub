@@ -10,11 +10,14 @@
   // and what you see is byte-for-byte what "Use this cover" stores.
   let cover = $state({ ...data.coverOptions });
   const onOff = (v: boolean) => (v ? 'on' : 'off');
+  // Screenshots a card can be drawn over: approved, and PNG or JPEG.
+  const drawable = $derived(data.screenshots.filter((sh) => sh.drawable));
   const previewUrl = $derived(
     '/api/cover/preview?' + new URLSearchParams({
-      systemId: s.id, base: cover.base, palette: cover.palette,
+      systemId: s.id, base: cover.base, palette: cover.palette, font: cover.font,
       title: onOff(cover.title), byline: onOff(cover.byline), counts: onOff(cover.counts),
-      label: onOff(cover.label), qr: onOff(cover.qr)
+      label: onOff(cover.label), qr: onOff(cover.qr),
+      baseImage: cover.base === 'image' ? (cover.baseImage ?? drawable[0]?.sha256 ?? '') : ''
     }).toString()
   );
 
@@ -56,10 +59,15 @@
   {#if s.revision != null}· revision {s.revision}{/if}
   {#if s.export_mode}· exported as the {s.export_mode === 'player' ? 'player' : 'GM'} view{/if}
 </p>
-<p class="actions">
+<div class="actions">
   <a href="/upload?replaces={s.id}">Upload a new version</a>
   {#if s.state === 'public'}· <a href="/s/{s.slug}">See the page</a>{/if}
-</p>
+  · <form class="inline" method="POST" action="?/reindex"><button class="linkish" type="submit"
+      title="Rebuild the tree, distances, counts and pills from the file the hub already holds - useful when the hub has learned to read something new">Re-index from the stored file</button></form>
+</div>
+{#if form?.reindexed}
+  <div class="panel notice"><p>Re-indexed from the stored file. The page, the tree and a generated cover are rebuilt from it.</p></div>
+{/if}
 
 {#if form?.message}
   <div class="panel notice bad"><p>{form.message}</p></div>
@@ -168,14 +176,39 @@
           <option value="starmap">Constellation</option>
           <option value="system">Orbits</option>
           <option value="plain">Just stars</option>
+          <option value="image" disabled={!drawable.length}>One of my screenshots{drawable.length ? '' : ' (add an approved PNG or JPEG first)'}</option>
         </select>
       </label>
+      {#if cover.base === 'image' && drawable.length}
+        <!-- Which one. Only approved PNG or JPEG screenshots are offered: the card is stored as
+             hub-drawn, and that holds only if everything under the words was already looked at. -->
+        <div class="thumbs">
+          {#each drawable as sh (sh.sha256)}
+            <label class="thumb" class:on={(cover.baseImage ?? drawable[0]?.sha256) === sh.sha256}>
+              <input type="radio" name="baseImage" value={sh.sha256}
+                checked={(cover.baseImage ?? drawable[0]?.sha256) === sh.sha256}
+                onchange={() => (cover.baseImage = sh.sha256)} />
+              <img src="/private/asset/{sh.sha256}" alt={sh.caption ?? 'Screenshot'} />
+            </label>
+          {/each}
+        </div>
+      {/if}
       <label>
         Palette
         <select name="palette" bind:value={cover.palette}>
           <option value="night">Night</option>
           <option value="amber">Amber</option>
           <option value="mono">Mono</option>
+          <option value="green">Green screen</option>
+        </select>
+      </label>
+      <label>
+        Lettering
+        <select name="font" bind:value={cover.font}>
+          <option value="pixel">Pixel</option>
+          <option value="bold">Bold</option>
+          <option value="outline">Outlined</option>
+          <option value="wide">Wide</option>
         </select>
       </label>
       <div class="checks">
@@ -191,6 +224,7 @@
       <input type="hidden" name="counts" value={onOff(cover.counts)} />
       <input type="hidden" name="label" value={onOff(cover.label)} />
       <input type="hidden" name="qr" value={onOff(cover.qr)} />
+      {#if cover.base === 'image' && !cover.baseImage && drawable[0]}<input type="hidden" name="baseImage" value={drawable[0].sha256} />{/if}
       <button class="primary" type="submit" disabled={!data.designer.allowed}>Use this cover</button>
       <p class="muted small">
         {#if data.coverIsScreenshot}Current cover: one of your screenshots.{:else if s.cover_sha256}Current cover: a card like this.{:else}No cover yet.{/if}
@@ -212,6 +246,13 @@
   h1 { margin: 0 0 4px; }
   .by { margin: 0 0 6px; color: var(--ink-faint); }
   .actions { margin: 0 0 20px; color: var(--ink-faint); }
+  .inline { display: inline; }
+  .linkish { background: none; border: none; padding: 0; font: inherit; color: var(--accent); cursor: pointer; }
+  .thumbs { display: grid; gap: 6px; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); margin: 0 0 8px; }
+  .thumb { margin: 0; cursor: pointer; border: 2px solid transparent; border-radius: 6px; overflow: hidden; }
+  .thumb.on { border-color: var(--accent); }
+  .thumb input { display: none; }
+  .thumb img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; display: block; }
   h2 { margin: 0 0 10px; font-size: 1.1rem; }
   .muted { color: var(--ink-dim); margin: 0 0 12px; max-width: 62ch; }
   label { display: block; margin: 12px 0; color: var(--ink-dim); }

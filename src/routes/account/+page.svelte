@@ -1,5 +1,5 @@
 <script lang="ts">
-  let { data } = $props();
+  let { data, form } = $props();
 
   const BADGE_LABEL: Record<string, string> = {
     cartographer: 'Cartographer - charted something and shared it',
@@ -15,13 +15,26 @@
   {#if data.me?.account_tier === 'pro'}<span class="tag">Pro</span>{/if}
 </p>
 
+<!-- The name on the byline, the card and the credit. A choice, not the handle by default. -->
+<form class="panel name" method="POST" action="?/profile">
+  <h2>Your name on maps</h2>
+  <label>
+    Display name
+    <input name="display_name" value={data.me?.display_name ?? ''} maxlength="40" placeholder={data.me?.handle} />
+  </label>
+  <p class="muted">Shown as the cartographer on your maps and drawn onto their covers. Leave it empty to use your handle.</p>
+  <button class="primary" type="submit">Save</button>
+  {#if form?.saved}<span class="muted"> Saved, and your covers redrawn.</span>{/if}
+  {#if form?.message}<span class="bad"> {form.message}</span>{/if}
+</form>
+
 <div class="panel">
   <h2>Your maps</h2>
   {#if !data.systems.length}
     <p class="muted">Nothing yet. <a href="/upload">Share a map</a>.</p>
   {:else}
     <table>
-      <thead><tr><th>Map</th><th>State</th><th>Hearts</th><th>Downloads</th><th></th></tr></thead>
+      <thead><tr><th>Map</th><th>State</th><th>Stars</th><th>Downloads</th><th></th></tr></thead>
       <tbody>
         {#each data.systems as sys (sys.id)}
           <tr>
@@ -128,6 +141,13 @@
   .by { margin: 0 0 20px; color: var(--ink-faint); }
   h2 { margin: 0 0 10px; font-size: 1.1rem; }
   .muted { color: var(--ink-dim); }
+  .bad { color: var(--bad); }
+  .name label { display: block; margin: 8px 0; color: var(--ink-dim); }
+  .name input {
+    display: block; width: min(100%, 320px); margin-top: 4px; font: inherit;
+    background: var(--panel-2); color: var(--ink); border: 1px solid var(--edge); border-radius: 8px; padding: 8px;
+  }
+  .name p { margin: 6px 0 10px; max-width: 62ch; }
   .badges { list-style: none; padding: 0; margin: 0; display: flex; gap: 8px; flex-wrap: wrap; }
   ul { margin: 0; padding-left: 18px; }
   .badges { padding-left: 0; }

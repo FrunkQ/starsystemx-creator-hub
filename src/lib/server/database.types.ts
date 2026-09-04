@@ -104,6 +104,8 @@ export type SystemRow = {
   content_credits: unknown;
   // 0019: the hub maps those credits point at, by slug, for "used in" on the original's page.
   content_credit_slugs: string[];
+  // 0020: when the derived rows were last rebuilt. Null = predates the current reader; re-index once.
+  reindexed_at: string | null;
   blurb: string | null;
   tags: string[];
   // Derived facets (db/migrations/0007). Facts the hub computed, kept separate from `tags` so a

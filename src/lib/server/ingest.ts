@@ -26,7 +26,7 @@ import { stripGmContent } from '$lib/bundle/strip';
 import { checkFreshness } from '$lib/bundle/freshness';
 import { zipSync, strToU8 } from 'fflate';
 import { normalise, creditSlugs, type NormalisedNode } from '$lib/bundle/normalise';
-import { readZip, BundleReadError } from '$lib/bundle/read';
+import { openBundle } from '$lib/bundle/open';
 import { storeGeneratedCover, linkCover, coverNodeFrom, coverFacts } from './cover';
 import { coverOptionsFrom, type CoverOptions } from '$lib/cover/generate';
 import { sha256Hex, claimedHashFromModelPath } from '$lib/bundle/hash';
@@ -118,40 +118,11 @@ export async function ingest(
   const zipRefusal = checkZipsAllowed(gates, zipped);
   if (zipRefusal) return { ok: false, ...zipRefusal };
 
-  // ---- read the container -------------------------------------------------------------------
-  let members: Record<string, Uint8Array> = {};
-  let docText: string;
-  let docPath: string;
-
-  if (zipped) {
-    try {
-      members = readZip(bytes);
-    } catch (e) {
-      const message = e instanceof BundleReadError ? e.message : 'That archive could not be read.';
-      return { ok: false, code: 'unreadable', message };
-    }
-    const names = Object.keys(members);
-    const found =
-      names.find((n) => n.endsWith(DOC_NAME.starmap)) ?? names.find((n) => n.endsWith(DOC_NAME.system));
-    if (!found) {
-      return {
-        ok: false, code: 'not-a-save',
-        message: 'That zip is not a Star System Explorer save (no starmap.json or system.json inside).'
-      };
-    }
-    docPath = found;
-    docText = new TextDecoder().decode(members[found]);
-  } else {
-    docPath = DOC_NAME.starmap;
-    docText = new TextDecoder().decode(bytes);
-  }
-
-  let doc: any;
-  try {
-    doc = JSON.parse(docText);
-  } catch {
-    return { ok: false, code: 'bad-json', message: 'The save data inside that file is not valid JSON.' };
-  }
+  // ---- read the container (bundle/open.ts - the same reader re-indexing uses) -----------------
+  const opened = openBundle(bytes);
+  if (!opened.ok) return { ok: false, code: opened.code, message: opened.message };
+  let { members, doc } = opened;
+  const { docPath } = opened;
 
   // ---- THE FORMAT GATE. Refuse politely; never guess. ----------------------------------------
   const format = checkBundleFormat(doc, {
@@ -502,7 +473,9 @@ async function writeRows(sb: Db, a: WriteArgs): Promise<string> {
     // Whose work this map includes, as the engine recorded it on paste (R-16, 0018) - and the
     // hub maps it points at, by slug, so the original's page can say "used in" (0019).
     content_credits: shaped.contentCredits.length ? shaped.contentCredits : null,
-    content_credit_slugs: creditSlugs(shaped.contentCredits)
+    content_credit_slugs: creditSlugs(shaped.contentCredits),
+    // The derived rows are current as of now (0020); the page's one-shot re-index skips this map.
+    reindexed_at: new Date().toISOString()
   }, (row) => Promise.resolve(sb.from('systems').upsert(row as Partial<SystemRow>)));
   if (sysError) throw new Error('could not save the map: ' + sysError.message);
 
@@ -539,23 +512,7 @@ async function writeRows(sb: Db, a: WriteArgs): Promise<string> {
     .filter((c) => !!c.sha256);
   if (claims.length) await sb.from('asset_claims').insert(claims);
 
-  const nodeRow = (n: NormalisedNode) => ({
-    id: crypto.randomUUID(), system_id: systemId,
-    node_id: n.node_id, parent_id: n.parent_id, name: n.name, kind: n.kind,
-    role_hint: n.role_hint, snippet: n.snippet, tags: n.tags,
-    image_sha256: n.image_path ? byPath.get(n.image_path) ?? null : null,
-    // 0015: "how far out", and a starmap root's place on the map. Tolerated when the columns are
-    // not there yet - the tree then falls back to ordering by size.
-    distance: n.distance, map_x: n.map_x, map_y: n.map_y
-  });
-
-  await tolerantWriteMany(shaped.bodies.map(nodeRow),
-    (rows) => Promise.resolve(sb.from('bodies').insert(rows as Partial<NodeRow>[])));
-  await tolerantWriteMany(shaped.constructs.map((n) => ({
-    ...nodeRow(n),
-    // The claim was verified against the bytes above, so by here it is safe to record.
-    model_sha256: n.model_hash_claim ?? null
-  })), (rows) => Promise.resolve(sb.from('constructs').insert(rows as Partial<ConstructRow>[])));
+  await writeNodeRows(sb, systemId, shaped, byPath);
 
   // APPEND-ONLY, and re-taken on every upload including an update. If the wording ever changes,
   // an old row still shows what was actually agreed to at the time - which is the only thing that
@@ -578,6 +535,33 @@ async function writeRows(sb: Db, a: WriteArgs): Promise<string> {
   }, (row) => Promise.resolve(sb.from('upload_events').insert(row as Partial<UploadEventRow>)));
 
   return slug;
+}
+
+/**
+ * The tree's rows, from a normalised document. Shared with re-indexing (server/reindex.ts), which
+ * rebuilds them from the stored bundle - ONE mapping, so a re-indexed map and a freshly uploaded
+ * one can never differ in what a row holds. The caller deletes the old rows first.
+ */
+export async function writeNodeRows(
+  sb: Db, systemId: string, shaped: ReturnType<typeof normalise>, byPath: Map<string, string>
+): Promise<void> {
+  const nodeRow = (n: NormalisedNode) => ({
+    id: crypto.randomUUID(), system_id: systemId,
+    node_id: n.node_id, parent_id: n.parent_id, name: n.name, kind: n.kind,
+    role_hint: n.role_hint, snippet: n.snippet, tags: n.tags,
+    image_sha256: n.image_path ? byPath.get(n.image_path) ?? null : null,
+    // 0015: "how far out", and a starmap root's place on the map. Tolerated when the columns are
+    // not there yet - the tree then falls back to ordering by size.
+    distance: n.distance, map_x: n.map_x, map_y: n.map_y
+  });
+
+  await tolerantWriteMany(shaped.bodies.map(nodeRow),
+    (rows) => Promise.resolve(sb.from('bodies').insert(rows as Partial<NodeRow>[])));
+  await tolerantWriteMany(shaped.constructs.map((n) => ({
+    ...nodeRow(n),
+    // The claim was verified against the bytes on upload, so by here it is safe to record.
+    model_sha256: n.model_hash_claim ?? null
+  })), (rows) => Promise.resolve(sb.from('constructs').insert(rows as Partial<ConstructRow>[])));
 }
 
 async function uniqueSlug(sb: Db, title: string, systemId: string): Promise<string> {

@@ -9,7 +9,7 @@
 
 <h1>Sign in</h1>
 <p class="lede">
-  You only need an account to share a map, heart one, or report a problem.
+  You only need an account to share a map, star one, or report a problem.
   <strong>Downloading never needs one.</strong>
 </p>
 

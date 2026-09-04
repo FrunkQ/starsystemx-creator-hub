@@ -117,7 +117,7 @@
     <div class="tile"><b>{fmt(s.totals.visitors_period)}</b><span>distinct visitors <em>{data.days > 7 ? 'visitor-weeks' : 'this week'}</em></span></div>
     <div class="tile"><b>{fmt(s.totals.uploads_period)}</b><span>uploads, {data.days} days</span></div>
     <div class="tile" class:warn={n(s.totals.refusals_period) > 0}><b>{fmt(s.totals.refusals_period)}</b><span>refused uploads</span></div>
-    <div class="tile"><b>{fmt(s.totals.hearts)}</b><span>hearts</span></div>
+    <div class="tile"><b>{fmt(s.totals.hearts)}</b><span>stars</span></div>
   </div>
 
   <h2>Growth, last twelve weeks</h2>
@@ -149,7 +149,7 @@
       <h2>Most downloaded maps</h2>
       {#if s.top_maps.length}
         <table>
-          <thead><tr><th>Map</th><th>By</th><th>All</th><th>{data.days}d</th><th>Hearts</th></tr></thead>
+          <thead><tr><th>Map</th><th>By</th><th>All</th><th>{data.days}d</th><th>Stars</th></tr></thead>
           <tbody>
             {#each s.top_maps as m (m.slug)}
               <tr>
@@ -166,7 +166,7 @@
       <h2>Cartographers</h2>
       {#if s.top_creators.length}
         <table>
-          <thead><tr><th>Explorer</th><th>Maps</th><th>Downloads</th><th>Hearts</th><th>Stored</th></tr></thead>
+          <thead><tr><th>Explorer</th><th>Maps</th><th>Downloads</th><th>Stars</th><th>Stored</th></tr></thead>
           <tbody>
             {#each s.top_creators as c (c.handle)}
               <tr><td>{c.handle}</td><td>{fmt(c.maps)}</td><td>{fmt(c.downloads)}</td><td>{fmt(c.hearts)}</td><td>{formatBytes(n(c.bundle_bytes))}</td></tr>

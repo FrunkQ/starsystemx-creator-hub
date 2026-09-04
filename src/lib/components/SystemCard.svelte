@@ -71,7 +71,8 @@
       <div class="pills">{#each pills as p (p.t)}<span class="tag" class:mine={p.mine}>{p.t}</span>{/each}</div>
     {/if}
     <div class="meta">
-      <span>{system.hearts_count} hearts</span>
+      <!-- Stars, with the symbol - a map of stars is starred, not hearted. -->
+      <span class="stars"><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg>{system.hearts_count}</span>
       <span>{system.download_count} downloads</span>
     </div>
   </div>
@@ -94,4 +95,6 @@
   .counts { color: var(--ink-faint); font-size: 0.85rem; margin-top: 6px; }
   .pills { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
   .tag.mine { border-color: var(--accent); }
+  .stars { display: inline-flex; align-items: center; gap: 4px; }
+  .stars svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; }
 </style>

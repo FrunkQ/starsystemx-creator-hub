@@ -3,10 +3,11 @@ import { error } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import * as ledger from '$lib/server/ledger';
 import { ensureCover, coverNodeFrom } from '$lib/server/cover';
+import { reindexSystem } from '$lib/server/reindex';
 import { loadSite } from '$lib/server/site';
 import { loadGates } from '$lib/server/config';
 
-export const load: PageServerLoad = async ({ params, platform, setHeaders, url }) => {
+export const load: PageServerLoad = async ({ params, platform, setHeaders, url, locals }) => {
   const env = platform?.env;
   if (!env?.SUPABASE_URL) throw error(500, 'not configured');
 
@@ -46,6 +47,26 @@ export const load: PageServerLoad = async ({ params, platform, setHeaders, url }
     : { data: [] as { id: string; handle: string; display_name: string | null }[] };
   const nameOf = new Map((reuserCreators ?? []).map((c) => [c.id, c.display_name ?? c.handle]));
   const usedIn = (reusers ?? []).map((r) => ({ slug: r.slug, title: r.title, creator: nameOf.get(r.creator_id) ?? null }));
+
+  // ROWS WRITTEN BEFORE THE CURRENT READER get rebuilt from the stored file, once, in the
+  // background (server/reindex.ts): distances, positions, small objects, credits. The page served
+  // now is the old reading; the next view has the new one. Never on the request's critical path.
+  const stale = !system.reindexed_at && (bodies?.length ?? 0) > 0 && (bodies ?? []).every((b) => b.distance == null);
+  if (stale && platform?.context?.waitUntil) {
+    platform.context.waitUntil(
+      Promise.all([loadSite(sb, url), loadGates(sb)])
+        .then(([site, gates]) => reindexSystem(env, sb, system.id, site, gates))
+        .then(() => undefined, (e) => console.warn('background re-index failed', e))
+    );
+  }
+
+  // Has THIS viewer starred it? One row, only when somebody is signed in.
+  let starred = false;
+  if (locals.viewer) {
+    const { data: mine } = await sb.from('hearts').select('system_id')
+      .eq('creator_id', locals.viewer.id).eq('system_id', system.id).maybeSingle();
+    starred = !!mine;
+  }
 
   // A map with no picture gets one drawn from itself on first view (server/cover.ts, D-21) - the
   // backfill for anything uploaded before the hub could draw. Once per map; never fails the page.
@@ -87,6 +108,8 @@ export const load: PageServerLoad = async ({ params, platform, setHeaders, url }
     bodies: bodies ?? [],
     constructs: constructs ?? [],
     usedIn,
+    starred,
+    signedIn: !!locals.viewer,
     withheldCount,
     // Only approved screenshots reach a public page. An unreviewed one is simply not there yet.
     screenshots: (shots ?? []).filter((s2) => approved.has(s2.sha256 as string)),

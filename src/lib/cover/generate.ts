@@ -22,9 +22,10 @@
 // person" at a glance in a Discord embed. See D-21 for why it is auto-approved.
 // ============================================================================================
 import { Raster, type RGB } from './raster';
-import { drawText, fold, textWidth, wrapLines } from './font';
+import { drawText, fold, textWidth, wrapLines, type FontStyle } from './font';
 import { encodePng } from './png';
 import { qrModules } from './qr';
+import type { DecodedImage } from './png-decode';
 
 export interface CoverNode {
   node_id: string;
@@ -45,12 +46,14 @@ export interface CoverNode {
   has_hydrosphere?: boolean;
 }
 
-export type CoverBase = 'auto' | 'system' | 'starmap' | 'plain';
-export type CoverPalette = 'night' | 'amber' | 'mono';
+/** 'image' is one of the creator's own approved screenshots, named by `baseImage`. */
+export type CoverBase = 'auto' | 'system' | 'starmap' | 'plain' | 'image';
+export type CoverPalette = 'night' | 'amber' | 'mono' | 'green';
 
 export interface CoverOptions {
   base: CoverBase;
   palette: CoverPalette;
+  font: FontStyle;
   title: boolean;
   byline: boolean;
   counts: boolean;
@@ -58,23 +61,30 @@ export interface CoverOptions {
   label: boolean;
   /** A QR code to the map's page. */
   qr: boolean;
+  /** sha256 of the screenshot under a base of 'image'; ignored otherwise. */
+  baseImage: string | null;
 }
 
 export const DEFAULT_COVER_OPTIONS: CoverOptions = {
-  base: 'auto', palette: 'night', title: true, byline: true, counts: true, label: true, qr: false
+  base: 'auto', palette: 'night', font: 'pixel',
+  title: true, byline: true, counts: true, label: true, qr: false, baseImage: null
 };
 
-const BASES: CoverBase[] = ['auto', 'system', 'starmap', 'plain'];
-const PALETTES: CoverPalette[] = ['night', 'amber', 'mono'];
+const BASES: CoverBase[] = ['auto', 'system', 'starmap', 'plain', 'image'];
+const PALETTES: CoverPalette[] = ['night', 'amber', 'mono', 'green'];
+const FONTS: FontStyle[] = ['pixel', 'bold', 'outline', 'wide'];
 
 /** Options from JSON or a form: anything unrecognised falls back to the default. */
 export function coverOptionsFrom(value: unknown): CoverOptions {
   const v = (value && typeof value === 'object' ? value : {}) as Record<string, unknown>;
-  const flag = (k: keyof CoverOptions) => (typeof v[k] === 'boolean' ? (v[k] as boolean) : v[k] === 'on' ? true : v[k] === 'off' ? false : DEFAULT_COVER_OPTIONS[k] as boolean);
+  const flag = (k: 'title' | 'byline' | 'counts' | 'label' | 'qr') =>
+    typeof v[k] === 'boolean' ? (v[k] as boolean) : v[k] === 'on' ? true : v[k] === 'off' ? false : DEFAULT_COVER_OPTIONS[k];
   return {
     base: BASES.includes(v.base as CoverBase) ? (v.base as CoverBase) : 'auto',
     palette: PALETTES.includes(v.palette as CoverPalette) ? (v.palette as CoverPalette) : 'night',
-    title: flag('title'), byline: flag('byline'), counts: flag('counts'), label: flag('label'), qr: flag('qr')
+    font: FONTS.includes(v.font as FontStyle) ? (v.font as FontStyle) : 'pixel',
+    title: flag('title'), byline: flag('byline'), counts: flag('counts'), label: flag('label'), qr: flag('qr'),
+    baseImage: typeof v.baseImage === 'string' && /^[0-9a-f]{64}$/.test(v.baseImage) ? v.baseImage : null
   };
 }
 
@@ -90,6 +100,8 @@ export interface CoverFacts {
   bodies: number;
   constructs: number;
   nodes: CoverNode[];
+  /** The creator's own picture, already fitted to the card, when the base is 'image'. */
+  baseImage?: DecodedImage | null;
 }
 
 export const COVER_W = 1200;
@@ -111,6 +123,11 @@ const PALETTE: Record<CoverPalette, Palette> = {
   mono: {
     bgTop: [22, 22, 25], bgBottom: [6, 6, 8], ink: [238, 238, 240], dim: [168, 168, 174],
     faint: [112, 112, 120], edge: [66, 66, 74], accent: [205, 205, 212], star: [255, 255, 255], warn: [190, 190, 196]
+  },
+  // The green screen: phosphor on black, the terminal every starship bridge was drawn from.
+  green: {
+    bgTop: [4, 16, 8], bgBottom: [1, 5, 2], ink: [130, 255, 150], dim: [90, 205, 110],
+    faint: [55, 140, 75], edge: [30, 92, 46], accent: [170, 255, 180], star: [210, 255, 210], warn: [235, 255, 120]
   }
 };
 
@@ -408,16 +425,32 @@ function drawQr(r: Raster, url: string, right: number, bottom: number): number {
 export function renderCover(facts: CoverFacts, options: CoverOptions = DEFAULT_COVER_OPTIONS): Uint8Array {
   const p = PALETTE[options.palette] ?? PALETTE.night;
   const r = new Raster(COVER_W, COVER_H);
-  r.gradient(p.bgTop, p.bgBottom);
 
   const wordsOn = options.title || options.byline;
   const footOn = options.counts || options.label || (options.qr && !!facts.url);
   const qrOn = options.qr && !!facts.url;
+  const font: FontStyle = options.font ?? 'pixel';
 
   // ---- the base ------------------------------------------------------------------------------
-  starfield(r, facts.title, Math.min(180, 60 + facts.systems * 2), p);
+  // The creator's own picture, when they chose one and it could be read; otherwise the card.
+  const picture = options.base === 'image' && facts.baseImage
+    && facts.baseImage.width === COVER_W && facts.baseImage.height === COVER_H ? facts.baseImage : null;
+  // Words over a photograph get a halo whatever the font, or they vanish into the picture.
+  const halo = font === 'outline' || !!picture;
+  const shadow = picture ? ([0, 0, 0] as RGB) : p.bgBottom;
 
-  const base: CoverBase = options.base === 'auto' ? (facts.kind === 'starmap' ? 'starmap' : 'system') : options.base;
+  let base: CoverBase = options.base === 'auto' || (options.base === 'image' && !picture)
+    ? (facts.kind === 'starmap' ? 'starmap' : 'system')
+    : options.base;
+  if (picture) {
+    r.image(picture);
+    if (wordsOn || footOn) r.shade(0.45, 0.9);
+    base = 'image';
+  } else {
+    r.gradient(p.bgTop, p.bgBottom);
+    starfield(r, facts.title, Math.min(180, 60 + facts.systems * 2), p);
+  }
+
   let drawn = false;
   if (base === 'starmap') {
     drawn = drawStarmap(r, facts, p, wordsOn || footOn
@@ -438,15 +471,21 @@ export function renderCover(facts: CoverFacts, options: CoverOptions = DEFAULT_C
   }
 
   // ---- the words -----------------------------------------------------------------------------
+  const write = (x: number, y: number, text: string, scale: number, c: RGB) =>
+    drawText(r, x, y, text, scale, c, 1, font, halo ? shadow : undefined);
+  const width = (text: string, scale: number) => textWidth(text, scale, font);
+  // A wide face fits fewer letters on a line.
+  const perLine = font === 'wide' ? 20 : 30;
+
   let y = 62;
   if (options.title) {
-    for (const line of wrapLines(fold(facts.title), 30, 2)) {
-      drawText(r, 60, y, line, 6, p.ink);
+    for (const line of wrapLines(fold(facts.title), perLine, 2)) {
+      write(60, y, line, 6, p.ink);
       y += 7 * 6 + 14;
     }
   }
   if (options.byline && facts.creator) {
-    drawText(r, 60, options.title ? y + 6 : y, fold('by ' + facts.creator), 3, p.dim);
+    write(60, options.title ? y + 6 : y, fold('by ' + facts.creator), 3, p.dim);
   }
 
   const baseline = COVER_H - 60 - 21;
@@ -457,19 +496,19 @@ export function renderCover(facts: CoverFacts, options: CoverOptions = DEFAULT_C
     parts.push(facts.bodies + (facts.bodies === 1 ? ' body' : ' bodies'));
     if (facts.constructs) parts.push(facts.constructs + (facts.constructs === 1 ? ' construct' : ' constructs'));
     const counts = fold(parts.join(' - '));
-    countsWidth = textWidth(counts, 3);
-    drawText(r, 60, baseline, counts, 3, p.dim);
+    countsWidth = width(counts, 3);
+    write(60, baseline, counts, 3, p.dim);
   }
 
   const right = COVER_W - 60;
   let labelTop = baseline;
   if (options.label && facts.label) {
     const label = fold(facts.label);
-    const w = textWidth(label, 3);
+    const w = width(label, 3);
     // The counts and the domain share the bottom line; when the two would touch, the domain
     // moves up a line rather than running into the numbers.
     if (options.counts && 60 + countsWidth + 40 > right - w) labelTop = baseline - 30;
-    drawText(r, right - w, labelTop, label, 3, p.faint);
+    write(right - w, labelTop, label, 3, p.faint);
   }
   if (qrOn) {
     // Above the label when there is one, otherwise on the baseline.

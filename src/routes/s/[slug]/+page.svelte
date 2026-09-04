@@ -19,6 +19,24 @@
   const total = $derived(data.bodies.length + data.constructs.length);
   let reportOpen = $state(false);
 
+  // STARS, not hearts (owner, 2026-09-04: "thematically appropriate"). The column keeps its old
+  // name; the word people see is the one that fits a map of stars.
+  let starred = $state(data.starred);
+  let stars = $state(s.hearts_count);
+  let starBusy = $state(false);
+  async function toggleStar() {
+    if (!data.signedIn) { location.href = '/login'; return; }
+    starBusy = true;
+    try {
+      const res = await fetch('/api/heart', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ slug: s.slug, on: !starred })
+      });
+      const out = (await res.json()) as { ok: boolean; hearts?: number };
+      if (out.ok) { starred = !starred; stars = out.hearts ?? stars; }
+    } catch { /* a failed star is not worth a dialog */ } finally { starBusy = false; }
+  }
+
   // Role counts are the human axis - "12 planets, 4 stations" says what "230 bodies" cannot. In
   // the fixed order every row of the tree uses, so the eye learns one layout.
   const roles = $derived(orderRoles((s.role_counts ?? {}) as Record<string, number>));
@@ -84,6 +102,13 @@
     Free. No account needed. Opens directly in
     <a href="https://starsystemx.com" target="_blank" rel="noopener">Star System Explorer</a>,
     which runs in your browser - nothing to install.
+  </p>
+  <p>
+    <button class="star" class:on={starred} onclick={toggleStar} disabled={starBusy}
+      title={data.signedIn ? (starred ? 'Take your star back' : 'Give this map a star') : 'Sign in to give this map a star'}>
+      <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg>
+      {starred ? 'Starred' : 'Star this map'} · {stars}
+    </button>
   </p>
 
   {#if data.withheldCount > 0}
@@ -213,6 +238,15 @@
 <style>
   h1 { margin: 0 0 4px; font-size: 1.9rem; letter-spacing: -0.02em; }
   .by { margin: 0 0 20px; color: var(--ink-faint); }
+  .star {
+    display: inline-flex; align-items: center; gap: 8px; font: inherit; font-size: 0.92rem;
+    background: var(--panel); color: var(--ink-dim); border: 1px solid var(--edge); border-radius: 8px;
+    padding: 6px 12px; cursor: pointer;
+  }
+  .star svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linejoin: round; }
+  .star.on { color: var(--warn); border-color: var(--warn); }
+  .star.on svg { fill: currentColor; }
+  .star:hover { color: var(--ink); }
   .cover {
     width: 100%; max-width: 100%; border-radius: var(--radius);
     border: 1px solid var(--edge); margin: 22px 0; display: block;

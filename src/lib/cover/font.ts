@@ -81,24 +81,46 @@ export function fold(text: string): string {
 
 const advance = (ch: string) => (G[ch]?.[0].length ?? 3) + 1;
 
+/**
+ * FOUR FACES FROM ONE SET OF GLYPHS (owner, 2026-09-04: "choose a different font"). There is one
+ * glyph set; the faces are ways of drawing it. `pixel` is the glyph as it is; `bold` paints it
+ * twice with a horizontal offset; `outline` paints a halo in the shadow colour first; `wide`
+ * stretches every column half as much again. A second glyph set would be data, not code.
+ */
+export type FontStyle = 'pixel' | 'bold' | 'outline' | 'wide';
+const stretch = (style: FontStyle) => (style === 'wide' ? 1.5 : 1);
+
 /** Pixel width of a folded string at `scale`. */
-export function textWidth(folded: string, scale: number): number {
+export function textWidth(folded: string, scale: number, style: FontStyle = 'pixel'): number {
   let w = 0;
   for (const ch of folded) w += advance(ch);
-  return Math.max(0, w - 1) * scale;
+  return Math.max(0, w - 1) * scale * stretch(style);
 }
 
-export function drawText(r: Raster, x: number, y: number, folded: string, scale: number, c: RGB, alpha = 1): void {
-  let cx = x;
-  for (const ch of folded) {
-    const rows = G[ch] ?? G[' '];
-    for (let row = 0; row < GLYPH_H; row++) {
-      for (let col = 0; col < rows[row].length; col++) {
-        if (rows[row][col] === '#') r.rect(cx + col * scale, y + row * scale, scale, scale, c, alpha);
+export function drawText(
+  r: Raster, x: number, y: number, folded: string, scale: number, c: RGB, alpha = 1,
+  style: FontStyle = 'pixel', shadow?: RGB
+): void {
+  const sx = scale * stretch(style);
+  const paint = (dx: number, dy: number, colour: RGB, a: number) => {
+    let cx = x;
+    for (const ch of folded) {
+      const rows = G[ch] ?? G[' '];
+      for (let row = 0; row < GLYPH_H; row++) {
+        for (let col = 0; col < rows[row].length; col++) {
+          if (rows[row][col] === '#') r.rect(cx + col * sx + dx, y + row * scale + dy, sx, scale, colour, a);
+        }
       }
+      cx += advance(ch) * sx;
     }
-    cx += advance(ch) * scale;
+  };
+  // The halo: the glyph in the shadow colour at eight offsets, so words read over anything.
+  if (shadow) {
+    const d = Math.max(1, scale * 0.45);
+    for (const [ox, oy] of [[-d, 0], [d, 0], [0, -d], [0, d], [-d, -d], [d, -d], [-d, d], [d, d]]) paint(ox, oy, shadow, alpha);
   }
+  if (style === 'bold') paint(Math.max(1, scale * 0.35), 0, c, alpha);
+  paint(0, 0, c, alpha);
 }
 
 /** Word-wrap to at most `maxChars` per line and `maxLines` lines; the last line is cut with '...'. */

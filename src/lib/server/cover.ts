@@ -1,17 +1,22 @@
-// Generated covers: what the card needs to know, how it is stored, and the lazy backfill.
+// Generated covers: what the card needs to know, how it is stored, how it is redrawn, and the
+// lazy backfill.
 //
 // ONE PLACE for every caller - ingest on upload, the map page on first view, the designer on the
-// manage page and its live preview - so none of them can disagree about what a generated cover is
-// or how it enters the ledger (D-21, D-22).
+// manage page and its live preview, re-indexing, a title or display-name change - so none of them
+// can disagree about what a generated cover is or how it enters the ledger (D-21, D-22).
 import type { Db, SystemRow } from './database.types';
 import type { HubEnv } from './db';
+import type { Gates } from './config';
+import type { Site } from './site';
 import * as ledger from './ledger';
 import * as r2 from './r2';
 import { sha256Hex } from '$lib/bundle/hash';
+import { tolerantWrite } from './tolerant';
 import {
-  renderCover, DEFAULT_COVER_OPTIONS,
+  renderCover, coverOptionsFrom, DEFAULT_COVER_OPTIONS, COVER_W, COVER_H,
   type CoverFacts, type CoverNode, type CoverOptions
 } from '$lib/cover/generate';
+import { decodeImage, coverFit, type DecodedImage } from '$lib/cover/image';
 
 export const GENERATED_COVER_PATH = 'hub/generated-cover.png';
 
@@ -52,8 +57,43 @@ export interface CoverSubject {
   label: string;
 }
 
-export function coverFacts(subject: CoverSubject, nodes: CoverNode[]): CoverFacts {
-  return { ...subject, nodes };
+export function coverFacts(subject: CoverSubject, nodes: CoverNode[], baseImage: DecodedImage | null = null): CoverFacts {
+  return { ...subject, nodes, baseImage };
+}
+
+/**
+ * THE CREATOR'S OWN PICTURE AS THE BASE - only one of THIS map's screenshots, and only one the
+ * ledger has approved: the card is stored auto-approved (D-21) because the hub drew it, and that
+ * holds only if everything it drew over had already been looked at. Decoded and fitted here, or
+ * null when it cannot be (WebP, GIF, a broken file), in which case the card falls back to itself.
+ */
+export async function loadBaseImage(env: HubEnv, sb: Db, systemId: string, sha256: string | null): Promise<DecodedImage | null> {
+  if (!sha256) return null;
+  const { data: mine } = await sb.from('system_screenshots')
+    .select('sha256').eq('system_id', systemId).eq('sha256', sha256).maybeSingle();
+  if (!mine || !(await ledger.isServable(sb, sha256))) return null;
+  const obj = await r2.getAsset(env, sha256);
+  if (!obj) return null;
+  const decoded = decodeImage(new Uint8Array(await obj.arrayBuffer()));
+  return decoded ? coverFit(decoded, COVER_W, COVER_H) : null;
+}
+
+/** Everything the card needs for one map, from the rows, with the picture loaded if chosen. */
+export async function factsFor(
+  env: HubEnv, sb: Db, system: SystemRow, site: Site, gates: Gates, options: CoverOptions
+): Promise<CoverFacts> {
+  const [{ data: bodies }, { data: constructs }, { data: creator }] = await Promise.all([
+    sb.from('bodies').select('*').eq('system_id', system.id),
+    sb.from('constructs').select('*').eq('system_id', system.id),
+    sb.from('creators').select('handle, display_name').eq('id', system.creator_id).maybeSingle()
+  ]);
+  const baseImage = options.base === 'image' ? await loadBaseImage(env, sb, system.id, options.baseImage) : null;
+  return coverFacts({
+    // The byline is the DISPLAY name when there is one: what the person chose to be called.
+    title: system.title, creator: creator?.display_name ?? creator?.handle ?? null, kind: system.kind,
+    systems: system.system_count, bodies: system.body_count, constructs: system.construct_count,
+    url: site.url + '/s/' + system.slug, label: gates.cover_label
+  }, [...(bodies ?? []), ...(constructs ?? [])].map(coverNodeFrom), baseImage);
 }
 
 /** Draw the card, put it in R2 if absent, register it approved. Returns the hash. */
@@ -81,6 +121,40 @@ export async function linkCover(sb: Db, systemId: string, hash: string): Promise
     { onConflict: SYSTEM_ASSETS_KEY, ignoreDuplicates: true }
   );
   if (error) console.warn('generated cover stored but not linked to its map', error.message);
+}
+
+/** Is this map's cover a picture the creator chose, rather than a card the hub drew? */
+export async function coverIsScreenshot(sb: Db, system: Pick<SystemRow, 'id' | 'cover_sha256'>): Promise<boolean> {
+  if (!system.cover_sha256) return false;
+  const { data } = await sb.from('system_screenshots')
+    .select('sha256').eq('system_id', system.id).eq('sha256', system.cover_sha256).maybeSingle();
+  return !!data;
+}
+
+/**
+ * REDRAW a map's generated cover from current facts and its stored choices - after a re-index,
+ * a title change, a display-name change. A chosen screenshot is left alone: that was a decision.
+ * Returns the new hash, or null when there was nothing to redraw. Never throws: a cover is
+ * decoration and must not fail the action that asked for it.
+ */
+export async function regenerateGeneratedCover(
+  env: HubEnv, sb: Db, systemId: string, site: Site, gates: Gates
+): Promise<string | null> {
+  try {
+    const { data: system } = await sb.from('systems').select('*').eq('id', systemId).maybeSingle();
+    if (!system || (await coverIsScreenshot(sb, system))) return null;
+    const options = coverOptionsFrom(system.cover_options);
+    const hash = await storeGeneratedCover(env, sb, await factsFor(env, sb, system, site, gates, options), options);
+    if (hash !== system.cover_sha256) {
+      await tolerantWrite({ cover_sha256: hash },
+        (row) => Promise.resolve(sb.from('systems').update(row as Partial<SystemRow>).eq('id', systemId)));
+      await linkCover(sb, systemId, hash);
+    }
+    return hash;
+  } catch (e) {
+    console.warn('could not redraw a cover', e);
+    return null;
+  }
 }
 
 /**

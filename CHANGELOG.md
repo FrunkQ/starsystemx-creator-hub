@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.13.0 — 2026-09-05
+
+### Re-index from the stored file, and the tree finally sorts by distance
+
+The tree's Distance order and the constellation cover both read null for every map uploaded
+before the position columns existed, so the sort fell back to size and TRAPPIST-1 sat next to Sol.
+Rather than ask for a re-upload, the hub now rebuilds every derived row - tree, distances,
+positions, small objects, counts, pills, credits, a generated cover - from the bundle it already
+holds: once, in the background, on the first view of such a map; on demand from a "Re-index"
+button on the manage page. Migration 0020 records when.
+
+### Stars, not hearts
+
+A map of stars is starred. The map page has a star button with the count; cards, the account page
+and the usage page say stars.
+
+### The cover designer grows up
+
+One of your own screenshots can be the base (approved PNG or JPEG, decoded and fitted on the
+Worker, the words drawn over it with a halo); four faces for the lettering (pixel, bold, outlined,
+wide); a green-screen palette. A renamed map gets its card redrawn, a changed display name redraws
+every card that carries it, and you can set that display name on the account page.
+
 ## 0.12.1 — 2026-09-04
 
 ### Upload a new version from the website

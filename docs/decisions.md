@@ -395,6 +395,29 @@ fact on the page rather than a sentiment.
 so the ORIGINAL map's page can list "Used in" with one indexed query. A cartographer sees where
 their work went without anyone having to tell them.
 
+### D-26. Derived rows are rebuilt from the stored bundle, never by asking for a re-upload
+
+Owner, 2026-09-04, on the tree: *"Distance does not work ... the closest star to SOL is NOT
+TRAPPIST-1"*, and on the designer: *"constellation is not showing"*. Both had one cause: the map's
+rows were written before the columns those features read, so every distance and position was
+null and both fell back honestly to something worse. The hub had been telling the owner to
+re-upload. That was the wrong ask: the hub kept the bytes precisely so it could read them again.
+
+`server/reindex.ts` rebuilds everything the hub derives - tree rows, distances and positions,
+roles, counts, pills, credits, a generated cover - from the stored bundle, through the same
+`openBundle` and `writeNodeRows` the upload uses (one reader, one row mapping). It never touches
+what the creator wrote (title, blurb, description, tags), the publish state, the ledger, or a
+chosen screenshot. It runs once in the background on the first view of a map whose rows predate
+the current reader (`reindexed_at` null and no distances), and on demand from the manage page.
+
+**The rule this sets:** when the reader improves, the next release re-indexes; creators are never
+asked to redo what the hub can redo itself.
+
+Also in this release, all owner asks: stars rather than hearts (with the symbol); a creator's own
+approved PNG or JPEG screenshot as a designed card's base, decoded in pure JavaScript and shaded so
+the words read; four faces from the one glyph set; a green-screen palette; a display name set on
+the account page, drawn onto every card and redrawn when it changes, as is a renamed title.
+
 ---
 
 ## Still open — the owner's to answer

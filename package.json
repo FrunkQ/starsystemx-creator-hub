@@ -1,6 +1,6 @@
 {
   "name": "starsystemx-creator-hub",
-  "version": "0.12.1",
+  "version": "0.13.0",
   "private": true,
   "description": "StarSystemX Creator Hub - share star systems and campaigns for Star System Explorer.",
   "type": "module",
@@ -27,6 +27,7 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.47.0",
     "fflate": "^0.8.2",
+    "jpeg-js": "^0.4.4",
     "qrcode-generator": "^2.0.4"
   }
 }

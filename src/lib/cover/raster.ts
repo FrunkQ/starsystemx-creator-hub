@@ -29,6 +29,26 @@ export class Raster {
     }
   }
 
+  /** A picture the same size as the canvas becomes the canvas. */
+  image(img: { width: number; height: number; rgb: Uint8Array }): void {
+    if (img.width !== this.width || img.height !== this.height) throw new Error('image is not the canvas size');
+    this.data.set(img.rgb);
+  }
+
+  /**
+   * Darken toward the top and bottom edges, so words drawn there read over a photograph: every
+   * row is multiplied by a factor running from `edge` at either end to `middle` half way down.
+   */
+  shade(edge: number, middle: number): void {
+    const { width, height, data } = this;
+    for (let y = 0; y < height; y++) {
+      const t = Math.abs((2 * y) / Math.max(1, height - 1) - 1);
+      const f = middle + (edge - middle) * t;
+      const row = y * width * 3;
+      for (let i = row; i < row + width * 3; i++) data[i] *= f;
+    }
+  }
+
   blend(x: number, y: number, c: RGB, a: number): void {
     if (a <= 0 || x < 0 || y < 0 || x >= this.width || y >= this.height) return;
     const i = (y * this.width + x) * 3;
