@@ -569,6 +569,13 @@ Two more things now ride in `source`, and one more thing to record:
    `ATTRIBUTIONS.md`: *"Earth — from Alpha by alice, via Beta by bob, via Gamma by carol."* When
    `chain` is absent, print the single line as before.
 
+**Shipped engine-side 2026-09-04 (stream F).** `pastedAt` is ISO 8601, which is right: it is a
+date a person reads in a hand-edited save. The hub does not consume it - `readContentCredits`
+reads `title`, `creator`, `url`, `site` and `chain` and ignores everything else, so its type is
+the engine's to choose. Also fixed there: the attributions file is now written when a campaign has
+credits but no uploaded art, where before it was skipped and the credit lost with it. The hub
+reads credits from the document, never from that file, so this affects the human copy only.
+
 **What the hub does with it:** the page shows *"Includes work from Alpha by alice (via Beta by bob,
 Gamma by carol)"* and lists every cartographer whose hands the content passed through — that is
 the shared ownership, made visible. And the ORIGINAL map's page lists *"Used in: Gamma by carol"*,
