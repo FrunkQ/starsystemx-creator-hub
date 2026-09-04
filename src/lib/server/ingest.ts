@@ -15,10 +15,10 @@
 // THE LIMIT OF (a), NAMED HONESTLY: the whole bundle is read into Worker memory. `max_bundle_bytes`
 // is therefore a real memory ceiling and not just a cost control, and it is why that gate defaults
 // to 50 MB rather than something ambitious.
-import type { Db, SystemRow, UploadEventRow } from './database.types';
+import type { Db, SystemRow, UploadEventRow, NodeRow, ConstructRow } from './database.types';
 import { checkBundleFormat } from '$lib/bundle/format';
 import { checkProvenance, noProvenance, breachesCcBy } from '$lib/bundle/attribution';
-import { tolerantWrite } from './tolerant';
+import { tolerantWrite, tolerantWriteMany } from './tolerant';
 import { readProvenance } from '$lib/bundle/provenance';
 import { detectGmContent } from '$lib/bundle/gmContent';
 import { computeFacets, deriveTags } from '$lib/bundle/facets';
@@ -27,7 +27,8 @@ import { checkFreshness } from '$lib/bundle/freshness';
 import { zipSync, strToU8 } from 'fflate';
 import { normalise, type NormalisedNode } from '$lib/bundle/normalise';
 import { readZip, BundleReadError } from '$lib/bundle/read';
-import { storeGeneratedCover, GENERATED_COVER_PATH } from './cover';
+import { storeGeneratedCover, linkCover, coverNodeFrom, coverFacts } from './cover';
+import { coverOptionsFrom, type CoverOptions } from '$lib/cover/generate';
 import { sha256Hex, claimedHashFromModelPath } from '$lib/bundle/hash';
 import {
   DOC_NAME, IMAGES_DIR, MODELS_DIR, PLAYER_IMAGES_DIR, ATTRIBUTIONS_NAME,
@@ -92,7 +93,8 @@ export async function ingest(
      */
     confirmStale?: boolean;
     /** The hub's display name, for the corner of a generated cover. */
-    siteName?: string;
+    /** The site's name and absolute url: the generated cover prints the label and links the QR. */
+    site?: { name: string; url: string };
     /**
      * The creator's provenance attestation. REQUIRED. There is no way to disprove "I made this
      * myself", so the hub does the one thing it honestly can: it asks plainly and records the
@@ -334,23 +336,39 @@ export async function ingest(
   const autoTags = deriveTags(facets, { hasGmContent: gm.hasGmContent });
   const systemId = opts.replacesSystemId ?? crypto.randomUUID();
 
-  // NO PICTURE AT ALL? Draw one (cover/generate.ts, D-21). The creator's own choice or any carried
-  // picture always wins; this is only for the map that would otherwise preview blank everywhere
-  // it is shared. Drawn from the same rows the page shows, so it can only say true things.
+  // THE SLUG FIRST: a designed cover can carry a QR code to the page, so the address has to exist
+  // before the card is drawn.
+  const slug = await uniqueSlug(sb, shaped.title, systemId);
+  const pageUrl = opts.site ? opts.site.url + '/s/' + slug : null;
+
+  // THE COVER (D-21, D-22). The creator's choice in the file, or any carried picture, wins
+  // (pickCover). On an UPDATE, a choice made on the hub is kept: a screenshot they picked, or a
+  // card they designed - a re-upload must never quietly undo it. Only a map with nothing at all
+  // gets the default card, drawn from the same rows the page shows, so it can only say true things.
   let coverHash = pickCover(doc, pending);
   let generatedCover = false;
-  if (!coverHash) {
-    coverHash = await storeGeneratedCover(env, sb, {
-      title: shaped.title, creator: viewer.handle, site: opts.siteName ?? 'StarSystemX Explorers',
+  let coverOptions: CoverOptions | null = null;
+  if (opts.replacesSystemId) {
+    const { data: prev } = await sb.from('systems').select('*').eq('id', systemId).maybeSingle();
+    if (prev?.cover_sha256) {
+      const { data: chosen } = await sb.from('system_screenshots')
+        .select('sha256').eq('system_id', systemId).eq('sha256', prev.cover_sha256).maybeSingle();
+      if (chosen) coverHash = prev.cover_sha256;
+    }
+    if (prev?.cover_options && typeof prev.cover_options === 'object') coverOptions = coverOptionsFrom(prev.cover_options);
+  }
+  if (coverOptions || !coverHash) {
+    coverHash = await storeGeneratedCover(env, sb, coverFacts({
+      title: shaped.title, creator: viewer.handle, kind,
       systems: facets.systemCount, bodies: facets.bodyCount, constructs: facets.constructCount,
-      nodes: [...shaped.bodies, ...shaped.constructs]
-    });
+      url: pageUrl, label: gates.cover_label
+    }, [...shaped.bodies, ...shaped.constructs].map(coverNodeFrom)), coverOptions ?? undefined);
     generatedCover = true;
   }
 
-  const slug = await writeRows(sb, {
-    systemId, viewer, kind, format: format.format, shaped, pending, provenance,
-    coverHash, generatedCover, publishGmTree: gm.hasGmContent,
+  await writeRows(sb, {
+    systemId, viewer, kind, format: format.format, shaped, pending, provenance, slug,
+    coverHash, generatedCover, coverOptions, publishGmTree: gm.hasGmContent,
     sourceBytes: bytes.length, isUpdate: !!opts.replacesSystemId, flagged, novelCount: novel.length,
     createdWith: madeWith.createdWith, legacyStamped: format.legacyStamped,
     revision: madeWith.revision, exportMode: madeWith.exportMode,
@@ -429,6 +447,9 @@ interface WriteArgs {
   coverHash: string | null;
   /** The cover is one the hub drew, so it gets a `cover` row rather than riding on a bundle path. */
   generatedCover: boolean;
+  /** The designer's choices when the cover is a card the creator designed; null otherwise. */
+  coverOptions: CoverOptions | null;
+  slug: string;
   publishGmTree: boolean;
   sourceBytes: number;
   isUpdate: boolean;
@@ -444,9 +465,7 @@ interface WriteArgs {
 }
 
 async function writeRows(sb: Db, a: WriteArgs): Promise<string> {
-  const { systemId, viewer, kind, format, shaped, pending, provenance, coverHash } = a;
-
-  const slug = await uniqueSlug(sb, shaped.title, systemId);
+  const { systemId, viewer, kind, format, shaped, pending, provenance, coverHash, slug } = a;
 
   // A TOLERANT write: the columns added by 0014 (`revision`, `export_mode`) exist in the code the
   // moment it deploys and in the database the moment the owner runs the migration, and those are
@@ -478,7 +497,8 @@ async function writeRows(sb: Db, a: WriteArgs): Promise<string> {
     tag_namespaces: a.facets.tagNamespaces,
     facet_results: a.facets.rules,
     revision: a.revision,
-    export_mode: a.exportMode
+    export_mode: a.exportMode,
+    cover_options: a.coverOptions
   }, (row) => Promise.resolve(sb.from('systems').upsert(row as Partial<SystemRow>)));
   if (sysError) throw new Error('could not save the map: ' + sysError.message);
 
@@ -497,11 +517,7 @@ async function writeRows(sb: Db, a: WriteArgs): Promise<string> {
   // The generated cover holds a reference like any asset, so the refcount and the garbage sweep
   // see it. Its "path" is not a bundle member and pack.ts never finds it in the zip - which is
   // right: a download carries what the creator saved, not what the hub drew.
-  if (a.generatedCover && coverHash) {
-    await sb.from('system_assets').insert({
-      system_id: systemId, sha256: coverHash, role: 'cover', bundle_path: GENERATED_COVER_PATH, node_ref: null
-    });
-  }
+  if (a.generatedCover && coverHash) await linkCover(sb, systemId, coverHash);
 
   const byPath = new Map(pending.map((p) => [p.path, p.sha256]));
 
@@ -523,17 +539,19 @@ async function writeRows(sb: Db, a: WriteArgs): Promise<string> {
     id: crypto.randomUUID(), system_id: systemId,
     node_id: n.node_id, parent_id: n.parent_id, name: n.name, kind: n.kind,
     role_hint: n.role_hint, snippet: n.snippet, tags: n.tags,
-    image_sha256: n.image_path ? byPath.get(n.image_path) ?? null : null
+    image_sha256: n.image_path ? byPath.get(n.image_path) ?? null : null,
+    // 0015: "how far out", and a starmap root's place on the map. Tolerated when the columns are
+    // not there yet - the tree then falls back to ordering by size.
+    distance: n.distance, map_x: n.map_x, map_y: n.map_y
   });
 
-  if (shaped.bodies.length) await sb.from('bodies').insert(shaped.bodies.map(nodeRow));
-  if (shaped.constructs.length) {
-    await sb.from('constructs').insert(shaped.constructs.map((n) => ({
-      ...nodeRow(n),
-      // The claim was verified against the bytes above, so by here it is safe to record.
-      model_sha256: n.model_hash_claim ?? null
-    })));
-  }
+  await tolerantWriteMany(shaped.bodies.map(nodeRow),
+    (rows) => Promise.resolve(sb.from('bodies').insert(rows as Partial<NodeRow>[])));
+  await tolerantWriteMany(shaped.constructs.map((n) => ({
+    ...nodeRow(n),
+    // The claim was verified against the bytes above, so by here it is safe to record.
+    model_sha256: n.model_hash_claim ?? null
+  })), (rows) => Promise.resolve(sb.from('constructs').insert(rows as Partial<ConstructRow>[])));
 
   // APPEND-ONLY, and re-taken on every upload including an update. If the wording ever changes,
   // an old row still shows what was actually agreed to at the time - which is the only thing that

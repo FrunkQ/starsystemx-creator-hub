@@ -1,5 +1,9 @@
 <script lang="ts">
   // The cover image is the ONLY picture on the hub (decision 3). No rendered preview, no engine.
+  //
+  // A STARMAP AND A SYSTEM LOOK DIFFERENT AT A GLANCE (owner, 2026-09-04): a starmap card carries
+  // a second, offset edge - a map with more inside it - and a kind badge on the picture. A system
+  // card is plain. Nobody should have to read the counts to know which they are looking at.
   interface System {
     slug: string;
     title: string;
@@ -11,11 +15,15 @@
     download_count: number;
     // Derived facets, present when the card is rendered from a query that selected them.
     auto_tags?: string[];
+    // The creator's own picks from the vocabulary - the tags that say why THIS Earth is different.
+    tags?: string[];
     body_count?: number;
     construct_count?: number;
     system_count?: number;
   }
   let { system }: { system: System } = $props();
+
+  const isStarmap = $derived(system.kind === 'starmap');
 
   // The one line that tells a browsing GM what this actually is. Built from counts rather than
   // prose, because counts are the thing that distinguishes a built-up system from an empty one.
@@ -27,8 +35,13 @@
     return bits.join(' · ');
   });
 
-  // At most three pills on a card - enough to characterise, not enough to become wallpaper.
-  const pills = $derived((system.auto_tags ?? []).filter((t) => PILLS.has(t)).slice(0, 3));
+  // At most four pills on a card. The CREATOR'S tags come first - they are the ones that separate
+  // one Solar System from the next - then the derived pills that change whether somebody clicks.
+  const pills = $derived.by(() => {
+    const mine = (system.tags ?? []).slice(0, 3).map((t) => ({ t, mine: true }));
+    const auto = (system.auto_tags ?? []).filter((t) => PILLS.has(t)).map((t) => ({ t, mine: false }));
+    return [...mine, ...auto].slice(0, 4);
+  });
 </script>
 
 <script lang="ts" module>
@@ -39,20 +52,23 @@
   ]);
 </script>
 
-<a class="card" href="/s/{system.slug}">
-  {#if system.cover_sha256}
-    <!-- Served through the ledger-checking route. A withheld cover simply 404s and the browser
-         shows the alt text, which is honest rather than broken. -->
-    <img class="cover" src="/asset/{system.cover_sha256}" alt="" loading="lazy" decoding="async" />
-  {:else}
-    <div class="cover-fallback">{system.kind === 'starmap' ? 'Campaign' : 'System'}</div>
-  {/if}
+<a class="card" class:starmap={isStarmap} href="/s/{system.slug}">
+  <div class="pic">
+    {#if system.cover_sha256}
+      <!-- Served through the ledger-checking route. A withheld cover simply 404s and the browser
+           shows the alt text, which is honest rather than broken. -->
+      <img class="cover" src="/asset/{system.cover_sha256}" alt="" loading="lazy" decoding="async" />
+    {:else}
+      <div class="cover-fallback">{isStarmap ? 'Starmap' : 'System'}</div>
+    {/if}
+    <span class="kind">{isStarmap ? 'Starmap' : 'System'}</span>
+  </div>
   <div class="body">
     <h3>{system.title}</h3>
     {#if system.blurb || system.summary}<p>{system.blurb ?? system.summary}</p>{/if}
     {#if whatsInIt}<p class="counts">{whatsInIt}</p>{/if}
     {#if pills.length}
-      <div class="pills">{#each pills as t}<span class="tag">{t}</span>{/each}</div>
+      <div class="pills">{#each pills as p (p.t)}<span class="tag" class:mine={p.mine}>{p.t}</span>{/each}</div>
     {/if}
     <div class="meta">
       <span>{system.hearts_count} hearts</span>
@@ -62,8 +78,20 @@
 </a>
 
 <style>
-  a.card { color: inherit; }
+  a.card { color: inherit; position: relative; }
   a.card:hover { text-decoration: none; border-color: var(--accent); }
+  /* The second edge: a starmap is a map with maps inside it. */
+  a.card.starmap { outline: 1px solid var(--edge); outline-offset: 3px; }
+  a.card.starmap:hover { outline-color: var(--accent); }
+  .pic { position: relative; }
+  .kind {
+    position: absolute; left: 8px; top: 8px;
+    font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600;
+    color: var(--ink); background: rgba(10, 13, 20, 0.72);
+    border: 1px solid var(--edge); border-radius: 6px; padding: 2px 7px;
+  }
+  a.card.starmap .kind { border-color: var(--accent); color: var(--accent); }
   .counts { color: var(--ink-faint); font-size: 0.85rem; margin-top: 6px; }
   .pills { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+  .tag.mine { border-color: var(--accent); }
 </style>

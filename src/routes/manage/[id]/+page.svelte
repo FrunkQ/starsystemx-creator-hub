@@ -5,6 +5,19 @@
   let uploading = $state(false);
   let uploadMessage = $state<string | null>(null);
 
+  // THE COVER DESIGNER (D-22). The choices live here; the preview is an <img> whose address
+  // carries them, so every change redraws the card on the server - no client-side rendering,
+  // and what you see is byte-for-byte what "Use this cover" stores.
+  let cover = $state({ ...data.coverOptions });
+  const onOff = (v: boolean) => (v ? 'on' : 'off');
+  const previewUrl = $derived(
+    '/api/cover/preview?' + new URLSearchParams({
+      systemId: s.id, base: cover.base, palette: cover.palette,
+      title: onOff(cover.title), byline: onOff(cover.byline), counts: onOff(cover.counts),
+      label: onOff(cover.label), qr: onOff(cover.qr)
+    }).toString()
+  );
+
   async function addScreenshot(e: Event) {
     const input = e.currentTarget as HTMLInputElement;
     const file = input.files?.[0];
@@ -130,7 +143,59 @@
   {/if}
 </div>
 
-<!-- 3. Publish. -->
+<!-- 3. The cover: a screenshot above, or a card drawn from the map to the creator's design. -->
+<div class="panel">
+  <h2>Cover</h2>
+  <p class="muted">
+    The picture on your map's page and in every link preview. Use one of your screenshots above,
+    or design a card drawn from the map itself - a constellation for a starmap, an orbital diagram
+    for a system - with the words, a QR code and a palette of your choosing.
+  </p>
+  {#if data.designer.proOnly && !data.designer.allowed}
+    <p class="muted"><strong>Designing a cover is a Pro feature at the moment.</strong> The default card is still drawn for you.</p>
+  {/if}
+  <div class="designer">
+    <img class="preview" src={previewUrl} alt="Cover preview" width="1200" height="630" />
+    <form method="POST" action="?/design" class="controls">
+      <label>
+        Picture
+        <select name="base" bind:value={cover.base}>
+          <option value="auto">Match the map ({s.kind === 'starmap' ? 'constellation' : 'orbits'})</option>
+          <option value="starmap">Constellation</option>
+          <option value="system">Orbits</option>
+          <option value="plain">Just stars</option>
+        </select>
+      </label>
+      <label>
+        Palette
+        <select name="palette" bind:value={cover.palette}>
+          <option value="night">Night</option>
+          <option value="amber">Amber</option>
+          <option value="mono">Mono</option>
+        </select>
+      </label>
+      <div class="checks">
+        <label class="check"><input type="checkbox" bind:checked={cover.title} /> Title</label>
+        <label class="check"><input type="checkbox" bind:checked={cover.byline} /> By you</label>
+        <label class="check"><input type="checkbox" bind:checked={cover.counts} /> What is in it</label>
+        <label class="check"><input type="checkbox" bind:checked={cover.label} /> {data.label}</label>
+        <label class="check"><input type="checkbox" bind:checked={cover.qr} /> QR code to this page</label>
+      </div>
+      <!-- Explicit on/off, so an unticked box is a statement and not an absence. -->
+      <input type="hidden" name="title" value={onOff(cover.title)} />
+      <input type="hidden" name="byline" value={onOff(cover.byline)} />
+      <input type="hidden" name="counts" value={onOff(cover.counts)} />
+      <input type="hidden" name="label" value={onOff(cover.label)} />
+      <input type="hidden" name="qr" value={onOff(cover.qr)} />
+      <button class="primary" type="submit" disabled={!data.designer.allowed}>Use this cover</button>
+      <p class="muted small">
+        {#if data.coverIsScreenshot}Current cover: one of your screenshots.{:else if s.cover_sha256}Current cover: a card like this.{:else}No cover yet.{/if}
+      </p>
+    </form>
+  </div>
+</div>
+
+<!-- 4. Publish. -->
 <form class="panel" method="POST" action="?/publish">
   <h2>{s.state === 'public' ? 'Published' : 'Not published yet'}</h2>
   <input type="hidden" name="state" value={s.state === 'public' ? 'draft' : 'public'} />
@@ -167,4 +232,16 @@
   figure img { width: 100%; border-radius: 8px; border: 1px solid var(--edge); display: block; }
   .waiting { color: var(--warn); font-size: 0.82rem; margin: 4px 0; }
   figure form { margin-top: 6px; }
+  .designer { display: grid; grid-template-columns: minmax(0, 1fr) 250px; gap: 16px; align-items: start; }
+  @media (max-width: 720px) { .designer { grid-template-columns: 1fr; } }
+  .preview { width: 100%; height: auto; border-radius: var(--radius); border: 1px solid var(--edge); display: block; background: var(--bg); }
+  .controls label { margin: 8px 0; }
+  .controls select {
+    display: block; width: 100%; margin-top: 4px; font: inherit;
+    background: var(--panel-2); color: var(--ink); border: 1px solid var(--edge); border-radius: 8px; padding: 6px 8px;
+  }
+  .checks { display: grid; gap: 4px; margin: 12px 0; }
+  .check { display: flex; align-items: center; gap: 8px; margin: 0; color: var(--ink); }
+  .check input { margin: 0; }
+  .small { font-size: 0.85rem; margin-top: 8px; }
 </style>

@@ -55,6 +55,25 @@ export function iconFor(roleHint: string | null | undefined, kind?: string | nul
   return UNKNOWN;
 }
 
+/**
+ * The order roles are LISTED in, on a row summary and on the page (owner, 2026-09-04): planets,
+ * moons, rings, belts, then the built things, then the rest. Not by count - a fixed order is what
+ * lets the eye find "moons" in the same place on every row.
+ */
+export const ROLE_ORDER = [
+  'planet', 'moon', 'ring', 'belt',
+  'megastructure', 'construct', 'habitat', 'infrastructure', 'station', 'ship',
+  'star', 'barycenter'
+];
+
+/** Non-zero counts in ROLE_ORDER, unknown roles after them alphabetically. */
+export function orderRoles(counts: Record<string, number>): [string, number][] {
+  const rank = (role: string) => { const i = ROLE_ORDER.indexOf(role); return i === -1 ? ROLE_ORDER.length : i; };
+  return Object.entries(counts)
+    .filter(([, n]) => n > 0)
+    .sort((a, b) => rank(a[0]) - rank(b[0]) || a[0].localeCompare(b[0]));
+}
+
 // The two actions on every row. Kept here so the tree has one source of icon data.
 export const COPY_ICON = 'M8 4h9a2 2 0 0 1 2 2v9M6 8h9a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2Z';
 export const TICK_ICON = 'M5 12.5l4.5 4.5L19 7.5';

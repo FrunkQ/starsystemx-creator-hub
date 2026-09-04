@@ -72,6 +72,8 @@ for f in db/migrations/*.sql; do echo "-- $f"; cat "$f"; done > /tmp/all.sql
 ```
 
 Paste into the SQL editor, or use the Supabase CLI. They are ordinary SQL and are meant to be read.
+Every migration from 0014 on is safe to run twice, and the code deployed ahead of it tolerates the
+missing columns (`src/lib/server/tolerant.ts`) - so run them when convenient, not in a panic.
 
 Then make yourself an admin — there is no bootstrap route on purpose, because a route that can mint
 an admin is a route that can be abused:

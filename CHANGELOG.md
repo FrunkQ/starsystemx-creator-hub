@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.8.0 — 2026-09-04
+
+### Design your cover
+
+The card the hub drew for maps with no picture is now something a creator can design: a
+constellation for a starmap (every system at its real map position, the origin star named) or an
+orbital diagram for a system (real orbit spacing, bodies sized and coloured from their real mass,
+radius and oceans), with the title, byline, counts, the site's domain and a QR code to the page
+each switchable, in three palettes. Live preview on the manage page; "Use this cover" stores it.
+Choices are kept and the card is redrawn on re-upload; a chosen screenshot survives re-upload too.
+Free for everyone now; a config row makes it Pro later.
+
+### Distance, not "orbit order"
+
+At the top of a starmap the tree now orders systems by distance from the origin star; inside a
+system, by orbit. One sort, called Distance. Row summaries list planets, moons, rings, belts, then
+the built things, each with its symbol. The tree remembers what you opened, per map.
+
+### Finding one Earth among forty
+
+Starmap cards carry a second edge and a kind badge. The creator's own tags show on cards first and
+filter the browse page, which also filters by kind and offers a "narrow it down" strip of the tags
+that best split a crowded result. The vocabulary grew to eight groups: when, what-if, physics,
+universe and more.
+
+Migration 0015 adds the distance columns and the cover choices. Everything tolerates it not having
+been run yet.
+
 ## 0.7.2 — 2026-09-03
 
 ### The build says which version it is

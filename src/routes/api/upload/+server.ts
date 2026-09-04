@@ -92,7 +92,7 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
   try {
     const site = await loadSite(sb, new URL(request.url));
     result = await ingest(env, sb, viewer!, gates, bytes, {
-      confirmGmTree, stripGm, confirmStale, replacesSystemId, attestation, siteName: site.name
+      confirmGmTree, stripGm, confirmStale, replacesSystemId, attestation, site
     });
   } catch (e) {
     console.error('ingest failed', e);

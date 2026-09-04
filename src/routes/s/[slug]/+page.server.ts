@@ -2,8 +2,9 @@ import type { PageServerLoad } from './$types';
 import { error } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import * as ledger from '$lib/server/ledger';
-import { ensureCover } from '$lib/server/cover';
+import { ensureCover, coverNodeFrom } from '$lib/server/cover';
 import { loadSite } from '$lib/server/site';
+import { loadGates } from '$lib/server/config';
 
 export const load: PageServerLoad = async ({ params, platform, setHeaders, url }) => {
   const env = platform?.env;
@@ -22,10 +23,11 @@ export const load: PageServerLoad = async ({ params, platform, setHeaders, url }
   if (!system || system.state !== 'public' || system.visibility !== 'public') throw error(404, 'Not found');
 
   const [{ data: bodies }, { data: constructs }, { data: creator }, { data: assets }] = await Promise.all([
-    sb.from('bodies').select('node_id, parent_id, name, kind, role_hint, tags, image_sha256, snippet, system_id')
-      .eq('system_id', system.id).order('name'),
-    sb.from('constructs').select('node_id, parent_id, name, kind, role_hint, tags, image_sha256, model_sha256, snippet')
-      .eq('system_id', system.id).order('name'),
+    // `*`, deliberately: 0015 added `distance`/`map_x`/`map_y`, and naming a column the database
+    // does not have yet fails the whole select - which would empty the page until the owner ran
+    // the migration. `*` returns whatever exists.
+    sb.from('bodies').select('*').eq('system_id', system.id).order('name'),
+    sb.from('constructs').select('*').eq('system_id', system.id).order('name'),
     sb.from('creators').select('handle, display_name').eq('id', system.creator_id).maybeSingle(),
     sb.from('system_assets').select('sha256').eq('system_id', system.id)
   ]);
@@ -37,12 +39,17 @@ export const load: PageServerLoad = async ({ params, platform, setHeaders, url }
   // backfill for anything uploaded before the hub could draw. Once per map; never fails the page.
   let backfilled: string | null = null;
   if (!system.cover_sha256) {
-    const site = await loadSite(sb, url);
-    backfilled = await ensureCover(
-      env, sb, system, [...(bodies ?? []), ...(constructs ?? [])],
-      creator?.handle ?? null, site.name
-    );
-    system.cover_sha256 = backfilled;
+    try {
+      const [site, gates] = await Promise.all([loadSite(sb, url), loadGates(sb)]);
+      backfilled = await ensureCover(env, sb, system, {
+        title: system.title, creator: creator?.handle ?? null, kind: system.kind,
+        systems: system.system_count, bodies: system.body_count, constructs: system.construct_count,
+        url: site.url + '/s/' + system.slug, label: gates.cover_label
+      }, [...(bodies ?? []), ...(constructs ?? [])].map(coverNodeFrom));
+      system.cover_sha256 = backfilled;
+    } catch (e) {
+      console.warn('cover backfill skipped', e);
+    }
   }
 
   // HOW MANY PICTURES ARE STILL WAITING (design 6.2). The map is public and downloadable either

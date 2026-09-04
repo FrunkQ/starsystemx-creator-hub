@@ -15,13 +15,19 @@
   // it before somebody decides whether to open it, or collapsing has merely hidden the information
   // rather than organised it.
   //
-  // ONE PLACE FOR COPYING, NOT TWO. This tree used to sit above a second, flat list of 172 JSON
-  // blocks ("Copy one piece") that had exactly the problem the tree had just solved. Now every row
-  // carries its own copy control, and copying a BRANCH copies everything under it: a star and all
-  // its planets, a planet and its moons. The format is bundle/clip.ts; the paste side is the
-  // engine's R-14.
+  // "DISTANCE" MEANS WHAT THE LEVEL MEANS (owner, 2026-09-04). At the top of a starmap it is the
+  // distance from the origin star - the one the map was built outward from; inside a system it is
+  // the orbit. One number per row (`distance`, 0015), one sort, and the hierarchy is never
+  // flattened by it. Rows without a number (older uploads) fall back to size, stars first.
+  //
+  // ONE PLACE FOR COPYING, NOT TWO. Every row carries its own copy control, and copying a BRANCH
+  // copies everything under it. The format is bundle/clip.ts; the paste side is the engine's R-14.
+  //
+  // THE TREE REMEMBERS. Which branches you opened and how you sorted are kept per map in this
+  // browser (localStorage), so coming back to a map finds it as you left it. A convenience, not
+  // state that matters: it is wrapped in try/catch and the page is right without it.
   import RoleIcon from './RoleIcon.svelte';
-  import { COPY_ICON, TICK_ICON, CODE_ICON } from './roleIcons';
+  import { COPY_ICON, TICK_ICON, CODE_ICON, orderRoles } from './roleIcons';
   import { buildClip, clipText, type ClipSource } from '$lib/bundle/clip';
 
   interface Node {
@@ -32,19 +38,41 @@
     role_hint: string | null;
     tags: string[];
     snippet: unknown;
+    distance?: number | null;
   }
 
   let { nodes, source, openDepth = 1 }: { nodes: Node[]; source: ClipSource; openDepth?: number } = $props();
 
-  type Sort = 'orbit' | 'name';
-  let sort = $state<Sort>('orbit');
-  // Expand/collapse all works by re-keying the tree, which re-applies `open` from scratch.
+  type Sort = 'distance' | 'name';
+  let sort = $state<Sort>('distance');
+  // Which rows are open, by id. Empty means "the defaults" (open to `openDepth`).
+  let open = $state<Record<string, boolean>>({});
   let expanded = $state<boolean | null>(null);
   let epoch = $state(0);
   let copiedId = $state<string | null>(null);
   // Whose own JSON is on screen. Rendered lazily: 170 pretty-printed blocks in the DOM at once
   // would be most of the page's weight for something almost nobody opens.
   let shown = $state<Record<string, boolean>>({});
+
+  const memoryKey = $derived('tree:' + source.url);
+
+  // Restore what this browser remembers for this map, once, on the client.
+  $effect(() => {
+    const key = memoryKey;
+    try {
+      const saved = JSON.parse(localStorage.getItem(key) ?? 'null');
+      if (saved && typeof saved === 'object') {
+        if (saved.sort === 'name' || saved.sort === 'distance') sort = saved.sort;
+        if (saved.open && typeof saved.open === 'object') { open = saved.open; epoch++; }
+      }
+    } catch { /* no memory is fine */ }
+  });
+
+  function remember() {
+    try {
+      localStorage.setItem(memoryKey, JSON.stringify({ sort, open }));
+    } catch { /* storage refused: nothing lost but a convenience */ }
+  }
 
   interface TreeNode extends Node { children: TreeNode[]; total: number; roles: Record<string, number> }
 
@@ -72,25 +100,38 @@
     };
     for (const r of roots) measure(r);
 
-    // Orbit order: stars first, then by what is under them - the biggest branch is the interesting
-    // one. A-Z is alphabetical at every level; the hierarchy is never flattened by a sort.
-    const byOrbit = (a: TreeNode, b: TreeNode) =>
+    // Distance: nearest first at every level; rows without a number after them, stars first and
+    // then by what is under them. A to Z is alphabetical at every level.
+    const fallback = (a: TreeNode, b: TreeNode) =>
       (b.role_hint === 'star' ? 1 : 0) - (a.role_hint === 'star' ? 1 : 0)
       || b.total - a.total
       || a.name.localeCompare(b.name);
+    const byDistance = (a: TreeNode, b: TreeNode) => {
+      const da = a.distance ?? Infinity, db = b.distance ?? Infinity;
+      return da !== db ? da - db : fallback(a, b);
+    };
     const byName = (a: TreeNode, b: TreeNode) => a.name.localeCompare(b.name);
-    const order = sort === 'name' ? byName : byOrbit;
+    const order = sort === 'name' ? byName : byDistance;
     const sortAll = (list: TreeNode[]) => { list.sort(order); for (const n of list) sortAll(n.children); };
     sortAll(roots);
 
     return roots;
   });
 
-  function summarise(n: TreeNode): string {
-    return Object.entries(n.roles)
-      .sort((a, b) => b[1] - a[1])
-      .map(([role, count]) => count + ' ' + role + (count === 1 ? '' : 's'))
-      .join(', ');
+  const isOpen = (id: string, depth: number) => open[id] ?? expanded ?? depth < openDepth;
+
+  function toggled(id: string, e: Event) {
+    open[id] = (e.currentTarget as HTMLDetailsElement).open;
+    remember();
+  }
+
+  function setSort(to: Sort) { sort = to; remember(); }
+  function setAll(to: boolean) { expanded = to; open = {}; epoch++; remember(); }
+
+  /** An orbit, in the unit a person would use for it. Only children have one worth showing. */
+  function orbitLabel(au: number): string {
+    if (au >= 0.05) return au.toFixed(au >= 10 ? 1 : 2) + ' AU';
+    return Math.round(au * 149597870.7).toLocaleString('en-GB') + ' km';
   }
 
   async function copy(id: string) {
@@ -128,6 +169,16 @@
   </span>
 {/snippet}
 
+{#snippet summaryOf(node: TreeNode)}
+  <!-- A fixed order, each count with its symbol: planets, moons, rings, belts, then the built
+       things. The eye finds "moons" in the same place on every row. -->
+  <span class="sum">
+    {#each orderRoles(node.roles) as [role, n] (role)}
+      <span class="rc"><RoleIcon role={role} size={12} />{n} {role}{n === 1 ? '' : 's'}</span>
+    {/each}
+  </span>
+{/snippet}
+
 {#snippet tagList(tags: string[], limit: number)}
   {#each tags.slice(0, limit) as t}
     {@const [key, value] = t.split(/=(.*)/s)}
@@ -136,14 +187,21 @@
   {#if tags.length > limit}<span class="more">+{tags.length - limit}</span>{/if}
 {/snippet}
 
+{#snippet distanceOf(node: TreeNode)}
+  {#if sort === 'distance' && node.parent_id && node.distance != null}
+    <span class="dist">{orbitLabel(node.distance)}</span>
+  {/if}
+{/snippet}
+
 {#snippet branch(node: TreeNode, depth: number)}
   {#if node.children.length}
-    <details open={expanded ?? depth < openDepth} style="--depth: {depth}">
+    <details open={isOpen(node.node_id, depth)} style="--depth: {depth}" ontoggle={(e) => toggled(node.node_id, e)}>
       <summary>
         <RoleIcon role={node.role_hint} kind={node.kind} />
         <span class="name">{node.name}</span>
         {#if node.role_hint}<span class="role">{node.role_hint}</span>{/if}
-        <span class="sum">{summarise(node)}</span>
+        {@render distanceOf(node)}
+        {@render summaryOf(node)}
         {@render actions(node, true)}
       </summary>
       {#if node.tags.length}
@@ -163,6 +221,7 @@
         <RoleIcon role={node.role_hint} kind={node.kind} />
         <span class="name">{node.name}</span>
         {#if node.role_hint}<span class="role">{node.role_hint}</span>{/if}
+        {@render distanceOf(node)}
         {#if node.tags.length}<span class="tags inline">{@render tagList(node.tags, 6)}</span>{/if}
         {@render actions(node, false)}
       </summary>
@@ -176,11 +235,12 @@
 <div class="bar">
   <span class="hint">{nodes.length} {nodes.length === 1 ? 'object' : 'objects'}</span>
   <div class="seg" role="group" aria-label="Order">
-    <button type="button" class:on={sort === 'orbit'} onclick={() => (sort = 'orbit')}>Orbit order</button>
-    <button type="button" class:on={sort === 'name'} onclick={() => (sort = 'name')}>A to Z</button>
+    <button type="button" class:on={sort === 'distance'} onclick={() => setSort('distance')}
+      title="Nearest first: from the origin star at the top of a starmap, by orbit inside a system">Distance</button>
+    <button type="button" class:on={sort === 'name'} onclick={() => setSort('name')}>A to Z</button>
   </div>
-  <button type="button" class="ghost" onclick={() => { expanded = true; epoch++; }}>Expand all</button>
-  <button type="button" class="ghost" onclick={() => { expanded = false; epoch++; }}>Collapse all</button>
+  <button type="button" class="ghost" onclick={() => setAll(true)}>Expand all</button>
+  <button type="button" class="ghost" onclick={() => setAll(false)}>Collapse all</button>
 </div>
 
 {#key epoch}
@@ -215,7 +275,10 @@
   summary:hover { background: var(--panel-2); }
   .name { color: var(--ink); font-weight: 550; }
   .role { color: var(--ink-faint); font-size: 0.85rem; }
-  .sum { color: var(--ink-dim); font-size: 0.85rem; margin-left: auto; }
+  .dist { color: var(--ink-faint); font-size: 0.8rem; font-variant-numeric: tabular-nums; }
+  .sum { color: var(--ink-dim); font-size: 0.85rem; margin-left: auto; display: inline-flex; flex-wrap: wrap; gap: 4px 12px; }
+  .rc { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+  .rc :global(.role-icon) { opacity: 0.7; }
 
   /* The actions: quiet until the row is hovered or focused, so 170 rows do not become 340 buttons
      shouting at once - but always present, so keyboard users find them. */

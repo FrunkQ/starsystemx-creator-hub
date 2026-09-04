@@ -1,23 +1,30 @@
-// THE GENERATED COVER: a card drawn from the map itself, for maps that carry no picture.
+// THE GENERATED COVER: a card drawn from the map itself.
 //
 // ============================================================================================
 // WHY. Most saves arrive with no cover - the Local Neighbourhood starmap has sixty node images and
 // not one of them is carried in the bundle (C-06). A page with no picture is a link that previews
 // with no picture, and for a hub whose product is link-sharing that is the most expensive small
 // failure available (D-18). So when the creator chose nothing and the guess finds nothing, the hub
-// draws one: the primary star, its children on tilted orbits, the title, the counts, the byline.
+// draws one - and since 0.8.0 the creator can also DESIGN one: pick the base, switch the words on
+// and off, add a QR code, choose a palette (docs/decisions.md D-22).
+//
+// TWO BASES, because a starmap and a system are different things:
+//   starmap  a constellation - every system's star at its real map position, the origin star
+//            largest and named, faint lines to its nearest neighbours. An Elite-style chart.
+//   system   an orbital diagram - the primary star and what orbits it, orbit radii on a log scale
+//            of the real semi-major axes, bodies sized and coloured from their real mass and radius.
 //
 // DETERMINISTIC ON PURPOSE. No randomness - every angle and every background star comes from a
-// hash of the map's own ids and title - so the same map draws the same bytes, the PNG hashes the
-// same, and a re-upload reuses the asset already in R2 rather than minting another.
+// hash of the map's own ids and title - so the same map with the same options draws the same
+// bytes, the PNG hashes the same, and a re-upload reuses the asset already in R2.
 //
 // NOT ART. It is a recognisable, honest card that says "a star system, this many things, by this
-// person" at a glance in a Discord embed. The moment a creator picks a real picture (coverAssetId)
-// it is never used. See docs/decisions.md D-21 for why it is auto-approved.
+// person" at a glance in a Discord embed. See D-21 for why it is auto-approved.
 // ============================================================================================
 import { Raster, type RGB } from './raster';
 import { drawText, fold, textWidth, wrapLines } from './font';
 import { encodePng } from './png';
+import { qrModules } from './qr';
 
 export interface CoverNode {
   node_id: string;
@@ -25,12 +32,60 @@ export interface CoverNode {
   name: string;
   kind: string;
   role_hint: string | null;
+  /** Orbit semi-major axis in AU for a child; map distance from the origin for a starmap root. */
+  distance?: number | null;
+  /** Position relative to the map's origin star, in map units. Starmap roots only. */
+  map_x?: number | null;
+  map_y?: number | null;
+  /** From the node itself, when the row carried it: sizes and colours. */
+  radius_km?: number | null;
+  mass_kg?: number | null;
+  /** e.g. 'G2V', from `classes: ['star/G2V']`. */
+  star_class?: string | null;
+  has_hydrosphere?: boolean;
+}
+
+export type CoverBase = 'auto' | 'system' | 'starmap' | 'plain';
+export type CoverPalette = 'night' | 'amber' | 'mono';
+
+export interface CoverOptions {
+  base: CoverBase;
+  palette: CoverPalette;
+  title: boolean;
+  byline: boolean;
+  counts: boolean;
+  /** The bottom-right label: the site's domain. */
+  label: boolean;
+  /** A QR code to the map's page. */
+  qr: boolean;
+}
+
+export const DEFAULT_COVER_OPTIONS: CoverOptions = {
+  base: 'auto', palette: 'night', title: true, byline: true, counts: true, label: true, qr: false
+};
+
+const BASES: CoverBase[] = ['auto', 'system', 'starmap', 'plain'];
+const PALETTES: CoverPalette[] = ['night', 'amber', 'mono'];
+
+/** Options from JSON or a form: anything unrecognised falls back to the default. */
+export function coverOptionsFrom(value: unknown): CoverOptions {
+  const v = (value && typeof value === 'object' ? value : {}) as Record<string, unknown>;
+  const flag = (k: keyof CoverOptions) => (typeof v[k] === 'boolean' ? (v[k] as boolean) : v[k] === 'on' ? true : v[k] === 'off' ? false : DEFAULT_COVER_OPTIONS[k] as boolean);
+  return {
+    base: BASES.includes(v.base as CoverBase) ? (v.base as CoverBase) : 'auto',
+    palette: PALETTES.includes(v.palette as CoverPalette) ? (v.palette as CoverPalette) : 'night',
+    title: flag('title'), byline: flag('byline'), counts: flag('counts'), label: flag('label'), qr: flag('qr')
+  };
 }
 
 export interface CoverFacts {
   title: string;
   creator: string | null;
-  site: string;
+  /** Bottom-right text - the site's domain, e.g. explorers.starsystemx.com. */
+  label: string;
+  /** The map page, for the QR code. Null draws no code even when asked. */
+  url: string | null;
+  kind: 'starmap' | 'system';
   systems: number;
   bodies: number;
   constructs: number;
@@ -40,16 +95,27 @@ export interface CoverFacts {
 export const COVER_W = 1200;
 export const COVER_H = 630;
 
-const INK: RGB = [232, 236, 245];
-const DIM: RGB = [154, 166, 191];
-const FAINT: RGB = [107, 119, 148];
-const EDGE: RGB = [52, 66, 100];
-const ACCENT: RGB = [111, 179, 255];
-const STAR: RGB = [255, 233, 176];
+interface Palette {
+  bgTop: RGB; bgBottom: RGB; ink: RGB; dim: RGB; faint: RGB; edge: RGB; accent: RGB; star: RGB; warn: RGB;
+}
+
+const PALETTE: Record<CoverPalette, Palette> = {
+  night: {
+    bgTop: [16, 22, 40], bgBottom: [6, 9, 17], ink: [232, 236, 245], dim: [154, 166, 191],
+    faint: [107, 119, 148], edge: [52, 66, 100], accent: [111, 179, 255], star: [255, 233, 176], warn: [255, 194, 102]
+  },
+  amber: {
+    bgTop: [30, 20, 10], bgBottom: [10, 7, 4], ink: [255, 234, 200], dim: [205, 170, 130],
+    faint: [150, 120, 90], edge: [96, 66, 36], accent: [255, 190, 100], star: [255, 226, 160], warn: [255, 150, 90]
+  },
+  mono: {
+    bgTop: [22, 22, 25], bgBottom: [6, 6, 8], ink: [238, 238, 240], dim: [168, 168, 174],
+    faint: [112, 112, 120], edge: [66, 66, 74], accent: [205, 205, 212], star: [255, 255, 255], warn: [190, 190, 196]
+  }
+};
+
 const WHITE: RGB = [255, 255, 255];
-const WARN: RGB = [255, 194, 102];
-const BG_TOP: RGB = [16, 22, 40];
-const BG_BOTTOM: RGB = [6, 9, 17];
+const QR_DARK: RGB = [8, 10, 16];
 
 /** FNV-1a: a stable 32-bit hash of a string, for angles and seeds. */
 export function fnv(s: string): number {
@@ -99,103 +165,316 @@ function primaryOf(roots: TreeNode[]): TreeNode | null {
   return [...pool].sort((a, b) => b.total - a.total)[0];
 }
 
-export function renderCover(facts: CoverFacts): Uint8Array {
-  const r = new Raster(COVER_W, COVER_H);
-  r.gradient(BG_TOP, BG_BOTTOM);
+// ---- what a thing looks like, from what the file says it is -------------------------------------
 
-  // ---- a field of background stars, seeded by the title so it is stable ---------------------
-  const rand = rng(fnv(facts.title) || 1);
-  const dots = Math.min(180, 60 + facts.systems * 2);
-  for (let i = 0; i < dots; i++) {
-    const x = rand() * COVER_W, y = rand() * COVER_H;
-    const size = 0.5 + rand() * 1.1;
-    r.circle(x, y, size, INK, 0.25 + rand() * 0.55);
-  }
-  // Other systems in a starmap: a few brighter points, so "42 systems" has something to point at.
-  for (let i = 0; i < Math.min(40, Math.max(0, facts.systems - 1)); i++) {
-    const x = rand() * COVER_W, y = rand() * COVER_H;
-    r.glow(x, y, 7, STAR, 0.25);
-    r.circle(x, y, 1.4 + rand(), WHITE, 0.85);
-  }
+const EARTH_KG = 5.972e24;
 
-  // ---- the diagram: the primary star and what orbits it ------------------------------------
+/** Star colour from the spectral letter. Anything unknown is the palette's star colour. */
+function starColour(cls: string | null | undefined, p: Palette): RGB {
+  const letter = (cls ?? '').trim().charAt(0).toUpperCase();
+  switch (letter) {
+    case 'O': case 'B': return [170, 190, 255];
+    case 'A': return [222, 230, 255];
+    case 'F': return [255, 246, 222];
+    case 'G': return p.star;
+    case 'K': return [255, 200, 140];
+    case 'M': return [255, 150, 110];
+    case 'L': case 'T': case 'Y': return [196, 120, 112];
+    case 'W': case 'D': return [232, 236, 255]; // white dwarf
+    default: return p.star;
+  }
+}
+
+/** Star radius on the chart, from the class: bright stars big, dwarfs small. */
+function starSize(cls: string | null | undefined): number {
+  const letter = (cls ?? '').trim().charAt(0).toUpperCase();
+  switch (letter) {
+    case 'O': case 'B': case 'A': return 4.2;
+    case 'F': return 3.8;
+    case 'G': return 3.4;
+    case 'K': return 3;
+    case 'M': return 2.5;
+    case 'L': case 'T': case 'Y': return 2;
+    case 'W': case 'D': return 2;
+    default: return 3;
+  }
+}
+
+/** A planet's disc: size from its radius, colour from its mass and whether it has an ocean. */
+function planetStyle(n: CoverNode, p: Palette): { r: number; c: RGB } {
+  const earths = n.mass_kg ? n.mass_kg / EARTH_KG : null;
+  if (earths !== null && earths >= 50) return { r: 11, c: [214, 180, 140] }; // gas giant
+  if (earths !== null && earths >= 8) return { r: 9, c: [150, 190, 230] };   // ice giant
+  const km = n.radius_km ?? null;
+  const r = km ? Math.max(3, Math.min(8, 2.5 + km / 2000)) : 6;
+  if (n.has_hydrosphere) return { r, c: [80, 140, 220] };
+  return { r, c: km || earths !== null ? [168, 158, 148] : p.accent };
+}
+
+// ---- the bases -----------------------------------------------------------------------------------
+
+function starfield(r: Raster, seedText: string, count: number, p: Palette): void {
+  const rand = rng(fnv(seedText) || 1);
+  for (let i = 0; i < count; i++) {
+    const x = rand() * COVER_W, y = rand() * COVER_H;
+    r.circle(x, y, 0.5 + rand() * 1.1, p.ink, 0.25 + rand() * 0.55);
+  }
+}
+
+/** The orbital diagram. `box` is where it may sit; the diagram fills it. */
+function drawSystem(r: Raster, facts: CoverFacts, p: Palette, box: { cx: number; cy: number; inner: number; outer: number }): void {
   const roots = buildTree(facts.nodes);
   const primary = primaryOf(roots);
-  const cx = 860, cy = 392, KY = 0.55;
+  const { cx, cy } = box;
+  const KY = 0.55;
 
-  if (primary) {
-    // Up to eight orbits: the children with the most beneath them, kept in the file's order.
-    const chosen = new Set([...primary.children].sort((a, b) => b.total - a.total).slice(0, 8).map((c) => c.node_id));
-    const orbiting = primary.children.filter((c) => chosen.has(c.node_id));
-    const n = orbiting.length;
-    const innermost = 62, outermost = 182;
-    const step = n > 1 ? Math.min(24, (outermost - innermost) / (n - 1)) : 0;
-
-    // Orbits first, so the bodies sit on top of them.
-    orbiting.forEach((child, i) => {
-      const radius = innermost + i * step;
-      if (child.role_hint === 'belt') {
-        for (let k = 0; k < 48; k++) {
-          const a = (k / 48) * Math.PI * 2 + (fnv(child.node_id + k) % 100) / 400;
-          r.circle(cx + radius * Math.cos(a), cy + radius * Math.sin(a) * KY, 1.1, FAINT, 0.8);
-        }
-      } else if (child.role_hint === 'ring') {
-        r.ring(cx, cy, radius, 3, EDGE, 0.7, KY);
-      } else {
-        r.ring(cx, cy, radius, 1.2, EDGE, 0.95, KY);
-      }
-    });
-
-    r.glow(cx, cy, 120, STAR, 0.38);
-    r.circle(cx, cy, 24, STAR);
-    r.circle(cx - 3, cy - 3, 12, WHITE, 0.55);
-
-    orbiting.forEach((child, i) => {
-      const radius = innermost + i * step;
-      const angle = ((fnv(child.node_id) % 3600) / 3600) * Math.PI * 2;
-      const x = cx + radius * Math.cos(angle), y = cy + radius * Math.sin(angle) * KY;
-      switch (child.role_hint) {
-        case 'planet': {
-          r.circle(x, y, 6, ACCENT);
-          r.circle(x - 1.5, y - 1.5, 2.5, WHITE, 0.45);
-          const moons = child.children.filter((m) => m.role_hint === 'moon').slice(0, 4);
-          if (moons.length) r.ring(x, y, 13, 0.8, EDGE, 0.8);
-          moons.forEach((m, k) => {
-            const ma = ((fnv(m.node_id) % 360) / 360) * Math.PI * 2 + k;
-            r.circle(x + 13 * Math.cos(ma), y + 13 * Math.sin(ma), 2, DIM);
-          });
-          break;
-        }
-        case 'moon': r.circle(x, y, 3, DIM); break;
-        case 'belt': break; // the orbit IS the belt
-        case 'ring': r.circle(x, y, 2.5, DIM, 0.8); break;
-        case 'star': r.glow(x, y, 26, STAR, 0.4); r.circle(x, y, 8, STAR); break;
-        case 'barycenter': r.ring(x, y, 5, 1.4, DIM); break;
-        default: r.rect(x - 3.5, y - 3.5, 7, 7, WARN); // a construct: station, ship, habitat
-      }
-    });
+  if (!primary) {
+    r.glow(cx, cy, 120, p.star, 0.38);
+    r.circle(cx, cy, 24, p.star);
+    return;
   }
 
-  // ---- the words ----------------------------------------------------------------------------
-  const titleScale = 6;
-  const lines = wrapLines(fold(facts.title), 30, 2);
+  // Up to eight orbits: the children with the most beneath them. Ordered by real distance when the
+  // file says, by file order otherwise.
+  const chosen = new Set([...primary.children].sort((a, b) => b.total - a.total).slice(0, 8).map((c) => c.node_id));
+  const orbiting = primary.children.filter((c) => chosen.has(c.node_id));
+  const known = orbiting.filter((c) => (c.distance ?? 0) > 0);
+  if (known.length >= 2) orbiting.sort((a, b) => (a.distance ?? Infinity) - (b.distance ?? Infinity));
+
+  const n = orbiting.length;
+  const { inner, outer } = box;
+  // Log scale of the real semi-major axes when at least two are known: Mercury to Neptune spans
+  // two orders of magnitude and a linear scale would put the inner planets on top of the star.
+  let radii: number[];
+  if (known.length >= 2 && known.length === n) {
+    const lo = Math.log(orbiting[0].distance as number), hi = Math.log(orbiting[n - 1].distance as number);
+    radii = orbiting.map((c) => (hi > lo ? inner + ((Math.log(c.distance as number) - lo) / (hi - lo)) * (outer - inner) : inner));
+  } else {
+    const step = n > 1 ? Math.min(24, (outer - inner) / (n - 1)) : 0;
+    radii = orbiting.map((_, i) => inner + i * step);
+  }
+
+  // Orbits first, so the bodies sit on top of them.
+  orbiting.forEach((child, i) => {
+    const radius = radii[i];
+    if (child.role_hint === 'belt') {
+      for (let k = 0; k < 56; k++) {
+        const a = (k / 56) * Math.PI * 2 + (fnv(child.node_id + k) % 100) / 400;
+        const wobble = ((fnv(child.node_id + 'w' + k) % 100) / 100 - 0.5) * 6;
+        r.circle(cx + (radius + wobble) * Math.cos(a), cy + (radius + wobble) * Math.sin(a) * KY, 1.1, p.faint, 0.8);
+      }
+    } else if (child.role_hint === 'ring') {
+      r.ring(cx, cy, radius, 3, p.edge, 0.7, KY);
+    } else {
+      r.ring(cx, cy, radius, 1.2, p.edge, 0.95, KY);
+    }
+  });
+
+  const sc = starColour(primary.star_class, p);
+  r.glow(cx, cy, 120, sc, 0.38);
+  r.circle(cx, cy, 24, sc);
+  r.circle(cx - 3, cy - 3, 12, WHITE, 0.55);
+
+  orbiting.forEach((child, i) => {
+    const radius = radii[i];
+    const angle = ((fnv(child.node_id) % 3600) / 3600) * Math.PI * 2;
+    const x = cx + radius * Math.cos(angle), y = cy + radius * Math.sin(angle) * KY;
+    switch (child.role_hint) {
+      case 'planet': {
+        const { r: pr, c } = planetStyle(child, p);
+        // A ringed planet wears its ring: a thin tilted ellipse around the disc.
+        if (child.children.some((k) => k.role_hint === 'ring')) r.ring(x, y, pr + 5, 1.6, p.dim, 0.8, 0.35);
+        r.circle(x, y, pr, c);
+        r.circle(x - pr * 0.3, y - pr * 0.3, pr * 0.4, WHITE, 0.4);
+        const moons = child.children.filter((m) => m.role_hint === 'moon').slice(0, 4);
+        if (moons.length) r.ring(x, y, pr + 9, 0.8, p.edge, 0.8);
+        moons.forEach((m, k) => {
+          const ma = ((fnv(m.node_id) % 360) / 360) * Math.PI * 2 + k;
+          r.circle(x + (pr + 9) * Math.cos(ma), y + (pr + 9) * Math.sin(ma), 2, p.dim);
+        });
+        break;
+      }
+      case 'moon': r.circle(x, y, 3, p.dim); break;
+      case 'belt': break; // the orbit IS the belt
+      case 'ring': r.circle(x, y, 2.5, p.dim, 0.8); break;
+      case 'star': {
+        const c = starColour(child.star_class, p);
+        r.glow(x, y, 26, c, 0.4); r.circle(x, y, 8, c); break;
+      }
+      case 'barycenter': r.ring(x, y, 5, 1.4, p.dim); break;
+      default: r.rect(x - 3.5, y - 3.5, 7, 7, p.warn); // a construct: station, ship, habitat
+    }
+  });
+}
+
+/** A system's star colour and size: the root's own class, or the brightest child's for a barycentre. */
+function systemClass(root: TreeNode): string | null {
+  if (root.star_class) return root.star_class;
+  const stars = root.children.filter((c) => c.star_class);
+  return stars.length ? stars.sort((a, b) => starSize(b.star_class) - starSize(a.star_class))[0].star_class ?? null : null;
+}
+
+/** What to call a system on the chart: the star's name, or a barycentre's name without the scaffolding. */
+function systemLabel(root: TreeNode): string {
+  const name = root.role_hint === 'star' ? root.name : root.name.replace(/\s*(system\s*)?bary(centre|center)?\s*$/i, '');
+  return fold(name).slice(0, 24);
+}
+
+/** The constellation: every root star at its real map position, the origin named. */
+function drawStarmap(r: Raster, facts: CoverFacts, p: Palette, box: { x0: number; y0: number; x1: number; y1: number }): boolean {
+  const roots = buildTree(facts.nodes).filter((n) => typeof n.map_x === 'number' && typeof n.map_y === 'number');
+  if (roots.length < 2) return false;
+
+  // THE ORIGIN AT THE CENTRE, AND A ROBUST SCALE. Fitting the bounding box lets one far-flung
+  // system shrink the whole neighbourhood into a blob; fitting the nearest 85 percent and pinning
+  // the outliers to the edge keeps the part people recognise readable.
+  const origin = roots.find((n) => (n.distance ?? 1) === 0) ?? roots[0];
+  const ox0 = origin.map_x as number, oy0 = origin.map_y as number;
+  const radii = roots.map((n) => Math.hypot((n.map_x as number) - ox0, (n.map_y as number) - oy0)).sort((a, b) => a - b);
+  const r85 = Math.max(1e-9, radii[Math.min(radii.length - 1, Math.floor(radii.length * 0.85))]);
+  const halfW = (box.x1 - box.x0) / 2, halfH = (box.y1 - box.y0) / 2;
+  const scale = Math.min(halfW, halfH) * 0.92 / r85;
+  const cx = (box.x0 + box.x1) / 2, cy = (box.y0 + box.y1) / 2;
+  const at = (n: TreeNode) => {
+    let x = ((n.map_x as number) - ox0) * scale, y = ((n.map_y as number) - oy0) * scale;
+    // Beyond the box: pin to its edge, along the line from the origin.
+    const k = Math.max(Math.abs(x) / halfW, Math.abs(y) / halfH);
+    if (k > 1) { x /= k; y /= k; }
+    return { x: cx + x, y: cy + y, far: k > 1 };
+  };
+  const o = at(origin);
+
+  // Faint lines: the origin to its six nearest, and each star to its nearest neighbour. That is
+  // the whole "chart" feel - routes and neighbourhoods, not a scatter of dots.
+  const others = roots.filter((n) => n !== origin);
+  const dist = (a: TreeNode, b: TreeNode) => {
+    const pa = at(a), pb = at(b);
+    return Math.hypot(pa.x - pb.x, pa.y - pb.y);
+  };
+  for (const n of [...others].sort((a, b) => dist(a, origin) - dist(b, origin)).slice(0, 6)) {
+    const q = at(n);
+    r.line(o.x, o.y, q.x, q.y, 1, p.edge, 0.9);
+  }
+  for (const n of others) {
+    let best: TreeNode | null = null, bd = Infinity;
+    for (const m of roots) {
+      if (m === n) continue;
+      const d = dist(n, m);
+      if (d < bd) { bd = d; best = m; }
+    }
+    if (best) {
+      const a = at(n), b = at(best);
+      r.line(a.x, a.y, b.x, b.y, 0.8, p.edge, 0.45);
+    }
+  }
+
+  for (const n of others) {
+    const q = at(n);
+    const cls = systemClass(n);
+    const c = starColour(cls, p);
+    const s = starSize(cls);
+    const alpha = q.far ? 0.45 : 1;
+    r.glow(q.x, q.y, s * 5, c, 0.3 * alpha);
+    r.circle(q.x, q.y, s, c, alpha);
+  }
+
+  const oc = starColour(systemClass(origin), p);
+  r.glow(o.x, o.y, 48, oc, 0.45);
+  r.circle(o.x, o.y, 7, oc);
+  r.circle(o.x - 2, o.y - 2, 3, WHITE, 0.6);
+  drawText(r, o.x + 14, o.y - 7, systemLabel(origin), 2, p.ink, 0.9);
+  return true;
+}
+
+// ---- the overlays --------------------------------------------------------------------------------
+
+function drawQr(r: Raster, url: string, right: number, bottom: number): number {
+  const modules = qrModules(url);
+  const n = modules.length;
+  const cell = Math.max(2, Math.floor(112 / n));
+  const quiet = 3 * cell;
+  const size = n * cell + quiet * 2;
+  const x0 = right - size, y0 = bottom - size;
+  r.rect(x0, y0, size, size, WHITE);
+  for (let row = 0; row < n; row++) {
+    for (let col = 0; col < n; col++) {
+      if (modules[row][col]) r.rect(x0 + quiet + col * cell, y0 + quiet + row * cell, cell, cell, QR_DARK);
+    }
+  }
+  return size;
+}
+
+export function renderCover(facts: CoverFacts, options: CoverOptions = DEFAULT_COVER_OPTIONS): Uint8Array {
+  const p = PALETTE[options.palette] ?? PALETTE.night;
+  const r = new Raster(COVER_W, COVER_H);
+  r.gradient(p.bgTop, p.bgBottom);
+
+  const wordsOn = options.title || options.byline;
+  const footOn = options.counts || options.label || (options.qr && !!facts.url);
+  const qrOn = options.qr && !!facts.url;
+
+  // ---- the base ------------------------------------------------------------------------------
+  starfield(r, facts.title, Math.min(180, 60 + facts.systems * 2), p);
+
+  const base: CoverBase = options.base === 'auto' ? (facts.kind === 'starmap' ? 'starmap' : 'system') : options.base;
+  let drawn = false;
+  if (base === 'starmap') {
+    drawn = drawStarmap(r, facts, p, wordsOn || footOn
+      ? { x0: qrOn ? 440 : 520, y0: 170, x1: qrOn ? 960 : 1120, y1: 540 }
+      : { x0: 100, y0: 70, x1: 1100, y1: 560 });
+  }
+  if (base === 'system' || (base === 'starmap' && !drawn)) {
+    // Other systems in a starmap: a few brighter points, so "42 systems" has something to point at.
+    const rand = rng(fnv(facts.title + 'x') || 1);
+    for (let i = 0; i < Math.min(40, Math.max(0, facts.systems - 1)); i++) {
+      const x = rand() * COVER_W, y = rand() * COVER_H;
+      r.glow(x, y, 7, p.star, 0.25);
+      r.circle(x, y, 1.4 + rand(), WHITE, 0.85);
+    }
+    drawSystem(r, facts, p, wordsOn || footOn
+      ? { cx: qrOn ? 760 : 860, cy: 392, inner: 62, outer: 182 }
+      : { cx: 600, cy: 315, inner: 90, outer: 270 });
+  }
+
+  // ---- the words -----------------------------------------------------------------------------
   let y = 62;
-  for (const line of lines) {
-    drawText(r, 60, y, line, titleScale, INK);
-    y += 7 * titleScale + 14;
+  if (options.title) {
+    for (const line of wrapLines(fold(facts.title), 30, 2)) {
+      drawText(r, 60, y, line, 6, p.ink);
+      y += 7 * 6 + 14;
+    }
   }
-  if (facts.creator) {
-    drawText(r, 60, y + 6, fold('by ' + facts.creator), 3, DIM);
+  if (options.byline && facts.creator) {
+    drawText(r, 60, options.title ? y + 6 : y, fold('by ' + facts.creator), 3, p.dim);
   }
 
-  const parts: string[] = [];
-  if (facts.systems > 1) parts.push(facts.systems + ' systems');
-  parts.push(facts.bodies + (facts.bodies === 1 ? ' body' : ' bodies'));
-  if (facts.constructs) parts.push(facts.constructs + (facts.constructs === 1 ? ' construct' : ' constructs'));
-  drawText(r, 60, COVER_H - 60 - 21, fold(parts.join(' - ')), 3, DIM);
+  const baseline = COVER_H - 60 - 21;
+  let countsWidth = 0;
+  if (options.counts) {
+    const parts: string[] = [];
+    if (facts.systems > 1) parts.push(facts.systems + ' systems');
+    parts.push(facts.bodies + (facts.bodies === 1 ? ' body' : ' bodies'));
+    if (facts.constructs) parts.push(facts.constructs + (facts.constructs === 1 ? ' construct' : ' constructs'));
+    const counts = fold(parts.join(' - '));
+    countsWidth = textWidth(counts, 3);
+    drawText(r, 60, baseline, counts, 3, p.dim);
+  }
 
-  const site = fold(facts.site);
-  drawText(r, COVER_W - 60 - textWidth(site, 3), COVER_H - 60 - 21, site, 3, FAINT);
+  const right = COVER_W - 60;
+  let labelTop = baseline;
+  if (options.label && facts.label) {
+    const label = fold(facts.label);
+    const w = textWidth(label, 3);
+    // The counts and the domain share the bottom line; when the two would touch, the domain
+    // moves up a line rather than running into the numbers.
+    if (options.counts && 60 + countsWidth + 40 > right - w) labelTop = baseline - 30;
+    drawText(r, right - w, labelTop, label, 3, p.faint);
+  }
+  if (qrOn) {
+    // Above the label when there is one, otherwise on the baseline.
+    const bottom = options.label && facts.label ? labelTop - 16 : COVER_H - 60;
+    drawQr(r, facts.url as string, right, bottom);
+  }
 
   return encodePng(COVER_W, COVER_H, r.data);
 }

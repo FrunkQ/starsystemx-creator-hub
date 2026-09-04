@@ -34,6 +34,11 @@ export interface Gates {
   pro_max_bundle_bytes: number;
   pro_max_assets_per_bundle: number;
 
+  // The cover designer (D-22). 'free' for everyone at launch - the owner's call - and a row so it
+  // can become a Pro feature without a deploy. `cover_label` is the domain printed on the card.
+  cover_designer_tier: 'free' | 'pro';
+  cover_label: string;
+
   // Integrations. All inert until enabled and the secrets are set.
   discord_enabled: boolean;
   discord_guild_id: string;
@@ -72,6 +77,9 @@ export const GATE_FALLBACKS: Gates = {
   pro_uploads_per_user_per_day: 10,
   pro_max_bundle_bytes: 200 * 1024 * 1024,
   pro_max_assets_per_bundle: 600,
+
+  cover_designer_tier: 'free',
+  cover_label: 'explorers.starsystemx.com',
 
   discord_enabled: false,
   discord_guild_id: '',

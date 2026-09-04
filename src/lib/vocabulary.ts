@@ -25,23 +25,50 @@ export interface VocabGroup {
   tags: string[];
 }
 
+// WIDENED 2026-09-04 at the owner's request: "most folks seem to be making versions of our solar
+// system ... when you type earth you are going to get LOTS - so we need to quickly give the users
+// tags to show why theirs is different - realism levels, functional universe, what-if scenarios,
+// far past, far future, etc." The groups below are the axes on which one Earth differs from the
+// next. The tags a creator picks show on the card and filter the browse page.
 export const DEFAULT_VOCABULARY: VocabGroup[] = [
   {
     label: 'How real is it',
     hint: 'How closely this follows the universe as it actually is.',
-    tags: ['real-astronomy', 'plausible', 'invented', 'fantasy', 'alternate-history']
+    tags: ['real-astronomy', 'plausible', 'stylised', 'invented', 'fantasy']
+  },
+  {
+    label: 'When',
+    hint: 'Where on the clock it sits.',
+    tags: ['far-past', 'ancient', 'present-day', 'near-future', 'far-future', 'deep-time']
+  },
+  {
+    label: 'What if',
+    hint: 'The premise that makes this version different.',
+    tags: [
+      'alternate-history', 'what-if', 'terraformed', 'colonised', 'abandoned', 'dead-earth',
+      'alien-earth', 'first-contact', 'megastructures', 'dyson-structures', 'uplifted', 'ai-run', 'post-human'
+    ]
   },
   {
     label: 'Physics',
     hint: 'Whether the usual rules apply.',
     // The owner's "physics class change" - a map that deliberately bends what SSE would otherwise
     // derive. See docs/decisions.md Q-07: this reading needs confirming.
-    tags: ['standard-physics', 'altered-physics', 'exotic-objects']
+    tags: ['standard-physics', 'altered-physics', 'exotic-objects', 'ftl', 'no-ftl', 'generation-ships']
+  },
+  {
+    label: 'Universe',
+    hint: 'What kind of setting it belongs to.',
+    // "functional universe" is the owner's phrase: a lived-in, working setting rather than a scenario.
+    tags: ['original-setting', 'functional-universe', 'shared-universe', 'homage', 'homebrew', 'conversion']
   },
   {
     label: 'Flavour',
     hint: 'What sort of story it is for.',
-    tags: ['hard-sf', 'space-opera', 'cyberpunk', 'horror', 'exploration', 'military', 'trade', 'mystery', 'post-apocalyptic']
+    tags: [
+      'hard-sf', 'space-opera', 'cyberpunk', 'horror', 'exploration', 'military', 'trade',
+      'mystery', 'political', 'survival', 'noir', 'post-apocalyptic'
+    ]
   },
   {
     label: 'What it is for',
@@ -51,7 +78,7 @@ export const DEFAULT_VOCABULARY: VocabGroup[] = [
   {
     label: 'Scale',
     hint: 'How much of it there is.',
-    tags: ['solar-system', 'single-star', 'sector', 'deep-space']
+    tags: ['solar-system', 'single-star', 'binary', 'cluster', 'sector', 'deep-space']
   }
 ];
 

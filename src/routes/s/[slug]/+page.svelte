@@ -10,6 +10,8 @@
   //      pasting into SSE. That is SECONDARY: the cheap way to lift one body or one star without
   //      taking the whole map. It serves the same funnel - a clip used is SSE opened.
   import NodeTree from '$lib/components/NodeTree.svelte';
+  import RoleIcon from '$lib/components/RoleIcon.svelte';
+  import { orderRoles } from '$lib/components/roleIcons';
   import { formatBytes } from '$lib/bundle/facets';
   let { data } = $props();
 
@@ -17,12 +19,9 @@
   const total = $derived(data.bodies.length + data.constructs.length);
   let reportOpen = $state(false);
 
-  // Role counts are the human axis - "12 planets, 4 stations" says what "230 bodies" cannot.
-  const roles = $derived(
-    Object.entries((s.role_counts ?? {}) as Record<string, number>)
-      .filter(([, n]) => n > 0)
-      .sort((a, b) => b[1] - a[1])
-  );
+  // Role counts are the human axis - "12 planets, 4 stations" says what "230 bodies" cannot. In
+  // the fixed order every row of the tree uses, so the eye learns one layout.
+  const roles = $derived(orderRoles((s.role_counts ?? {}) as Record<string, number>));
 </script>
 
 <svelte:head>
@@ -112,7 +111,11 @@
   </div>
 
   {#if roles.length}
-    <p class="roles">{#each roles as [role, n], i}{n} {role}{n === 1 ? '' : 's'}{i < roles.length - 1 ? ' · ' : ''}{/each}</p>
+    <p class="roles">
+      {#each roles as [role, n] (role)}
+        <span class="rc"><RoleIcon role={role} size={13} />{n} {role}{n === 1 ? '' : 's'}</span>
+      {/each}
+    </p>
   {/if}
 
   {#if (s.auto_tags ?? []).length}
@@ -170,7 +173,9 @@
   .muted { color: var(--ink-dim); margin: 0 0 12px; }
   .facts { display: flex; flex-wrap: wrap; gap: 8px 22px; margin: 0 0 10px; color: var(--ink-dim); }
   .facts b { color: var(--ink); font-variant-numeric: tabular-nums; }
-  .roles { color: var(--ink-faint); margin: 0 0 12px; font-size: 0.92rem; }
+  .roles { color: var(--ink-faint); margin: 0 0 12px; font-size: 0.92rem; display: flex; flex-wrap: wrap; gap: 4px 14px; }
+  .rc { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+  .rc :global(.role-icon) { opacity: 0.7; }
   .pills { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 18px; }
   .pills a.tag { text-decoration: none; }
   .pills a.tag:hover { border-color: var(--accent); }

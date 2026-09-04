@@ -24,6 +24,15 @@ export interface NormalisedNode {
   model_hash_claim: string | null;
   /** The copy-paste JSON snippet for this one node, precomputed (design 2). */
   snippet: unknown;
+  /**
+   * ONE NUMBER FOR "HOW FAR OUT", meaning what the level means (owner, 2026-09-04): for a body or
+   * construct in orbit, the semi-major axis in AU; for a system's root in a starmap, the map
+   * distance from the origin star. Null when the file says nothing. The tree sorts on it.
+   */
+  distance: number | null;
+  /** A starmap root's position relative to the origin star, in map units. Null otherwise. */
+  map_x: number | null;
+  map_y: number | null;
 }
 
 export interface NormalisedBundle {
@@ -73,11 +82,19 @@ function readNodeTags(raw: unknown): string[] {
 /** A construct is anything the engine marks as one; everything else is a body. */
 const isConstruct = (node: any) => String(node?.kind ?? '') === 'construct';
 
-function toNode(node: any): NormalisedNode {
+/** Where a system sits on its starmap, relative to the origin. Only roots get one. */
+interface Placement { distance: number; x: number; y: number }
+
+function toNode(node: any, placement?: Placement): NormalisedNode {
   const imageUrl = str(node?.image?.url);
+  const parentId = str(node?.parentId);
+  // The engine's orbit: `orbit.elements.a_AU` (measured on a real save). Anything else is "unknown".
+  const a = node?.orbit?.elements?.a_AU;
+  const orbitAu = typeof a === 'number' && Number.isFinite(a) && a > 0 ? a : null;
+  const isRoot = !parentId;
   return {
     node_id: String(node?.id ?? ''),
-    parent_id: str(node?.parentId),
+    parent_id: parentId,
     name: String(node?.name ?? node?.id ?? 'unnamed'),
     kind: String(node?.kind ?? 'unknown'),
     role_hint: str(node?.roleHint),
@@ -86,8 +103,56 @@ function toNode(node: any): NormalisedNode {
       imageUrl && imageUrl.startsWith(IMAGES_DIR) && !imageUrl.startsWith(PLAYER_IMAGES_DIR)
         ? imageUrl : null,
     model_hash_claim: str(node?.model?.hash),
-    snippet: snippetFor(node)
+    snippet: snippetFor(node),
+    distance: isRoot ? placement?.distance ?? null : orbitAu,
+    map_x: isRoot && placement ? placement.x : null,
+    map_y: isRoot && placement ? placement.y : null
   };
+}
+
+const num = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null);
+
+/**
+ * THE ORIGIN OF A STARMAP - the owner's rule: "the centre, or the star selected as its centre".
+ * The file carries no flag for it today, so: an explicit id if the engine ever writes one, else
+ * the system nearest the centroid of all positions - which on a real map is the one the author
+ * built outward from. Every other system's `distance` is measured from it.
+ */
+function placements(doc: any): Map<any, Placement> {
+  const out = new Map<any, Placement>();
+  const entries: any[] = Array.isArray(doc?.systems) ? doc.systems : [];
+  const placed = entries.filter((e) => num(e?.position?.x) !== null && num(e?.position?.y) !== null);
+  if (placed.length < 2) return out;
+
+  // In order of how much the file actually says: an explicit id (R-15, not written yet); the
+  // system the most routes touch, because routes are drawn FROM home; a system called Sol or the
+  // Solar System, because most maps are versions of ours; and only then the centroid, which one
+  // far-flung system can drag away from where the author was standing.
+  const explicit = doc?.originSystemId ?? doc?.centerSystemId ?? doc?.centreSystemId;
+  let origin = explicit ? placed.find((e) => e?.id === explicit) : undefined;
+  if (!origin && Array.isArray(doc?.routes) && doc.routes.length) {
+    const degree = new Map<unknown, number>();
+    for (const route of doc.routes) {
+      for (const end of [route?.from, route?.to, route?.fromSystemId, route?.toSystemId]) {
+        if (end != null) degree.set(end, (degree.get(end) ?? 0) + 1);
+      }
+    }
+    const busiest = [...placed].sort((a, b) => (degree.get(b?.id) ?? 0) - (degree.get(a?.id) ?? 0))[0];
+    if (busiest && (degree.get(busiest.id) ?? 0) > 0) origin = busiest;
+  }
+  if (!origin) origin = placed.find((e) => /^(sol|sun|the sun|solar system|our solar system)$/i.test(String(e?.name ?? '').trim()));
+  if (!origin) {
+    const cx = placed.reduce((s, e) => s + e.position.x, 0) / placed.length;
+    const cy = placed.reduce((s, e) => s + e.position.y, 0) / placed.length;
+    origin = [...placed].sort((a, b) =>
+      Math.hypot(a.position.x - cx, a.position.y - cy) - Math.hypot(b.position.x - cx, b.position.y - cy))[0];
+  }
+  const ox = origin.position.x, oy = origin.position.y, oz = num(origin.position.z) ?? 0;
+  for (const e of placed) {
+    const x = e.position.x - ox, y = e.position.y - oy, z = (num(e.position.z) ?? 0) - oz;
+    out.set(e, { distance: Math.hypot(x, y, z), x, y });
+  }
+  return out;
 }
 
 /**
@@ -109,13 +174,15 @@ export function normalise(doc: any): NormalisedBundle {
   const constructs: NormalisedNode[] = [];
   const systemNames: string[] = [];
 
-  const push = (node: any) => (isConstruct(node) ? constructs : bodies).push(toNode(node));
+  const push = (node: any, placement?: Placement) =>
+    (isConstruct(node) ? constructs : bodies).push(toNode(node, placement));
 
   if (Array.isArray(doc?.nodes)) for (const node of doc.nodes) push(node);
+  const placed = placements(doc);
   for (const entry of doc?.systems ?? []) {
     const name = String(entry?.name ?? entry?.system?.name ?? '');
     if (name) systemNames.push(name);
-    for (const node of entry?.system?.nodes ?? []) push(node);
+    for (const node of entry?.system?.nodes ?? []) push(node, placed.get(entry));
   }
 
   // THE CREATOR'S WRITE-UP, if the save carries one (docs/sse-integration-spec.md section 1).

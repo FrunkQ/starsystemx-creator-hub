@@ -8,6 +8,7 @@ import { GLYPHS, GLYPH_H, fold, wrapLines, textWidth } from '../src/lib/cover/fo
 import { readZip } from '../src/lib/bundle/read';
 import { normalise } from '../src/lib/bundle/normalise';
 import { computeFacets } from '../src/lib/bundle/facets';
+import { coverNodeFrom } from '../src/lib/server/cover';
 
 const fixture = () => {
   const zip = readZip(new Uint8Array(readFileSync('tests/fixtures/creator-hub-bundle.sse.zip')));
@@ -19,9 +20,9 @@ function factsFor(doc: any, title = 'The Hystrine Reach') {
   const shaped = normalise(doc);
   const f = computeFacets(doc);
   return {
-    title, creator: 'frunk', site: 'StarSystemX Explorers',
+    title, creator: 'frunk', label: 'explorers.starsystemx.com', url: null, kind: 'starmap' as const,
     systems: f.systemCount, bodies: f.bodyCount, constructs: f.constructCount,
-    nodes: [...shaped.bodies, ...shaped.constructs]
+    nodes: [...shaped.bodies, ...shaped.constructs].map(coverNodeFrom)
   };
 }
 
@@ -119,7 +120,7 @@ describe('a generated cover', () => {
   });
 
   it('copes with a map that has no nodes at all', () => {
-    const png = renderCover({ title: 'Empty', creator: null, site: 'x', systems: 0, bodies: 0, constructs: 0, nodes: [] });
+    const png = renderCover({ title: 'Empty', creator: null, label: 'x', url: null, kind: 'system', systems: 0, bodies: 0, constructs: 0, nodes: [] });
     expect(parsePng(png).width).toBe(COVER_W);
   });
 

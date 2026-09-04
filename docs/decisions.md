@@ -293,6 +293,46 @@ already in the ledger keeps the verdict it has. It is used only when the creator
 **It is a card, not art.** Capitals in a pixel font, one colour per role. Good enough to recognise a
 map in a feed, and honest about being generated rather than pretending to be a screenshot.
 
+### D-22. A cover designer, a wider vocabulary, and "distance" that means what the level means
+
+Owner, 2026-09-04, on seeing the generated card: *"I love this image as the default"*, then: put
+the domain on it, a QR code as an option, let the creator choose the base and the overlays, give
+starmaps a constellation look and systems the orbital look, *"could be a pro feature ... free for
+now"*. And two more: cards must tell a starmap from a system at a glance, and the fortieth Solar
+System needs tags to say how it differs.
+
+**The designer.** `src/lib/cover/generate.ts` now draws two bases from the map's own rows: a
+**constellation** for a starmap (every system's star at its real map position, the origin star
+named and largest, faint lines to its neighbours) and **orbits** for a system (radii on a log scale
+of the real semi-major axes, bodies sized from radius and coloured from mass and hydrosphere, ringed
+planets wearing their ring). Overlays switch independently: title, byline, counts, the domain, a QR
+code to the page. Three palettes. The manage page previews every change live through
+`/api/cover/preview` and "Use this cover" stores the card through the same ledger path as the
+default one. **The choices are kept (`cover_options`) and the card is redrawn to them on every
+re-upload**; a chosen screenshot is likewise kept across re-uploads — a re-upload must never undo a
+choice made on the hub. `cover_designer_tier` is a config row (`free` now) so this becomes Pro
+without a deploy.
+
+**Why the picture is still pure JavaScript:** Workers have no Canvas and refuse runtime WebAssembly
+compilation, so a WASM rasteriser is not an option without bundler work. The QR code is
+`qrcode-generator`, pure JS, no DOM.
+
+**Distance.** "Orbit order" made no sense at the top of a starmap. One number per row (`distance`,
+0015): the semi-major axis in AU inside a system; at the top of a starmap, the map distance from
+the **origin star** — the system nearest the map's centre, which is the one the author built
+outward from, or an explicit origin id if the engine ever writes one. The sort is called Distance.
+Rows without a number (uploads before 0015) fall back to size, stars first. The tree also
+remembers, per map and per browser, which branches were open and how it was sorted.
+
+**Cards.** A starmap card carries a second offset edge and a kind badge; creator tags show before
+the derived pills, because they are the ones that separate one Earth from the next.
+
+**The vocabulary** grew from five groups to eight — when (far past to deep time), what-if
+premises, physics (ftl, no-ftl, generation ships), universe (original, "functional universe" in
+the owner's phrase, shared, homage) — and the browse page now filters on the creator's tags as well
+as the derived ones, by kind, and offers a "narrow it down" strip of the tags that best split a
+crowded result.
+
 ---
 
 ## Still open — the owner's to answer

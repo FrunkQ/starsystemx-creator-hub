@@ -97,6 +97,9 @@ export type SystemRow = {
   // LABEL. Both null for older files; `revision` is also null for every single-system save.
   revision: number | null;
   export_mode: string | null;
+  // 0015: the creator's cover-designer choices (src/lib/cover/generate.ts CoverOptions), when the
+  // cover is one the hub drew. Null means the cover is a real picture, or the plain default card.
+  cover_options: unknown;
   blurb: string | null;
   tags: string[];
   // Derived facets (db/migrations/0007). Facts the hub computed, kept separate from `tags` so a
@@ -205,6 +208,11 @@ export type NodeRow = {
   snippet: unknown;
   tags: string[];
   image_sha256: string | null;
+  // 0015: "how far out" (AU in orbit; map distance from the origin star for a starmap root) and a
+  // starmap root's position relative to the origin. Null when the file said nothing.
+  distance: number | null;
+  map_x: number | null;
+  map_y: number | null;
 }
 
 export type ConstructRow = NodeRow & { model_sha256: string | null };

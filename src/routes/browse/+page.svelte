@@ -9,22 +9,15 @@
 
   const selected = $derived(new Set(data.selected));
 
-  /** Toggle one pill, preserving the rest of the query. */
-  function hrefFor(tag: string): string {
+  /** The current query, with one change applied. */
+  function href(change: { tag?: string; kind?: string | null; sort?: 'loved' | 'new' }): string {
     const p = new URLSearchParams();
-    for (const t of data.selected) if (t !== tag) p.append('tag', t);
-    if (!selected.has(tag)) p.append('tag', tag);
+    for (const t of data.selected) if (t !== change.tag) p.append('tag', t);
+    if (change.tag && !selected.has(change.tag)) p.append('tag', change.tag);
     if (data.q) p.set('q', data.q);
-    if (data.sort === 'new') p.set('sort', 'new');
-    const s = p.toString();
-    return s ? '/browse?' + s : '/browse';
-  }
-
-  function sortHref(to: 'loved' | 'new'): string {
-    const p = new URLSearchParams();
-    for (const t of data.selected) p.append('tag', t);
-    if (data.q) p.set('q', data.q);
-    if (to === 'new') p.set('sort', 'new');
+    const kind = change.kind === undefined ? data.kind : change.kind;
+    if (kind) p.set('kind', kind);
+    if ((change.sort ?? data.sort) === 'new') p.set('sort', 'new');
     const s = p.toString();
     return s ? '/browse?' + s : '/browse';
   }
@@ -37,8 +30,8 @@
 
 <h1>Browse</h1>
 <p class="lede">
-  Every map here is free to download in one click, no account needed.
-  The pills are worked out from the file itself, so they are accurate rather than claimed.
+  Every map here is free to download in one click, no account needed. The first pills are worked
+  out from the file itself; the rest are what each cartographer says their map is.
 </p>
 
 <div class="layout">
@@ -46,8 +39,18 @@
     <form method="GET" class="search">
       <input name="q" value={data.q} placeholder="Search titles" aria-label="Search titles" />
       {#each data.selected as t}<input type="hidden" name="tag" value={t} />{/each}
+      {#if data.kind}<input type="hidden" name="kind" value={data.kind} />{/if}
       <button type="submit">Go</button>
     </form>
+
+    <section>
+      <h2>Kind</h2>
+      <div class="pills">
+        <a class="tag" class:on={!data.kind} href={href({ kind: null })}>all</a>
+        <a class="tag" class:on={data.kind === 'starmap'} href={href({ kind: 'starmap' })}>starmaps</a>
+        <a class="tag" class:on={data.kind === 'system'} href={href({ kind: 'system' })}>systems</a>
+      </div>
+    </section>
 
     {#each data.groups as group}
       <section>
@@ -56,7 +59,7 @@
           {#each group.tags as tag}
             {@const n = data.counts[tag] ?? 0}
             {#if n > 0 || selected.has(tag)}
-              <a class="tag" class:on={selected.has(tag)} href={hrefFor(tag)}>
+              <a class="tag" class:on={selected.has(tag)} href={href({ tag })}>
                 {tag}{#if n > 0}<span class="n">{n}</span>{/if}
               </a>
             {/if}
@@ -65,7 +68,25 @@
       </section>
     {/each}
 
-    {#if data.selected.length}
+    <!-- The cartographers' own tags: how one version of the Solar System differs from the next. -->
+    {#each data.mine as group}
+      {@const live = group.tags.filter((tag) => (data.counts[tag] ?? 0) > 0 || selected.has(tag))}
+      {#if live.length}
+        <section>
+          <h2>{group.label}</h2>
+          <div class="pills">
+            {#each live as tag}
+              {@const n = data.counts[tag] ?? 0}
+              <a class="tag mine" class:on={selected.has(tag)} href={href({ tag })}>
+                {tag}{#if n > 0}<span class="n">{n}</span>{/if}
+              </a>
+            {/each}
+          </div>
+        </section>
+      {/if}
+    {/each}
+
+    {#if data.selected.length || data.kind}
       <p><a href="/browse">Clear all filters</a></p>
     {/if}
   </aside>
@@ -74,9 +95,19 @@
     <div class="bar">
       <span>{data.systems.length} {data.systems.length === 1 ? 'map' : 'maps'}</span>
       <span class="spacer"></span>
-      <a class:on={data.sort === 'loved'} href={sortHref('loved')}>Most loved</a>
-      <a class:on={data.sort === 'new'} href={sortHref('new')}>Newest</a>
+      <a class:on={data.sort === 'loved'} href={href({ sort: 'loved' })}>Most loved</a>
+      <a class:on={data.sort === 'new'} href={href({ sort: 'new' })}>Newest</a>
     </div>
+
+    {#if data.narrow.length}
+      <!-- Forty Earths: the pills that split this crowd, right where the crowd is. -->
+      <div class="narrow">
+        <span>Narrow it down:</span>
+        {#each data.narrow as tag}
+          <a class="tag" href={href({ tag })}>{tag}<span class="n">{data.counts[tag]}</span></a>
+        {/each}
+      </div>
+    {/if}
 
     {#if data.failed}
       <div class="panel notice bad">
@@ -87,7 +118,7 @@
       <div class="panel notice">
         <h3>Nothing matches</h3>
         <p>
-          {#if data.selected.length || data.q}
+          {#if data.selected.length || data.q || data.kind}
             Try removing a filter. <a href="/browse">Clear all</a>.
           {:else}
             No maps have been published yet.
@@ -115,7 +146,8 @@
   .pills { display: flex; flex-wrap: wrap; gap: 6px; }
   a.tag { text-decoration: none; }
   a.tag:hover { border-color: var(--accent); }
-  a.tag.on { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+  a.tag.mine { border-style: dashed; }
+  a.tag.on { background: var(--accent); color: var(--accent-ink); border-color: transparent; border-style: solid; }
   .n { opacity: 0.6; margin-left: 5px; font-variant-numeric: tabular-nums; }
   .search { display: flex; gap: 6px; margin-bottom: 20px; }
   .search input {
@@ -126,4 +158,6 @@
          color: var(--ink-faint); font-size: 0.9rem; }
   .bar .spacer { flex: 1; }
   .bar a.on { color: var(--ink); font-weight: 600; }
+  .narrow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 14px;
+            color: var(--ink-faint); font-size: 0.9rem; }
 </style>

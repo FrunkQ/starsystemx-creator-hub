@@ -79,6 +79,25 @@ export class Raster {
     }
   }
 
+  /** A straight stroke between two points, anti-aliased like everything else. */
+  line(x0: number, y0: number, x1: number, y1: number, thickness: number, c: RGB, alpha = 1): void {
+    const reach = thickness / 2 + 1;
+    const bx0 = Math.floor(Math.min(x0, x1) - reach), bx1 = Math.ceil(Math.max(x0, x1) + reach);
+    const by0 = Math.floor(Math.min(y0, y1) - reach), by1 = Math.ceil(Math.max(y0, y1) + reach);
+    const dx = x1 - x0, dy = y1 - y0;
+    const len2 = dx * dx + dy * dy || 1;
+    for (let y = by0; y <= by1; y++) {
+      for (let x = bx0; x <= bx1; x++) {
+        const px = x + 0.5, py = y + 0.5;
+        // Distance from the pixel centre to the nearest point on the segment.
+        const t = Math.max(0, Math.min(1, ((px - x0) * dx + (py - y0) * dy) / len2));
+        const ex = px - (x0 + t * dx), ey = py - (y0 + t * dy);
+        const d = Math.sqrt(ex * ex + ey * ey);
+        this.blend(x, y, c, clamp01(thickness / 2 + 0.5 - d) * alpha);
+      }
+    }
+  }
+
   rect(x: number, y: number, w: number, h: number, c: RGB, alpha = 1): void {
     const x0 = Math.round(x), y0 = Math.round(y), x1 = Math.round(x + w), y1 = Math.round(y + h);
     for (let yy = y0; yy < y1; yy++) for (let xx = x0; xx < x1; xx++) this.blend(xx, yy, c, alpha);
