@@ -26,6 +26,7 @@
   // THE TREE REMEMBERS. Which branches you opened and how you sorted are kept per map in this
   // browser (localStorage), so coming back to a map finds it as you left it. A convenience, not
   // state that matters: it is wrapped in try/catch and the page is right without it.
+  import { onMount } from 'svelte';
   import RoleIcon from './RoleIcon.svelte';
   import { COPY_ICON, TICK_ICON, CODE_ICON, orderRoles } from './roleIcons';
   import { buildClip, clipText, type ClipSource } from '$lib/bundle/clip';
@@ -56,14 +57,19 @@
 
   const memoryKey = $derived('tree:' + source.url);
 
-  // Restore what this browser remembers for this map, once, on the client.
-  $effect(() => {
-    const key = memoryKey;
+  // Restore what this browser remembers for this map: ONCE, on the client, in onMount.
+  //
+  // NOT an $effect. The first version was one, and it locked every map page (0.10.1): `epoch++`
+  // READS epoch before writing it, so the effect depended on the very value it changed, re-ran on
+  // its own write, and Svelte stopped it at the update-depth limit after a quarter of a million
+  // console errors. An effect that writes state must not read that state. onMount runs once and
+  // tracks nothing, which is what "restore on load" means.
+  onMount(() => {
     try {
-      const saved = JSON.parse(localStorage.getItem(key) ?? 'null');
+      const saved = JSON.parse(localStorage.getItem(memoryKey) ?? 'null');
       if (saved && typeof saved === 'object') {
         if (saved.sort === 'name' || saved.sort === 'distance') sort = saved.sort;
-        if (saved.open && typeof saved.open === 'object') { open = saved.open; epoch++; }
+        if (saved.open && typeof saved.open === 'object') { open = saved.open; epoch += 1; }
       }
     } catch { /* no memory is fine */ }
   });

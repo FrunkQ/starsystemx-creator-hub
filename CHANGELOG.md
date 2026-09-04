@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.10.1 — 2026-09-04
+
+### Map pages locked up
+
+Since 0.8.0 the tree restored its remembered state inside a Svelte effect that did `epoch++`.
+Reading `epoch` made the effect depend on the value it then wrote, so it re-ran on its own write
+until Svelte stopped it at the update-depth limit - a quarter of a million console errors and a
+frozen page, on every map. The restore now runs once on mount and tracks nothing.
+
 ## 0.10.0 — 2026-09-04
 
 ### Pages are data transfer, and bytes in are counted too
