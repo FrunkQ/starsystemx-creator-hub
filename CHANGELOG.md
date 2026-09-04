@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.10.0 — 2026-09-04
+
+### Pages are data transfer, and bytes in are counted too
+
+With clips, most of what leaves the hub may leave through a page rather than the download button.
+Server-rendered pages are now buffered in the hook to be measured, counted under their own kind
+and shown in the same total; uploads count as bytes in. The usage page gains a chart of bytes out
+stacked by kind with bytes in below the axis, and the day table shows both. Migration 0017.
+
+### A copied object keeps what still works elsewhere
+
+The clip used to strip every picture and model. Now it strips only what the bundle carried - those
+would be broken links on arrival - and keeps app-shipped references and remote urls, so a station
+built on the ISS starter model is still on the ISS when pasted into another campaign. Takes effect
+on re-upload.
+
 ## 0.9.0 — 2026-09-04
 
 ### Where it starts to cost

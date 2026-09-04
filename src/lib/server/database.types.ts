@@ -265,6 +265,8 @@ export type TrafficDailyRow = {
   category: string;
   requests: number;
   bytes: number;
+  // 0017: what arrived (uploads).
+  bytes_in: number;
 }
 
 // One row per download: a week-scoped visitor hash and nothing else (src/lib/server/visitor.ts).
@@ -373,6 +375,8 @@ export interface Database {
       hub_stats: { Args: { p_days: number }; Returns: unknown };
       // A batch of traffic buckets from one Worker isolate, added to their day and category (0016).
       bump_traffic: { Args: { p_rows: unknown }; Returns: undefined };
+      // The traffic panel: 31 days by category with bytes in and out, and this month's totals (0017).
+      hub_traffic: { Args: Record<string, never>; Returns: unknown };
     };
     Enums: {
       review_state: ReviewState;

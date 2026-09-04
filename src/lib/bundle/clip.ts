@@ -24,7 +24,7 @@
 export interface ClipNode {
   node_id: string;
   parent_id: string | null;
-  /** The node as stored: asset references and GM notes already stripped (normalise.ts). */
+  /** The node as stored: bundle-carried asset references and GM notes already stripped (normalise.ts). */
   snippet: unknown;
 }
 

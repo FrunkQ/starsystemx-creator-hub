@@ -1,26 +1,54 @@
 <script lang="ts">
   // The usage dashboard. One RPC, every panel; no chart library (the page rule: fast to load).
   import { formatBytes } from '$lib/bundle/facets';
-  import { R2_FREE_BYTES, LIMITS, type HubStats, type Count } from '$lib/stats';
+  import { R2_FREE_BYTES, LIMITS, TRAFFIC_CATEGORIES, type HubStats, type HubTraffic, type Count } from '$lib/stats';
   let { data } = $props();
 
   // WHERE IT STARTS TO COST (owner, 2026-09-04). Each meter is drawn to 125% of its allowance so
   // the red line - the free level - sits inside the bar with headroom visible beyond it.
   const today = new Date().toISOString().slice(0, 10);
-  const traffic = $derived(data.stats?.traffic ?? []);
+  const tr = $derived(data.traffic as HubTraffic | null);
+  const traffic = $derived(tr?.days ?? []);
   const requestsToday = $derived(traffic.filter((t) => t.day === today).reduce((a, t) => a + Number(t.requests), 0));
+
+  // One row per day: requests and bytes by category, bytes in, bytes out.
+  type Day = { requests: number; out: number; in: number; bytesBy: Record<string, number>; reqBy: Record<string, number> };
   const byDay = $derived.by(() => {
-    const m = new Map<string, { requests: number; bytes: number; page: number; api: number; asset: number; download: number }>();
+    const m = new Map<string, Day>();
     for (const t of traffic) {
-      const d = m.get(t.day) ?? { requests: 0, bytes: 0, page: 0, api: 0, asset: 0, download: 0 };
-      d.requests += Number(t.requests); d.bytes += Number(t.bytes);
-      if (t.category in d) (d as Record<string, number>)[t.category] += Number(t.requests);
+      const d = m.get(t.day) ?? { requests: 0, out: 0, in: 0, bytesBy: {}, reqBy: {} };
+      d.requests += Number(t.requests);
+      d.out += Number(t.bytes);
+      d.in += Number(t.bytes_in);
+      d.bytesBy[t.category] = (d.bytesBy[t.category] ?? 0) + Number(t.bytes);
+      d.reqBy[t.category] = (d.reqBy[t.category] ?? 0) + Number(t.requests);
       m.set(t.day, d);
     }
     return [...m.entries()].sort((a, b) => (a[0] < b[0] ? 1 : -1));
   });
   const busiestDay = $derived(byDay.reduce((a, [, d]) => Math.max(a, d.requests), 0));
-  const month = $derived(data.stats?.month);
+  const month = $derived(tr?.month);
+
+  // THE CHART: bytes out stacked upward by kind, bytes in downward, one column per day, 31 days.
+  const chart = $derived.by(() => {
+    const cols = [...byDay].reverse().slice(-31);
+    const peak = Math.max(1, ...cols.map(([, d]) => Math.max(d.out, d.in)));
+    const W = 620, H = 150, base = 100, colW = W / 31;
+    return {
+      W, H, base,
+      peak,
+      cols: cols.map(([day, d], i) => {
+        let y = base;
+        const segments = TRAFFIC_CATEGORIES.filter((c) => c !== 'upload').map((c) => {
+          const h = ((d.bytesBy[c] ?? 0) / peak) * (base - 6);
+          y -= h;
+          return { c, y, h };
+        });
+        return { day, x: (31 - cols.length + i) * colW + 1, w: colW - 2, segments, inH: (d.in / peak) * (H - base - 6) };
+      })
+    };
+  });
+  const COLOURS: Record<string, string> = { page: 'var(--accent)', api: '#9aa6bf', asset: '#7fd1a8', download: '#ffe08a', upload: '#ff8080' };
   const project = (used: number) => {
     const elapsed = Math.max(1, Number(month?.days_elapsed ?? 1));
     return Math.round((used / elapsed) * Number(month?.days_in_month ?? 30));
@@ -153,7 +181,7 @@
   <p class="muted">
     The red line is the free level. Bandwidth out of Cloudflare is free and has no line; the
     database-to-Worker traffic Supabase meters (5 GB a month) cannot be measured from here.
-    {#if !s.traffic}<strong>Request counting starts once migration 0016 has run.</strong>{/if}
+    {#if !tr}<strong>Request counting starts once migrations 0016 and 0017 have run.</strong>{/if}
   </p>
   <div class="meters">
     {@render meter('Requests today', requestsToday, LIMITS.workersRequestsPerDay, 'Workers free plan, per day, resets at midnight UTC', fmt)}
@@ -163,18 +191,42 @@
     {@render meter('R2 writes this month', project(n(month?.writes)), LIMITS.r2WritesPerMonth, 'assets and bundles stored, projected (' + fmt(month?.writes) + ' so far)', fmt)}
     {@render meter('Database', n(s.storage.db_bytes), LIMITS.supabaseDbBytes, 'Supabase free plan', formatBytes)}
   </div>
+  <h2>Data transfer</h2>
   <p class="muted">
-    Data served this month: <b>{formatBytes(n(month?.bytes))}</b> over {fmt(month?.requests)} requests. Free, and worth watching: it grows before everything else does.
+    This month: <b>{formatBytes(n(month?.bytes))}</b> out over {fmt(month?.requests)} requests,
+    <b>{formatBytes(n(month?.bytes_in))}</b> in. Pages count as transfer - with clips, most of what
+    leaves may leave through a page rather than a download. Free on Cloudflare, and worth watching:
+    it grows before everything else does.
   </p>
+
+  {#if chart.cols.length}
+    <div class="chart">
+      <svg viewBox="0 0 {chart.W} {chart.H}" preserveAspectRatio="none" role="img" aria-label="Bytes out and in per day">
+        <line x1="0" y1={chart.base} x2={chart.W} y2={chart.base} class="axis" />
+        {#each chart.cols as col (col.day)}
+          {#each col.segments as seg (seg.c)}
+            {#if seg.h > 0}<rect x={col.x} y={seg.y} width={col.w} height={seg.h} fill={COLOURS[seg.c]}><title>{col.day} {seg.c}</title></rect>{/if}
+          {/each}
+          {#if col.inH > 0}<rect x={col.x} y={chart.base + 1} width={col.w} height={col.inH} fill={COLOURS.upload}><title>{col.day} in</title></rect>{/if}
+        {/each}
+      </svg>
+      <div class="legend">
+        <span>peak day {formatBytes(chart.peak)}</span>
+        {#each TRAFFIC_CATEGORIES as c}<span><i style="background: {COLOURS[c]}"></i>{c === 'upload' ? 'uploads (in)' : c + 's'}</span>{/each}
+      </div>
+    </div>
+  {/if}
 
   {#if byDay.length}
     <div class="scroll">
       <table>
-        <thead><tr><th>Day</th><th>Requests</th><th>Pages</th><th>API</th><th>Assets</th><th>Downloads</th><th>Served</th></tr></thead>
+        <thead><tr><th>Day</th><th>Requests</th><th>Pages</th><th>API</th><th>Assets</th><th>Downloads</th><th>Uploads</th><th>Out</th><th>In</th></tr></thead>
         <tbody>
           {#each byDay.slice(0, 14) as [day, d] (day)}
             <tr class:bad={d.requests > LIMITS.workersRequestsPerDay}>
-              <td>{day}</td><td>{fmt(d.requests)}</td><td>{fmt(d.page)}</td><td>{fmt(d.api)}</td><td>{fmt(d.asset)}</td><td>{fmt(d.download)}</td><td>{formatBytes(d.bytes)}</td>
+              <td>{day}</td><td>{fmt(d.requests)}</td>
+              <td>{fmt(d.reqBy.page)}</td><td>{fmt(d.reqBy.api)}</td><td>{fmt(d.reqBy.asset)}</td><td>{fmt(d.reqBy.download)}</td><td>{fmt(d.reqBy.upload)}</td>
+              <td>{formatBytes(d.out)}</td><td>{formatBytes(d.in)}</td>
             </tr>
           {/each}
         </tbody>
@@ -241,5 +293,10 @@
   .line { position: absolute; top: -1px; bottom: -1px; left: 80%; width: 2px; background: var(--bad); }
   .meter .note { color: var(--ink-faint); font-size: 0.8rem; }
   tr.bad td { color: var(--bad); }
+  .chart { background: var(--panel); border: 1px solid var(--edge); border-radius: var(--radius); padding: 10px 12px; margin: 0 0 14px; }
+  .chart svg { width: 100%; height: 150px; display: block; }
+  .chart .axis { stroke: var(--edge); stroke-width: 1; }
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 8px; color: var(--ink-faint); font-size: 0.8rem; }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
   code { background: var(--panel-2); border: 1px solid var(--edge); border-radius: 4px; padding: 1px 5px; font-size: 0.85em; }
 </style>

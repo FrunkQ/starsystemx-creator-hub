@@ -24,17 +24,22 @@
 // ============================================================================================
 import type { Db } from './database.types';
 
-export type Category = 'page' | 'api' | 'asset' | 'download' | 'other';
+// PAGES ARE DATA TRANSFER TOO (owner, 2026-09-04): with clips, most of what people take from the
+// hub may leave through the page itself, not the download button. So a page's bytes are counted
+// like a download's - the HTML is buffered in the hook to measure it - under their own category,
+// and shown in the same total. Uploads are the bytes IN.
+export type Category = 'page' | 'api' | 'asset' | 'download' | 'upload' | 'other';
 
 export function categoryOf(pathname: string): Category {
   if (pathname.startsWith('/asset/') || pathname.startsWith('/private/asset/')) return 'asset';
   if (pathname.startsWith('/api/download/')) return 'download';
+  if (pathname === '/api/upload' || pathname === '/api/screenshots' || pathname.startsWith('/api/debug/')) return 'upload';
   if (pathname.startsWith('/api/')) return 'api';
   if (pathname.startsWith('/_app/') || pathname === '/favicon.ico' || pathname === '/robots.txt') return 'other';
   return 'page';
 }
 
-interface Bucket { day: string; category: Category; requests: number; bytes: number }
+interface Bucket { day: string; category: Category; requests: number; bytes: number; bytes_in: number }
 
 const FLUSH_EVERY_REQUESTS = 20;
 const FLUSH_EVERY_MS = 45_000;
@@ -44,12 +49,14 @@ export class TrafficCounter {
   private since = Date.now();
   private count = 0;
 
-  record(category: Category, bytes: number, now = new Date()): void {
+  /** `bytes` left the hub (the response); `bytesIn` arrived (the request body, an upload). */
+  record(category: Category, bytes: number, bytesIn = 0, now = new Date()): void {
     const day = now.toISOString().slice(0, 10);
     const key = day + '|' + category;
-    const b = this.pending.get(key) ?? { day, category, requests: 0, bytes: 0 };
+    const b = this.pending.get(key) ?? { day, category, requests: 0, bytes: 0, bytes_in: 0 };
     b.requests += 1;
     b.bytes += Math.max(0, bytes | 0);
+    b.bytes_in += Math.max(0, bytesIn | 0);
     this.pending.set(key, b);
     this.count += 1;
   }

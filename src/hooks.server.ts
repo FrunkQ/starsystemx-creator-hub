@@ -98,9 +98,23 @@ export const handle: Handle = async ({ event, resolve }) => {
   // Traffic, for the usage page's "where it starts to cost" panel (server/traffic.ts). Counted
   // from the response the visitor gets and flushed in batches, so counting costs a fraction of
   // what it measures. Static files never reach this code and are not billed either.
+  //
+  // A PAGE IS BUFFERED TO BE MEASURED. Server-rendered HTML and JSON carry no content-length, and
+  // with clips most of what leaves the hub may leave through a page rather than a download - so
+  // the body is read into memory, counted, and sent on with its length stated. Pages are tens of
+  // kilobytes; assets and downloads already state their length and are streamed untouched.
+  let body: BodyInit | null = response.body;
   const category = categoryOf(event.url.pathname);
   if (category !== 'other') {
-    counter.record(category, Number(headers.get('content-length') ?? 0));
+    let bytesOut = Number(headers.get('content-length') ?? 0);
+    const type = headers.get('content-type') ?? '';
+    if (!headers.has('content-length') && response.body && (type.startsWith('text/html') || type.startsWith('application/json'))) {
+      const buffered = await response.arrayBuffer();
+      bytesOut = buffered.byteLength;
+      headers.set('content-length', String(bytesOut));
+      body = buffered;
+    }
+    counter.record(category, bytesOut, Number(event.request.headers.get('content-length') ?? 0));
     flushIfDue(sb, event.platform?.context);
   }
 
@@ -110,7 +124,7 @@ export const handle: Handle = async ({ event, resolve }) => {
     for (const [k, v] of Object.entries(PUBLIC_CORS)) headers.set(k, v);
   }
 
-  return new Response(response.body, {
+  return new Response(body, {
     status: response.status,
     statusText: response.statusText,
     headers

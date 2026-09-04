@@ -447,8 +447,13 @@ Three rules, from the hub's `src/lib/bundle/clip.ts`:
 3. **Ids are the SOURCE map's ids**, carried only so `parentId` resolves within the clip. **Mint new
    ones and remap** — one clip pasted twice, or two clips from the same map, collide otherwise.
 
-Nodes are the engine's own node shape minus `image`, `model` and `gmNotes`. The hub does not touch
-orbits, masses or anything else: what was in the file is what is in the clip.
+Nodes are the engine's own node shape minus `gmNotes` and minus any picture or model **the bundle
+carried** (`assets/...`, a `model.hash`) - those would be broken links on arrival. App-shipped
+references (`/images/star_types/G.webp`, `/models/nasa/iss.glb` with its credit) and remote urls
+stay, so a station built on the ISS is still on the ISS elsewhere. The hub does not touch orbits,
+masses, megastructure parameters or anything else: what was in the file is what is in the clip.
+Constructs, megastructures, barycentres and their subtrees copy exactly like bodies do - every row
+of the tree has the control.
 
 ### What the paste target has to do
 

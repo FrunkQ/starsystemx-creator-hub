@@ -253,6 +253,40 @@ describe('reading a node\'s tags', () => {
 });
 
 // ------------------------------------------------------------------------------------------------
+// The snippet: what a pasted object keeps. Strip only what would break on arrival.
+// ------------------------------------------------------------------------------------------------
+describe('what a copied object keeps', () => {
+  const snippetOf = (node: Record<string, unknown>) =>
+    normalise({ nodes: [{ id: 'n', name: 'N', kind: 'construct', ...node }] }).constructs[0].snippet as Record<string, any>;
+
+  it('keeps an app-shipped model, credit and all - the ISS is still the ISS elsewhere', () => {
+    const s = snippetOf({ model: { url: '/models/nasa/iss.glb', name: 'ISS', credit: 'NASA', license: 'Public domain' } });
+    expect(s.model?.url).toBe('/models/nasa/iss.glb');
+    expect(s.model?.credit).toBe('NASA');
+  });
+
+  it('strips a model the bundle carried: a hash nobody else has is a broken link', () => {
+    expect(snippetOf({ model: { hash: 'abc', url: 'assets/models/abc.glb' } }).model).toBeUndefined();
+    expect(snippetOf({ model: { url: 'assets/models/x.glb' } }).model).toBeUndefined();
+  });
+
+  it('keeps app-shipped and remote pictures, strips carried and inline ones', () => {
+    expect(snippetOf({ image: { url: '/images/star_types/G.webp' } }).image?.url).toBe('/images/star_types/G.webp');
+    expect(snippetOf({ image: { url: 'https://example.com/p.jpg' } }).image?.url).toBe('https://example.com/p.jpg');
+    expect(snippetOf({ image: { url: 'assets/images/n.jpg' } }).image).toBeUndefined();
+    expect(snippetOf({ image: { url: 'data:image/png;base64,AAAA' } }).image).toBeUndefined();
+  });
+
+  it('never carries GM notes, and keeps everything else - megastructure knobs included', () => {
+    const s = snippetOf({ gmNotes: 'the villain', megaParams: { radiusKm: 1000 }, engines: [{ id: 'e1' }], placement: 'Low Orbit' });
+    expect(s.gmNotes).toBeUndefined();
+    expect(s.megaParams).toEqual({ radiusKm: 1000 });
+    expect(s.engines).toEqual([{ id: 'e1' }]);
+    expect(s.placement).toBe('Low Orbit');
+  });
+});
+
+// ------------------------------------------------------------------------------------------------
 // C-07: an in-app capture is exempt from "missing provenance" - and ONLY from that.
 // ------------------------------------------------------------------------------------------------
 const capture = (extra: Record<string, unknown> = {}) => ({

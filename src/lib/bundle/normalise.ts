@@ -163,9 +163,21 @@ function placements(doc: any): Map<any, Placement> {
  */
 function snippetFor(node: any): unknown {
   const copy = { ...node };
-  delete copy.image;
-  delete copy.model;
   delete copy.gmNotes;
+
+  // WHAT IS STRIPPED IS WHAT WOULD NOT WORK ON ARRIVAL, and nothing else. A picture or model the
+  // BUNDLE carried (`assets/...`, a `model.hash`) would paste a broken link into somebody else's
+  // save, and a data: url would paste a megabyte. But an app-shipped star image
+  // (`/images/star_types/G.webp`), a starter model (`/models/nasa/iss.glb`, credit and all) or
+  // somebody else's hosting (`https://...`) works in any campaign - so the ISS a station was built
+  // on is still the ISS when it lands somewhere else (owner, 2026-09-04: constructs,
+  // megastructures, any object selected).
+  const imageUrl = typeof copy.image?.url === 'string' ? copy.image.url : '';
+  if (copy.image && (!imageUrl || imageUrl.startsWith('assets/') || imageUrl.startsWith('data:'))) delete copy.image;
+
+  const modelUrl = typeof copy.model?.url === 'string' ? copy.model.url : '';
+  if (copy.model && (copy.model.hash || !modelUrl || modelUrl.startsWith('assets/') || modelUrl.startsWith('data:'))) delete copy.model;
+
   return copy;
 }
 
