@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.15.2 — 2026-09-05
+
+The card's kind label is a little smaller than the cover's own title, so it reads as a tag.
+
 ## 0.15.1 — 2026-09-05
 
 The card's kind label moves to the top-right of the picture: a generated cover letters its title

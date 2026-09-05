@@ -65,7 +65,8 @@
       <div class="cover-fallback">{isStarmap ? 'Starmap' : 'System'}</div>
     {/if}
     <!-- The kind, in the cover font: the same pixels the card's own picture is lettered in. -->
-    <span class="kind"><PixelText text={isStarmap ? 'Starmap' : 'System'} scale={2} /></span>
+    <!-- Smaller than the cover's own title (owner, 2026-09-05): a tag, not a second line of it. -->
+    <span class="kind"><PixelText text={isStarmap ? 'Starmap' : 'System'} scale={1.5} /></span>
   </div>
   <div class="body">
     <h3>{system.title}</h3>
