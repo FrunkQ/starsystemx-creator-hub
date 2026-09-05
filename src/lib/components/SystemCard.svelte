@@ -93,8 +93,10 @@
   a.card.starmap { outline: 1px solid var(--edge); outline-offset: 3px; }
   a.card.starmap:hover { outline-color: var(--accent); }
   .pic { position: relative; }
+  /* Top-RIGHT: a generated cover letters its title top-left in the same pixels, and two lines of
+     the same font in the same corner read as one. */
   .kind {
-    position: absolute; left: 8px; top: 8px;
+    position: absolute; right: 8px; top: 8px; line-height: 0;
     font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600;
     color: var(--ink); background: rgba(10, 13, 20, 0.72);
     border: 1px solid var(--edge); border-radius: 6px; padding: 2px 7px;

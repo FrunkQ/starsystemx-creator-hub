@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.15.1 — 2026-09-05
+
+The card's kind label moves to the top-right of the picture: a generated cover letters its title
+top-left in the same pixels, and the two read as one line.
+
 ## 0.15.0 — 2026-09-05
 
 ### People can be moderated, and can leave
