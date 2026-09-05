@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.18.0 — 2026-09-05
+
+Any hub badge can be a Discord role: `discord_badge_roles` maps badge ids to role ids, given and
+taken with the badge through the bot (migration 0025). The config page refuses a channel link
+where a webhook URL is wanted and says where to get one, and has two test buttons: a post to the
+sharing channel, and an email to your own address through Supabase's SMTP (D-34).
+
 ## 0.17.1 — 2026-09-05
 
 The in-map tag chips show every tag, grouped by namespace, so a biosignature on one world is as

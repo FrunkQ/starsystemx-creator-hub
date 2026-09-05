@@ -101,7 +101,11 @@ export async function reconcile(sb: Db, gates: Gates, creatorId: string): Promis
     .maybeSingle();
   if (!identity) return; // no linked Discord account: nothing to push, and that is fine
 
+  // Every badge can be a role (D-34): the map in config, over the older single row for cartographer.
   const roleFor: Partial<Record<Badge, string>> = { cartographer: gates.discord_role_creator };
+  for (const [badge, roleId] of Object.entries(gates.discord_badge_roles ?? {})) {
+    if (isBadge(badge) && typeof roleId === 'string' && roleId) roleFor[badge] = roleId;
+  }
 
   for (const [badge, roleId] of Object.entries(roleFor)) {
     if (!roleId) continue;

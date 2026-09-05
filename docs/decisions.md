@@ -654,6 +654,25 @@ scheduler with the cron key. The pictures and bundles are already the only copy 
 R2; the backup names which ones matter. A Worker has no clock, so the schedule is the owner's to
 point at `POST /api/admin/backup`.
 
+### D-34. Hub badges can be Discord roles; the config page tries things
+
+The owner (2026-09-05): "what about status between discord and the site - custom badges - or is
+that a nitro thing?"
+
+**Profile badges are Discord's own.** No server, and no Nitro, adds a custom one. The server-side
+equivalent is a ROLE: a colour on the name, and from Boost Level 2 an icon beside it. The hub
+already gave Cartographer as a role through the bot and the outbox; now any badge maps to a role
+via `discord_badge_roles` (migration 0025: `{"chronicler": "<role id>"}`), given when the badge is
+earned and taken when it is lost. Needs the bot in the server with Manage Roles, the bot token
+secret, and `discord_enabled` true. The sharing webhook needs none of that.
+
+**The config page refuses what is not a webhook.** The owner pasted a channel link first, which is
+the natural mistake; the page now says what a webhook URL looks like and where it comes from. Two
+buttons do the real thing once: a test post to the sharing channel, and a test email to the
+admin's own address through whatever SMTP Supabase has - a password-reset mail, because that is
+the one email Supabase sends on demand. A secret pasted into a migration would be committed;
+values like the webhook go in through the page or a one-line update, never the repo.
+
 ### D-16. The takedown address is assembled at runtime, never served as text
 
 The owner's instruction was explicit: keep it off the page as scrapable text. It is stored as

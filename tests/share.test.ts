@@ -1,6 +1,6 @@
 // Sharing a map to Discord (src/lib/server/integrations/share.ts): the payload and the dedupe key.
 import { describe, it, expect } from 'vitest';
-import { buildShare, shareDedupeKey } from '../src/lib/server/integrations/share';
+import { buildShare, shareDedupeKey, isDiscordWebhook } from '../src/lib/server/integrations/share';
 
 const system = {
   slug: 'local-neighbourhood', title: 'Local Neighbourhood', kind: 'starmap' as const, blurb: null, summary: 'Near stars.',
@@ -18,6 +18,13 @@ describe('a share', () => {
 
   it('never links a cover that cannot be served', () => {
     expect(buildShare(system, null, 'https://x.test', false, 'updated').cover).toBeNull();
+  });
+
+  it('knows a webhook URL from a channel link', () => {
+    expect(isDiscordWebhook('https://discord.com/api/webhooks/1443191203066810463/AbC-def_123')).toBe(true);
+    expect(isDiscordWebhook('https://discordapp.com/api/webhooks/1/x')).toBe(true);
+    expect(isDiscordWebhook('https://discord.com/channels/1443167899933212744/1443191203066810463')).toBe(false);
+    expect(isDiscordWebhook('')).toBe(false);
   });
 
   it('is one post per map per event per hour', () => {

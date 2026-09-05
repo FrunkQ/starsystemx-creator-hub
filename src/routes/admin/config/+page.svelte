@@ -7,7 +7,7 @@
 <h1>Gates</h1>
 <p class="lede">
   Every limit the hub enforces is a row here. Changes take effect on the next request - no deploy.
-  Values are JSON: <code>true</code>, <code>false</code>, or a number.
+  Values are JSON: <code>true</code>, <code>false</code>, a number, or a string in quotes.
 </p>
 
 <div class="panel notice">
@@ -17,6 +17,21 @@
     surface to text. The hub keeps working: Star System Explorer guarantees a plain .json save
     still loads, and always will.
   </p>
+</div>
+
+<!-- The real thing, once each, so it can be seen working before anyone else sees it not. -->
+<div class="panel">
+  <h3>Try things</h3>
+  <p class="muted">Each button does the real thing once.</p>
+  <div class="tries">
+    <form method="POST" action="?/testShare">
+      <button type="submit">Post a test to the Discord sharing channel</button>
+    </form>
+    <form method="POST" action="?/testMail">
+      <button type="submit">Send me a test email</button>
+    </form>
+  </div>
+  {#if form?.tested}<p class="ok">{form.tested}</p>{/if}
 </div>
 
 {#if form?.message}
@@ -46,6 +61,11 @@
 <style>
   h1 { margin: 0 0 6px; }
   .lede { color: var(--ink-dim); margin: 0 0 18px; max-width: 66ch; }
+  .panel h3 { margin: 0 0 6px; font-size: 0.98rem; }
+  .muted { color: var(--ink-dim); margin: 0 0 10px; }
+  .tries { display: flex; gap: 8px; flex-wrap: wrap; }
+  .tries form { margin: 0; }
+  .ok { color: var(--accent); margin: 10px 0 0; }
   .inline { display: flex; gap: 6px; }
   input {
     font: inherit; background: var(--panel-2); color: var(--ink);

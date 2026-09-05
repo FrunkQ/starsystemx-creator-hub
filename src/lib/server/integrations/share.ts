@@ -25,6 +25,13 @@ export interface SharePayload {
   downloads: number;
 }
 
+/**
+ * A Discord INCOMING WEBHOOK URL, as the channel's Integrations page hands it out. Not a channel
+ * link (`discord.com/channels/...`), which is what people paste first (the owner did).
+ */
+export const isDiscordWebhook = (u: string): boolean =>
+  /^https:\/\/(discord\.com|discordapp\.com)\/api\/webhooks\/\d+\/[A-Za-z0-9_-]+$/.test(u.trim());
+
 /** One post per map per event per hour at most. A pure function of the intent, never the moment. */
 export function shareDedupeKey(systemId: string, event: ShareEvent, at: Date = new Date()): string {
   return ['share', systemId, event, at.toISOString().slice(0, 13)].join(':');

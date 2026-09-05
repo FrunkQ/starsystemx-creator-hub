@@ -1,7 +1,11 @@
 import type { PageServerLoad, Actions } from './$types';
 import { error, fail } from '@sveltejs/kit';
-import { db } from '$lib/server/db';
+import { db, authClient } from '$lib/server/db';
+import { loadGates } from '$lib/server/config';
+import { loadSite } from '$lib/server/site';
 import * as audit from '$lib/server/audit';
+import { isDiscordWebhook } from '$lib/server/integrations/share';
+import { postShare } from '$lib/server/integrations/discord';
 
 export const load: PageServerLoad = async ({ platform, locals }) => {
   const env = platform?.env;
@@ -12,13 +16,18 @@ export const load: PageServerLoad = async ({ platform, locals }) => {
   return { rows: data ?? [] };
 };
 
+function admin(platform: App.Platform | undefined, locals: App.Locals) {
+  const env = platform?.env;
+  if (!env) throw error(500, 'not configured');
+  if (locals.viewer?.role !== 'admin') throw error(404, 'Not found');
+  return { env, me: locals.viewer };
+}
+
 export const actions: Actions = {
   // A gate an admin relaxes takes effect on the next request. That is the whole point of putting
   // them in a table: a limit that needs a deploy to relax is a limit nobody relaxes (design 6.3).
   default: async ({ request, platform, locals }) => {
-    const env = platform?.env;
-    if (!env) throw error(500, 'not configured');
-    if (locals.viewer?.role !== 'admin') throw error(404, 'Not found');
+    const { env, me } = admin(platform, locals);
 
     const form = await request.formData();
     const key = String(form.get('key') ?? '');
@@ -28,16 +37,63 @@ export const actions: Actions = {
     try {
       value = JSON.parse(raw);
     } catch {
-      return fail(400, { key, message: 'That is not valid JSON. Use true, false, or a number.' });
+      return fail(400, { key, message: 'That is not valid JSON. Use true, false, a number, or a string in quotes.' });
+    }
+
+    // The one value people get wrong first time (the owner did): a channel LINK is not a webhook.
+    if (key === 'discord_share_webhook' && typeof value === 'string' && value !== '' && !isDiscordWebhook(value)) {
+      return fail(400, {
+        key,
+        message: 'That is not a webhook URL. A channel link (discord.com/channels/...) will not do. In Discord, open the '
+          + 'channel\'s settings, Integrations, Webhooks, New Webhook, Copy Webhook URL - it starts with '
+          + 'https://discord.com/api/webhooks/ - and paste it here in quotes.'
+      });
     }
 
     const sb = db(env);
     const { error: e } = await sb.from('config')
-      .update({ value, updated_by: locals.viewer.id, updated_at: new Date().toISOString() })
+      .update({ value, updated_by: me.id, updated_at: new Date().toISOString() })
       .eq('key', key);
     if (e) return fail(500, { key, message: e.message });
 
-    await audit.record(sb, locals.viewer.id, 'config.set', key, undefined, { value });
+    await audit.record(sb, me.id, 'config.set', key, undefined, { value });
     return { ok: true, key };
+  },
+
+  /** The real thing, once: a test post to the sharing channel through the configured webhook. */
+  testShare: async ({ platform, locals, url }) => {
+    const { env, me } = admin(platform, locals);
+    const sb = db(env);
+    const [gates, site] = await Promise.all([loadGates(sb), loadSite(sb, url)]);
+    if (!gates.discord_share_webhook) return fail(400, { message: 'Set discord_share_webhook first.' });
+    try {
+      await postShare(gates.discord_share_webhook, {
+        event: 'published', slug: '', url: site.url, title: 'A test from the hub', kind: 'system',
+        by: me.handle,
+        blurb: 'If you can read this, the sharing channel is wired up. Newly published and updated maps will appear here.',
+        cover: null, counts: { systems: 1, bodies: 0, constructs: 0 }, stars: 0, downloads: 0
+      }, site.name);
+    } catch (e) {
+      return fail(502, { message: 'Discord refused the test post: ' + (e as Error).message });
+    }
+    await audit.record(sb, me.id, 'discord.test-share', 'config:discord_share_webhook');
+    return { tested: 'A test post went to the sharing channel.' };
+  },
+
+  /**
+   * The one email Supabase will send on demand: a password reset, to the admin's own address,
+   * through whatever SMTP is configured in the Supabase dashboard. If it arrives, mail works.
+   */
+  testMail: async ({ platform, locals, url }) => {
+    const { env, me } = admin(platform, locals);
+    const sb = db(env);
+    const { data } = await sb.auth.admin.getUserById(me.id);
+    const email = data?.user?.email;
+    if (!email) return fail(400, { message: 'Your sign-in has no email address to send to.' });
+    const site = await loadSite(sb, url);
+    const { error: e } = await authClient(env).auth.resetPasswordForEmail(email, { redirectTo: site.url + '/login' });
+    if (e) return fail(502, { message: 'Supabase could not send it: ' + e.message });
+    await audit.record(sb, me.id, 'mail.test', 'creator:' + me.id);
+    return { tested: 'A password-reset email is on its way to ' + email + '. If it arrives, SMTP works; ignore the link.' };
   }
 };

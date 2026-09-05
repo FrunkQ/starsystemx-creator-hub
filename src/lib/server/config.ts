@@ -46,6 +46,8 @@ export interface Gates {
   discord_role_pro: string;
   /** Incoming-webhook URL of the sharing channel (D-32). Empty = no cross-posting. */
   discord_share_webhook: string;
+  /** Hub badge id -> Discord role id (D-34). Given and taken with the badge, through the bot. */
+  discord_badge_roles: Record<string, string>;
   patreon_enabled: boolean;
   patreon_campaign_id: string;
   patreon_tier_map: Record<string, string>;
@@ -88,6 +90,7 @@ export const GATE_FALLBACKS: Gates = {
   discord_role_creator: '',
   discord_role_pro: '',
   discord_share_webhook: '',
+  discord_badge_roles: {},
   patreon_enabled: false,
   patreon_campaign_id: '',
   patreon_tier_map: {}
