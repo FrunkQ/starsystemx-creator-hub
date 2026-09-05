@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.14.0 — 2026-09-05
+
+### Comments
+
+Registered explorers can comment on a map. Comments are counted and accumulated like stars:
+beside the star button, on cards, on the account page (per map and in total) and on the usage
+page (total, weekly, per map, per cartographer). A comment can be removed by its author, by the
+map's cartographer, or by an admin; it is kept and marked, never deleted, and an admin can restore
+it. `/admin/comments` lists the latest comments across the hub with one-click Remove. Migration
+0021 (D-27).
+
+Reads that name a column the database does not have yet now drop that column and read again, the
+way writes already did, so the card lists survive a deploy that runs ahead of a migration.
+
 ## 0.13.0 — 2026-09-05
 
 ### Re-index from the stored file, and the tree finally sorts by distance

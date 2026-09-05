@@ -35,6 +35,7 @@ export const GET: RequestHandler = async ({ platform, params, setHeaders }) => {
     bundleFormat: map.bundle_format,
     sizeBytes: map.source_bytes,
     hearts: map.hearts_count,
+    comments: map.comments_count ?? 0,
     downloads: map.download_count,
     tags: map.tags,
     autoTags: map.auto_tags,

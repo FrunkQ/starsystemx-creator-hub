@@ -1,7 +1,7 @@
 // Schema-tolerant writes: see src/lib/server/tolerant.ts for why a deploy can run ahead of a
 // migration and what that must NOT be allowed to break.
 import { describe, it, expect } from 'vitest';
-import { tolerantWrite } from '../src/lib/server/tolerant';
+import { tolerantWrite, tolerantSelect } from '../src/lib/server/tolerant';
 import { isoWeek } from '../src/lib/server/visitor';
 
 const unknown = (col: string) => ({
@@ -51,6 +51,35 @@ describe('a write against a schema that is behind the code', () => {
     }, 3);
     expect(calls).toBe(4);
     expect(r.error).not.toBeNull();
+  });
+});
+
+describe('a read against a schema that is behind the code', () => {
+  const missing = (col: string) => ({ code: '42703', message: 'column systems.' + col + ' does not exist' });
+
+  it('drops an optional column the database named and reads again', async () => {
+    const asked: string[] = [];
+    const r = await tolerantSelect<{ slug: string }[]>(['slug', 'comments_count'], ['comments_count'], async (cols) => {
+      asked.push(cols);
+      return cols.includes('comments_count')
+        ? { data: null, error: missing('comments_count') }
+        : { data: [{ slug: 'a' }], error: null };
+    });
+    expect(r.error).toBeNull();
+    expect(r.data).toEqual([{ slug: 'a' }]);
+    expect(r.dropped).toEqual(['comments_count']);
+    expect(asked).toEqual(['slug, comments_count', 'slug']);
+  });
+
+  it('will not drop a column the page depends on', async () => {
+    const r = await tolerantSelect(['slug', 'title'], ['comments_count'], async () => ({ data: null, error: missing('title') }));
+    expect(r.error?.code).toBe('42703');
+    expect(r.dropped).toEqual([]);
+  });
+
+  it('passes any other failure straight through', async () => {
+    const r = await tolerantSelect(['slug'], ['comments_count'], async () => ({ data: null, error: { message: 'connection reset' } }));
+    expect(r.error?.message).toBe('connection reset');
   });
 });
 

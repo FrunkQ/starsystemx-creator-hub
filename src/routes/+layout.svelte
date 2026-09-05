@@ -32,6 +32,7 @@
       <a href="/account">{data.viewer.handle}</a>
       {#if data.viewer.role === 'admin'}
         <a href="/admin/review">Review</a>
+        <a href="/admin/comments">Comments</a>
         <a href="/admin/stats">Usage</a>
         <a href="/admin/debug">Debug</a>
       {/if}

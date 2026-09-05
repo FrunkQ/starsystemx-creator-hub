@@ -6,6 +6,8 @@ import { ensureCover, coverNodeFrom } from '$lib/server/cover';
 import { reindexSystem } from '$lib/server/reindex';
 import { loadSite } from '$lib/server/site';
 import { loadGates } from '$lib/server/config';
+import { mayContribute } from '$lib/server/auth';
+import { removalRole, commentNotice } from '$lib/comments';
 
 export const load: PageServerLoad = async ({ params, platform, setHeaders, url, locals }) => {
   const env = platform?.env;
@@ -68,6 +70,28 @@ export const load: PageServerLoad = async ({ params, platform, setHeaders, url, 
     starred = !!mine;
   }
 
+  // COMMENTS (0021). Live ones, oldest first - a conversation reads down. This names a table the
+  // database may not have yet; then there is no section and no box, not an error page.
+  const { data: commentRows, error: commentsErr } = await sb.from('comments')
+    .select('id, creator_id, body, created_at')
+    .eq('system_id', system.id).is('removed_at', null)
+    .order('created_at', { ascending: true }).limit(200);
+  const commenterIds = [...new Set((commentRows ?? []).map((c) => c.creator_id))];
+  const { data: commenters } = commenterIds.length
+    ? await sb.from('creators').select('id, handle, display_name').in('id', commenterIds)
+    : { data: [] as { id: string; handle: string; display_name: string | null }[] };
+  const commenterName = new Map((commenters ?? []).map((c) => [c.id, c.display_name ?? c.handle]));
+  const comments = (commentRows ?? []).map((c) => ({
+    id: c.id, body: c.body, created_at: c.created_at,
+    by: commenterName.get(c.creator_id) ?? 'an explorer',
+    // Who may take it down is decided here, once; the page only draws the button.
+    removable: !!removalRole(locals.viewer, c, system.creator_id)
+  }));
+
+  // The one line a form round-trip leaves behind (api/comment, api/report redirect here).
+  const notice = commentNotice(url.searchParams.get('comment'))
+    ?? (url.searchParams.has('reported') ? 'Thank you. Your report is recorded and will be read.' : null);
+
   // A map with no picture gets one drawn from itself on first view (server/cover.ts, D-21) - the
   // backfill for anything uploaded before the hub could draw. Once per map; never fails the page.
   let backfilled: string | null = null;
@@ -100,7 +124,9 @@ export const load: PageServerLoad = async ({ params, platform, setHeaders, url, 
   const approved = await ledger.approvedOnly(sb, hashes);
   const withheldCount = hashes.length - approved.size;
 
-  setHeaders({ 'cache-control': 'public, max-age=60' });
+  // The page after a form round-trip must be fresh: a cached copy would not show the comment just
+  // posted, and would read as lost.
+  setHeaders({ 'cache-control': notice ? 'no-store' : 'public, max-age=60' });
 
   return {
     system,
@@ -109,6 +135,10 @@ export const load: PageServerLoad = async ({ params, platform, setHeaders, url, 
     constructs: constructs ?? [],
     usedIn,
     starred,
+    comments,
+    commentsAvailable: !commentsErr,
+    mayComment: mayContribute(locals.viewer),
+    notice,
     signedIn: !!locals.viewer,
     withheldCount,
     // Only approved screenshots reach a public page. An unreviewed one is simply not there yet.

@@ -5,6 +5,10 @@
     cartographer: 'Cartographer - charted something and shared it',
     featured: 'Featured - a map people loved'
   };
+
+  // What has come back: stars and comments, accumulated across every map, like for like.
+  const stars = $derived(data.systems.reduce((a, s) => a + (s.hearts_count ?? 0), 0));
+  const comments = $derived(data.systems.reduce((a, s) => a + (s.comments_count ?? 0), 0));
 </script>
 
 <svelte:head><title>Your account</title><meta name="robots" content="noindex" /></svelte:head>
@@ -33,14 +37,18 @@
   {#if !data.systems.length}
     <p class="muted">Nothing yet. <a href="/upload">Share a map</a>.</p>
   {:else}
+    <p class="muted">
+      {stars} {stars === 1 ? 'star' : 'stars'} and {comments} {comments === 1 ? 'comment' : 'comments'} across your maps.
+    </p>
     <table>
-      <thead><tr><th>Map</th><th>State</th><th>Stars</th><th>Downloads</th><th></th></tr></thead>
+      <thead><tr><th>Map</th><th>State</th><th>Stars</th><th>Comments</th><th>Downloads</th><th></th></tr></thead>
       <tbody>
         {#each data.systems as sys (sys.id)}
           <tr>
             <td>{sys.title}</td>
             <td>{sys.state}</td>
             <td>{sys.hearts_count}</td>
+            <td>{#if sys.comments_count}<a href="/s/{sys.slug}#comments">{sys.comments_count}</a>{:else}0{/if}</td>
             <td>{sys.download_count}</td>
             <td><a href="/manage/{sys.id}">Manage</a></td>
           </tr>

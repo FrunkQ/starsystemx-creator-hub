@@ -65,7 +65,7 @@
     const step = w / Math.max(1, values.length - 1);
     return values.map((v, i) => (i * step).toFixed(1) + ',' + (h - 2 - (v / max) * (h - 4)).toFixed(1)).join(' ');
   }
-  type GrowthKey = 'creators' | 'maps' | 'uploads' | 'refusals' | 'downloads' | 'visitors';
+  type GrowthKey = 'creators' | 'maps' | 'uploads' | 'refusals' | 'downloads' | 'visitors' | 'comments';
   const series = (key: GrowthKey) => (s?.growth ?? []).map((g) => n(g[key]));
   const sum = (key: GrowthKey) => series(key).reduce((a, b) => a + b, 0);
 
@@ -118,11 +118,12 @@
     <div class="tile"><b>{fmt(s.totals.uploads_period)}</b><span>uploads, {data.days} days</span></div>
     <div class="tile" class:warn={n(s.totals.refusals_period) > 0}><b>{fmt(s.totals.refusals_period)}</b><span>refused uploads</span></div>
     <div class="tile"><b>{fmt(s.totals.hearts)}</b><span>stars</span></div>
+    <div class="tile"><b>{fmt(s.totals.comments)}</b><span>comments</span></div>
   </div>
 
   <h2>Growth, last twelve weeks</h2>
   <div class="sparks">
-    {#each [['downloads', 'Downloads'], ['visitors', 'Visitors'], ['maps', 'New maps'], ['creators', 'New explorers'], ['uploads', 'Uploads'], ['refusals', 'Refusals']] as [key, label]}
+    {#each [['downloads', 'Downloads'], ['visitors', 'Visitors'], ['maps', 'New maps'], ['creators', 'New explorers'], ['uploads', 'Uploads'], ['refusals', 'Refusals'], ['comments', 'Comments']] as [key, label]}
       {@const values = series(key as GrowthKey)}
       <div class="spark">
         <svg viewBox="0 0 140 30" preserveAspectRatio="none"><polyline points={points(values)} /></svg>
@@ -132,12 +133,12 @@
   </div>
   <div class="scroll">
     <table>
-      <thead><tr><th>Week of</th><th>Explorers</th><th>Maps</th><th>Uploads</th><th>Refusals</th><th>Downloads</th><th>Visitors</th></tr></thead>
+      <thead><tr><th>Week of</th><th>Explorers</th><th>Maps</th><th>Uploads</th><th>Refusals</th><th>Downloads</th><th>Visitors</th><th>Comments</th></tr></thead>
       <tbody>
         {#each [...s.growth].reverse() as g (g.week)}
           <tr>
             <td>{g.week}</td><td>{fmt(g.creators)}</td><td>{fmt(g.maps)}</td><td>{fmt(g.uploads)}</td>
-            <td class:bad={n(g.refusals) > 0}>{fmt(g.refusals)}</td><td>{fmt(g.downloads)}</td><td>{fmt(g.visitors)}</td>
+            <td class:bad={n(g.refusals) > 0}>{fmt(g.refusals)}</td><td>{fmt(g.downloads)}</td><td>{fmt(g.visitors)}</td><td>{fmt(g.comments)}</td>
           </tr>
         {/each}
       </tbody>
@@ -149,12 +150,12 @@
       <h2>Most downloaded maps</h2>
       {#if s.top_maps.length}
         <table>
-          <thead><tr><th>Map</th><th>By</th><th>All</th><th>{data.days}d</th><th>Stars</th></tr></thead>
+          <thead><tr><th>Map</th><th>By</th><th>All</th><th>{data.days}d</th><th>Stars</th><th>Comments</th></tr></thead>
           <tbody>
             {#each s.top_maps as m (m.slug)}
               <tr>
                 <td><a href="/s/{m.slug}">{m.title}</a></td><td>{m.handle}</td>
-                <td>{fmt(m.download_count)}</td><td>{fmt(m.downloads_period)}</td><td>{fmt(m.hearts_count)}</td>
+                <td>{fmt(m.download_count)}</td><td>{fmt(m.downloads_period)}</td><td>{fmt(m.hearts_count)}</td><td>{fmt(m.comments_count)}</td>
               </tr>
             {/each}
           </tbody>
@@ -166,10 +167,10 @@
       <h2>Cartographers</h2>
       {#if s.top_creators.length}
         <table>
-          <thead><tr><th>Explorer</th><th>Maps</th><th>Downloads</th><th>Stars</th><th>Stored</th></tr></thead>
+          <thead><tr><th>Explorer</th><th>Maps</th><th>Downloads</th><th>Stars</th><th>Comments</th><th>Stored</th></tr></thead>
           <tbody>
             {#each s.top_creators as c (c.handle)}
-              <tr><td>{c.handle}</td><td>{fmt(c.maps)}</td><td>{fmt(c.downloads)}</td><td>{fmt(c.hearts)}</td><td>{formatBytes(n(c.bundle_bytes))}</td></tr>
+              <tr><td>{c.handle}</td><td>{fmt(c.maps)}</td><td>{fmt(c.downloads)}</td><td>{fmt(c.hearts)}</td><td>{fmt(c.comments)}</td><td>{formatBytes(n(c.bundle_bytes))}</td></tr>
             {/each}
           </tbody>
         </table>
@@ -254,6 +255,7 @@
         {#if n(s.queue.pending)}· <a href="/admin/review">review</a>{/if}
       </p>
       <p><b>{fmt(s.queue.open_reports)}</b> open reports {#if n(s.queue.open_reports)}· <a href="/admin/reports">read</a>{/if}</p>
+      <p><b>{fmt(s.totals.comments)}</b> comments · <a href="/admin/comments">moderate</a></p>
     </section>
   </div>
 {/if}

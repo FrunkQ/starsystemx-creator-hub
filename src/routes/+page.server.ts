@@ -1,5 +1,7 @@
 import type { PageServerLoad } from './$types';
 import { db } from '$lib/server/db';
+import { tolerantSelect } from '$lib/server/tolerant';
+import { CARD_COLUMNS, CARD_OPTIONAL, type CardRow } from '$lib/server/cards';
 
 // SSR, one query, no engine. The page must be fast at LOADING (design 2).
 export const load: PageServerLoad = async ({ platform, setHeaders }) => {
@@ -7,12 +9,13 @@ export const load: PageServerLoad = async ({ platform, setHeaders }) => {
   if (!env?.SUPABASE_URL) return { systems: [], configured: false, failed: false };
 
   const sb = db(env);
-  const { data, error } = await sb.from('systems')
-    .select('slug, title, summary, blurb, kind, cover_sha256, hearts_count, download_count, auto_tags, tags, body_count, construct_count, system_count')
-    .eq('state', 'public').eq('visibility', 'public')
-    .order('hearts_count', { ascending: false })
-    .order('created_at', { ascending: false })
-    .limit(24);
+  const { data, error } = await tolerantSelect<CardRow[]>(CARD_COLUMNS, CARD_OPTIONAL, (cols) =>
+    sb.from('systems').select(cols)
+      .eq('state', 'public').eq('visibility', 'public')
+      .order('hearts_count', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(24)
+  );
 
   // Same rule as /browse: a failed query must not render as an empty library. Do not cache a
   // failure either - a 60-second cache on a broken read turns a blip into a minute of wrong page.

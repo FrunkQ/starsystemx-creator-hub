@@ -13,11 +13,16 @@
   import RoleIcon from '$lib/components/RoleIcon.svelte';
   import { orderRoles } from '$lib/components/roleIcons';
   import { formatBytes } from '$lib/bundle/facets';
+  import { COMMENT_MAX } from '$lib/comments';
   let { data } = $props();
 
   const s = $derived(data.system);
   const total = $derived(data.bodies.length + data.constructs.length);
   let reportOpen = $state(false);
+
+  // Comments are counted like stars: the trigger-kept count when the column exists, the rows
+  // themselves on a database that has not run 0021 (then there are none).
+  const commentCount = $derived(s.comments_count ?? data.comments.length);
 
   // STARS, not hearts (owner, 2026-09-04: "thematically appropriate"). The column keeps its old
   // name; the word people see is the one that fits a map of stars.
@@ -109,6 +114,12 @@
       <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg>
       {starred ? 'Starred' : 'Star this map'} · {stars}
     </button>
+    {#if data.commentsAvailable}
+      <a class="star" href="#comments" title="Comments on this map">
+        <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+        {commentCount} {commentCount === 1 ? 'comment' : 'comments'}
+      </a>
+    {/if}
   </p>
 
   {#if data.withheldCount > 0}
@@ -213,6 +224,52 @@
     }}
   />
 
+  <!-- COMMENTS (owner, 2026-09-05). Below the data and above the report: a place to say
+       something about the map, not a reason to come here. Registered explorers only, like stars.
+       Plain forms, so they work without a script; removal is one click for whoever may. -->
+  {#if data.commentsAvailable}
+    <section class="comments" id="comments">
+      <h2>Comments{#if commentCount} · {commentCount}{/if}</h2>
+      {#if data.notice}<p class="notice-line">{data.notice}</p>{/if}
+      {#if data.comments.length}
+        <ol>
+          {#each data.comments as c (c.id)}
+            <li>
+              <div class="who">
+                <b>{c.by}</b>
+                <time datetime={c.created_at}>{c.created_at.slice(0, 10)}</time>
+                {#if c.removable}
+                  <form method="POST" action="/api/comment">
+                    <input type="hidden" name="slug" value={s.slug} />
+                    <input type="hidden" name="remove" value={c.id} />
+                    <button class="linkish" type="submit">Remove</button>
+                  </form>
+                {/if}
+              </div>
+              <p class="text">{c.body}</p>
+            </li>
+          {/each}
+        </ol>
+      {:else}
+        <p class="muted">Nothing yet.</p>
+      {/if}
+      {#if data.mayComment}
+        <form class="panel" method="POST" action="/api/comment">
+          <input type="hidden" name="slug" value={s.slug} />
+          <label>
+            Say something about this map
+            <textarea name="body" rows="3" maxlength={COMMENT_MAX} required></textarea>
+          </label>
+          <button class="primary" type="submit">Post comment</button>
+        </form>
+      {:else if !data.signedIn}
+        <p class="muted"><a href="/login?next=/s/{s.slug}%23comments">Sign in</a> to leave a comment.</p>
+      {/if}
+    </section>
+  {:else if data.notice}
+    <p class="notice-line" id="comments">{data.notice}</p>
+  {/if}
+
   <div class="foot-actions">
     <button onclick={() => (reportOpen = !reportOpen)}>Report a problem with this map</button>
   </div>
@@ -247,6 +304,16 @@
   .star.on { color: var(--warn); border-color: var(--warn); }
   .star.on svg { fill: currentColor; }
   .star:hover { color: var(--ink); }
+  a.star { text-decoration: none; margin-left: 8px; vertical-align: middle; }
+  .comments { margin-top: 36px; }
+  .comments ol { list-style: none; padding: 0; margin: 0 0 12px; }
+  .comments li { border-top: 1px solid var(--edge); padding: 10px 0; }
+  .comments .who { display: flex; align-items: baseline; gap: 10px; color: var(--ink-faint); font-size: 0.88rem; }
+  .comments .who b { color: var(--ink); font-weight: 600; }
+  .comments .who form { display: inline; margin-left: auto; }
+  .comments .text { margin: 6px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .comments .panel { margin-top: 12px; }
+  .notice-line { color: var(--warn); margin: 0 0 12px; }
   .cover {
     width: 100%; max-width: 100%; border-radius: var(--radius);
     border: 1px solid var(--edge); margin: 22px 0; display: block;

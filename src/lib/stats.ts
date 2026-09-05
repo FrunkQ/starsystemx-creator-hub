@@ -8,14 +8,18 @@ export interface HubStats {
   totals: {
     creators: Count; maps_public: Count; maps_all: Count; downloads: Count; hearts: Count;
     downloads_period: Count; visitors_period: Count; uploads_period: Count; refusals_period: Count;
+    // 0021. Absent until that migration runs.
+    comments?: Count;
   };
   growth: Array<{
     week: string; creators: Count; maps: Count; uploads: Count; refusals: Count; downloads: Count; visitors: Count;
+    comments?: Count;
   }>;
   top_maps: Array<{
     slug: string; title: string; handle: string; download_count: Count; hearts_count: Count; downloads_period: Count;
+    comments_count?: Count;
   }>;
-  top_creators: Array<{ handle: string; maps: Count; downloads: Count; hearts: Count; bundle_bytes: Count }>;
+  top_creators: Array<{ handle: string; maps: Count; downloads: Count; hearts: Count; bundle_bytes: Count; comments?: Count }>;
   storage: { asset_bytes: Count; asset_count: Count; bundle_bytes: Count; bundle_count: Count; db_bytes?: Count };
   failures: Array<{ reason: string; n: Count }>;
   queue: { pending: Count; oldest_pending: string | null; flagged: Count; open_reports: Count };

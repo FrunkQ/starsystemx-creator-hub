@@ -1,5 +1,7 @@
 import type { PageServerLoad } from './$types';
 import { db } from '$lib/server/db';
+import { tolerantSelect } from '$lib/server/tolerant';
+import { CARD_COLUMNS, CARD_OPTIONAL, type CardRow } from '$lib/server/cards';
 import { vocabularyFrom } from '$lib/vocabulary';
 
 /** Pills the hub DERIVES from the file, grouped - see 0007's note on why these are kept apart. */
@@ -31,29 +33,32 @@ export const load: PageServerLoad = async ({ platform, url, setHeaders }) => {
   if (!env?.SUPABASE_URL) return { ...empty, configured: false, failed: false };
 
   const sb = db(env);
-  let query = sb.from('systems')
-    .select('slug, title, summary, blurb, kind, cover_sha256, hearts_count, download_count, auto_tags, tags, body_count, construct_count, system_count')
-    .eq('state', 'public').eq('visibility', 'public');
+  // Built from the column list, so a column the database lacks yet can be dropped and the query
+  // run again (tolerant.ts) - a builder cannot be re-run once awaited.
+  const build = (cols: string) => {
+    let query = sb.from('systems').select(cols).eq('state', 'public').eq('visibility', 'public');
 
-  // A starmap and a system are different things to look for (owner, 2026-09-04).
-  if (kind) query = query.eq('kind', kind);
+    // A starmap and a system are different things to look for (owner, 2026-09-04).
+    if (kind) query = query.eq('kind', kind);
 
-  // Each selected tag must be present - in the hub's DERIVED pills or the creator's OWN picks.
-  // Narrowing rather than widening is what people expect from a stack of filters: each pill you
-  // add should show you less, not more. The creator's tags are what tell the fortieth Solar
-  // System apart from the thirty-nine before it, so they filter here too.
-  for (const t of selected) query = query.or('auto_tags.cs.{' + t + '},tags.cs.{' + t + '}');
+    // Each selected tag must be present - in the hub's DERIVED pills or the creator's OWN picks.
+    // Narrowing rather than widening is what people expect from a stack of filters: each pill you
+    // add should show you less, not more. The creator's tags are what tell the fortieth Solar
+    // System apart from the thirty-nine before it, so they filter here too.
+    for (const t of selected) query = query.or('auto_tags.cs.{' + t + '},tags.cs.{' + t + '}');
 
-  // Titles and the one-line blurb. Not descriptions: ILIKE over prose is slow and ranks badly; a
-  // real text index is the answer when the library is big enough to need one.
-  if (q) query = query.or('title.ilike.%' + q + '%,blurb.ilike.%' + q + '%');
+    // Titles and the one-line blurb. Not descriptions: ILIKE over prose is slow and ranks badly; a
+    // real text index is the answer when the library is big enough to need one.
+    if (q) query = query.or('title.ilike.%' + q + '%,blurb.ilike.%' + q + '%');
 
-  query = sort === 'new'
-    ? query.order('created_at', { ascending: false })
-    : query.order('hearts_count', { ascending: false }).order('created_at', { ascending: false });
+    query = sort === 'new'
+      ? query.order('created_at', { ascending: false })
+      : query.order('hearts_count', { ascending: false }).order('created_at', { ascending: false });
+    return query.limit(60);
+  };
 
   const [{ data, error }, { data: vocabRow }] = await Promise.all([
-    query.limit(60),
+    tolerantSelect<CardRow[]>(CARD_COLUMNS, CARD_OPTIONAL, build),
     sb.from('config').select('value').eq('key', 'creator_vocabulary').maybeSingle()
   ]);
   const mine = vocabularyFrom(vocabRow?.value ?? null).map((g) => ({ label: g.label, tags: g.tags }));

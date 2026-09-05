@@ -451,6 +451,41 @@ rather than an oversight — the privacy *practice* is stated in plain words ins
 **`LAST_UPDATED` in the page IS the version.** The terms say the current version is the one on the
 page, dated, so that string is the mechanism. Change the text, change the date.
 
+### D-27. Comments: registered explorers, removed not deleted, counted like stars
+
+The owner's ask (2026-09-05): *"registered users should be able to comment on maps - and comments
+counted and accumulated like stars"*, then *"admins need to be able to delete comments easily"*.
+
+**Built as:** one `comments` table (migration 0021). Signed-in, active accounts only - the same
+rule as stars and reports, because an anonymous comment box is a griefing tool. Plain form posts
+with a redirect back to the map, so it works without a script and the page after a post is served
+`no-store` so the new comment is never hidden behind a cached copy.
+
+**Removed, never deleted, by the site.** `removed_at` is set, with who and under which claim
+(`author`, `cartographer`, `admin`), so the count stays honest and a removal can be answered or
+undone. Only a cascade - the creator or the map deleted - takes the row away. The count is
+denormalised onto `systems.comments_count` by a trigger that RECOUNTS rather than nudges, because
+a removal is an update and a nudged count would drift.
+
+**Who may remove:** the author; the cartographer whose map it sits under (their page, their call -
+a judgement the owner was not asked and can reverse); an admin, whose removal is audited.
+`/admin/comments` lists every live comment newest first with one-click Remove, and the removed
+ones with Restore, so an admin never hunts map by map.
+
+**Counted like stars:** beside the star button on the map page; on cards (only when there are
+any - a zero on every card at launch says nothing); on the account page per map and in total; on
+the usage page in the tiles, the weekly growth, the top maps and the cartographers.
+
+**Limits:** twenty comments an hour per account, and the same words twice under one map collapse
+to one. If spam arrives, an account-age gate is the next lever.
+
+**Not built, deliberately:** threads, replies, editing, reactions, notifications, reporting one
+comment (report the map with "Something else" for now). Each is a product decision.
+
+**Also in 0.14.0:** reads that name a column the database does not have yet drop that column and
+read again (`tolerantSelect`), the way writes already did, so the card lists survive a deploy that
+runs ahead of a migration. The card column list lives in one place (`server/cards.ts`).
+
 ### D-16. The takedown address is assembled at runtime, never served as text
 
 The owner's instruction was explicit: keep it off the page as scrapable text. It is stored as

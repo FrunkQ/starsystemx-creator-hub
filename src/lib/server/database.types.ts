@@ -88,6 +88,8 @@ export type SystemRow = {
   visibility: Visibility;
   cover_sha256: string | null;
   hearts_count: number;
+  // 0021: live comments under the map, maintained by trigger like hearts_count.
+  comments_count: number;
   download_count: number;
   source_bytes: number;
   // The CAPABILITY MARKER - which engine build wrote this. Never a parse gate.
@@ -241,6 +243,19 @@ export type ReportRow = {
   created_at: string;
 }
 
+// 0021. A comment under a map. Removed, never deleted, by the site: `removed_at` set, by whom and
+// under which claim (author | cartographer | admin). Only a cascade deletes the row.
+export type CommentRow = {
+  id: string;
+  system_id: string;
+  creator_id: string;
+  body: string;
+  created_at: string;
+  removed_at: string | null;
+  removed_by: string | null;
+  removed_reason: string | null;
+}
+
 export type ConfigRow = {
   key: string;
   value: unknown;
@@ -352,6 +367,10 @@ export interface Database {
       bodies: Table<NodeRow>;
       constructs: Table<ConstructRow>;
       hearts: Table<HeartRow>;
+      comments: Table<
+        CommentRow,
+        [Rel<'comments_system_id_fkey', 'system_id', 'systems', 'id'>]
+      >;
       reports: Table<
         ReportRow,
         [Rel<'reports_system_id_fkey', 'system_id', 'systems', 'id'>]

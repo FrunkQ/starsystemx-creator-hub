@@ -22,4 +22,12 @@ describe('what the code assumes about the schema', () => {
     // never landed, and covers vanished after the first page view. The key is (system_id, bundle_path).
     expect(SYSTEM_ASSETS_KEY).toBe(primaryKeyOf('system_assets'));
   });
+
+  it('keeps the comment count by a trigger that recounts on removal as well as on insert', () => {
+    // api/comment REMOVES by updating removed_at; a trigger on insert and delete alone would leave
+    // the count one too high after every removal.
+    const sql = readFileSync('db/migrations/0021_comments.sql', 'utf8');
+    expect(sql).toMatch(/after insert or update of removed_at or delete on comments/);
+    expect(sql).toMatch(/alter table systems add column if not exists comments_count/);
+  });
 });

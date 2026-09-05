@@ -43,9 +43,12 @@ and bumps the format, and this goes red on a fixture it does not understand.
 anything else), then publish. **Patreon and Discord hooks are built and switched off** — the schema
 is the expensive part to change later, so it exists now; see `docs/integrations.md`.
 
-Not built yet: hearts and discovery UI (phase 3 — the API and schema exist), account deletion, the
-Patreon OAuth callback (the webhook and entitlement logic are done), in-app sign-in for SSE
-(`docs/sse-requirements.md` R-06), and `/terms`, `/acceptable-use`, `/takedown`.
+**Stars and comments** are the community layer: both need an account, both are counted on the map
+and accumulated for its cartographer, and a comment is removed (by its author, the cartographer or
+an admin) rather than deleted. See `docs/decisions.md` D-27.
+
+Not built yet: account deletion, the Patreon OAuth callback (the webhook and entitlement logic are
+done), and in-app sign-in for SSE (`docs/sse-requirements.md` R-06).
 
 ---
 
