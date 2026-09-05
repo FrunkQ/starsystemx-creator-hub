@@ -582,6 +582,44 @@ the shared ownership, made visible. And the ORIGINAL map's page lists *"Used in:
 because the hub can see which public maps credit it (0019). Nothing for the engine to do for that
 half; it falls out of recording the chain faithfully.
 
+## R-17. Open a hub map from a URL — one click from a map page into the app
+
+**The owner's ask (2026-09-05):** *"how feasible is just an 'open in SSE' button next to download -
+instead of the Open SSE at the top - it is just 'open this in SSE'."*
+
+**What the hub does.** When the config row `open_in_sse_url` is set, every map page shows "Open in
+Star System Explorer" beside the download. The link is that URL with the map's download URL
+appended, percent-encoded:
+
+```
+https://starsystemx.com/?open=https%3A%2F%2Fexplorers.starsystemx.com%2Fapi%2Fdownload%2Flocal-neighbourhood
+```
+
+`GET /api/download/<slug>` already answers cross-origin: `access-control-allow-origin: *`, no
+credentials, on success and on error alike (the hub's `cors.ts`, learned the hard way). So there
+is no CORS problem to solve on the engine side: a plain `fetch` of that URL from starsystemx.com
+works today and returns the `.sse.zip` bundle, reassembled from approved assets only.
+
+**What the engine needs to do.**
+
+1. On load, read `open` from the query string (or the hash — the hub can send either; say which).
+2. Accept it only when it is an `https:` URL on a host the engine trusts — the hub's domain, its
+   workers.dev name while that lasts, a `pages.dev` preview. Anything else is ignored with a
+   plain message. A URL parameter that the app will fetch and load is an SSRF-shaped thing; the
+   allow-list is the whole defence.
+3. `fetch` it, and hand the bytes to the existing bundle import path — the same one the file
+   picker uses — so provenance, attributions and the format gate behave exactly as for a file.
+4. Then behave as a normal import would: ask the same "replace or add?" question the picker asks,
+   in the same words. Do not auto-replace a campaign somebody has open because a link said so.
+5. Strip the parameter from the address bar once handled, so a reload does not import twice.
+
+**What the hub will set.** The URL template goes in `open_in_sse_url`, e.g. `https://starsystemx.com/?open=`
+— the engine tells the hub the exact parameter name and the hub sets the row. Until then the button
+is not shown; nothing ships dead.
+
+**Not asked:** deep-linking to an object inside the map on open. The clip's `#node=<id>` already
+does that on the hub side; the engine can honour a second parameter later if it wants to.
+
 ---
 
 ## What the hub will NOT ask the engine to do

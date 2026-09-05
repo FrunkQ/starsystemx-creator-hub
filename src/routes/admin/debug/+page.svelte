@@ -51,7 +51,7 @@
       <tbody>
         {#each data.uploads as u (u.id)}
           <tr class:stale={ageDays(u.uploaded_at) > data.retentionDays}>
-            <td><a href="/admin/debug/{u.id}">{u.filename}</a></td>
+            <td><a href="/admin/debug/{u.id}/inspect">{u.filename}</a> <a class="dl" href="/admin/debug/{u.id}" data-sveltekit-reload title="Download the raw file">download</a></td>
             <td>{formatBytes(u.byte_size)}</td>
             <td>{ageDays(u.uploaded_at)}d</td>
             <td class="note">{u.user_note ?? ''}</td>

@@ -136,7 +136,12 @@ export const load: PageServerLoad = async ({ params, platform, setHeaders, url, 
   const withheldCount = hashes.length - approved.size;
 
   // HOW MUCH IS WRITTEN ABOUT IT (D-30): the stored score, against the best on the hub.
-  const best = await bestDensity(sb);
+  const [best, pageSite, gates] = await Promise.all([bestDensity(sb), loadSite(sb, url), loadGates(sb)]);
+  // "OPEN IN STAR SYSTEM EXPLORER" (D-35): the engine URL with the download URL appended, once the
+  // engine can receive one (R-17). The download route already answers cross-origin.
+  const openInSse = gates.open_in_sse_url
+    ? gates.open_in_sse_url + encodeURIComponent(pageSite.url + '/api/download/' + system.slug)
+    : null;
   const detail = densityFrom(system.info_density, system.info_detail);
   const level = densityLevel(system.info_density, best);
   const density = { level, summary: densitySummary(level, detail), measured: detail !== null };
@@ -153,6 +158,7 @@ export const load: PageServerLoad = async ({ params, platform, setHeaders, url, 
     constructs: constructs ?? [],
     usedIn,
     density,
+    openInSse,
     starred,
     comments,
     commentsAvailable: !commentsErr,

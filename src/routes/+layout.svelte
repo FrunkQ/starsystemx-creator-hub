@@ -42,6 +42,7 @@
         <a href="/admin/explorers">Explorers</a>
         <a href="/admin/reports">Reports</a>
         <a href="/admin/backup">Backups</a>
+        <a href="/admin/config">Gates</a>
         <a href="/admin/stats">Usage</a>
         <a href="/admin/debug">Debug</a>
       {/if}

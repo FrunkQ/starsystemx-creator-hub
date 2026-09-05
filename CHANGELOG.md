@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.19.0 — 2026-09-05
+
+### Inspect a debug upload
+
+A debug upload can be read as evidence without being trusted: zip or JSON, whether the zip carries
+its own index, what is inside, whether the document parses and where it stops if not, the
+versions, the objects complete and incomplete, orphans and duplicate ids, GM material, and every
+asset the document names against what the zip holds. At `/admin/debug/<id>/inspect`.
+
+### Open in Star System Explorer
+
+The hub side of a one-click open from a map page: a button beside the download, shown once the
+engine can receive a URL (R-17 in `docs/sse-requirements.md`; migration 0026 adds the gate). The
+Gates page is in the admin nav.
+
 ## 0.18.0 — 2026-09-05
 
 Any hub badge can be a Discord role: `discord_badge_roles` maps badge ids to role ids, given and

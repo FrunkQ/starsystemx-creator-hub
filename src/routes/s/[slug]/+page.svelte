@@ -115,6 +115,10 @@
         <a class="download" href="/api/download/{s.slug}" data-sveltekit-reload>
           Download for Star System Explorer
         </a>
+        <!-- One click into the app (D-35): shown once the engine can receive a URL (R-17). -->
+        {#if data.openInSse}
+          <a class="download open" href={data.openInSse} target="_blank" rel="noopener">Open in Star System Explorer</a>
+        {/if}
       </p>
       <p class="download-note">
         Free. No account needed. Opens directly in
@@ -343,6 +347,9 @@
     .top { grid-template-columns: minmax(0, 1.15fr) minmax(360px, 0.85fr); align-items: start; }
   }
   .lead .dl, .lead .social { margin: 0 0 8px; }
+  .lead .dl { display: flex; gap: 8px; flex-wrap: wrap; }
+  .download.open { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+  .download.open:hover { background: var(--panel-2); filter: none; }
   .lead .download-note { margin: 0 0 12px; }
   .lead .panel { margin: 12px 0 0; }
   .visual .cover { margin: 0 0 12px; }

@@ -48,6 +48,11 @@ export interface Gates {
   discord_share_webhook: string;
   /** Hub badge id -> Discord role id (D-34). Given and taken with the badge, through the bot. */
   discord_badge_roles: Record<string, string>;
+  /**
+   * "Open in Star System Explorer" (D-35, engine R-17): the engine URL the encoded download URL
+   * is appended to, e.g. `https://starsystemx.com/?open=`. Empty until the engine can receive it.
+   */
+  open_in_sse_url: string;
   patreon_enabled: boolean;
   patreon_campaign_id: string;
   patreon_tier_map: Record<string, string>;
@@ -91,6 +96,7 @@ export const GATE_FALLBACKS: Gates = {
   discord_role_pro: '',
   discord_share_webhook: '',
   discord_badge_roles: {},
+  open_in_sse_url: '',
   patreon_enabled: false,
   patreon_campaign_id: '',
   patreon_tier_map: {}

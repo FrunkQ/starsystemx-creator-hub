@@ -673,6 +673,31 @@ admin's own address through whatever SMTP Supabase has - a password-reset mail, 
 the one email Supabase sends on demand. A secret pasted into a migration would be committed;
 values like the webhook go in through the page or a one-line update, never the repo.
 
+### D-35. A debug upload can be inspected without being trusted; a map can open in the app
+
+**Inspection** (owner, 2026-09-05: "see if it can do a basic parse - pull out version numbers and
+complete objects - detect any json errors or truncated file, resources and other files it says it
+requires"). `src/lib/bundle/inspect.ts` reads a debug upload as EVIDENCE: is it a zip or JSON; does
+the zip carry its own index (a missing end-of-central-directory record is a transfer cut short);
+what is inside; does the document parse, and if not, what was said, at which character, with the
+text around it, and whether the brackets are still open at the end (cut short) or simply wrong;
+the versions (`bundleFormat`, `appVersion`, `revision`, `exportMode`); how many objects, how many
+complete (id, kind and name), the incomplete ones, the orphans, the duplicate ids; the GM
+material; every `assets/` path the document names and whether the zip has it. Bounded, guarded,
+never throws: a file that crashed the engine's parser must not crash this one. Read on demand at
+`/admin/debug/<id>/inspect`, admin only; the bytes stay where they are and nothing about the
+reading is stored. Storage is still the unparsed path it always was.
+
+**Open in the app** (owner: "how feasible is just an 'open in SSE' button next to download... or
+will that hit CORS issues?"). Feasible, and no CORS problem: the download route has answered
+cross-origin since `cors.ts`. The engine needs to accept a URL, fetch it and hand the bytes to its
+file-import path - R-17 in `docs/sse-requirements.md`, a prompt in
+`docs/prompt-for-sse-2026-09-05.md`. The hub's side is built and gated: `open_in_sse_url`
+(migration 0026) holds the engine's prefix and the button appears only once it is set, so nothing
+ships dead.
+
+**Also:** the Gates page was reachable only by URL; it is in the admin nav now.
+
 ### D-16. The takedown address is assembled at runtime, never served as text
 
 The owner's instruction was explicit: keep it off the page as scrapable text. It is stored as
