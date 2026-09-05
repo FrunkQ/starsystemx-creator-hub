@@ -53,8 +53,11 @@ npx wrangler r2 bucket create sshub-bundles
 > real to read and should not guess.** If that error ever appears here anyway, the fix is to run
 > `npx wrangler types` once and commit `worker-configuration.d.ts` — not to edit the build script.
 
-**A Cron Trigger** for the integration outbox, once Discord is switched on. Every 5 minutes is
-plenty; it POSTs `/api/admin/outbox` with the `x-cron-key` header set to `CRON_SECRET`.
+**The Cron Triggers are in `wrangler.toml`** and need nothing set up: `worker/index.mjs` wraps the
+adapter's worker with a `scheduled` handler that calls `/api/admin/outbox` every fifteen minutes
+and `/api/admin/backup` weekly, in-process. Those routes recognise the Worker's own call by the
+absence of `cf-connecting-ip` and `request.cf`, which no outside request can leave off. An
+external scheduler can still POST the same routes with `x-cron-key` set to `CRON_SECRET`.
 
 **Git builds.** Workers Builds is configured under the Worker's **Settings → Build**: connect the
 repo and set the production branch to `main`. It is not automatic the way Vercel is — connecting the
@@ -98,7 +101,7 @@ npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
 | `SUPABASE_URL` | everything | now |
 | `SUPABASE_SERVICE_ROLE_KEY` | everything | now |
 | `VISITOR_SALT` | the anonymous visitor hash on downloads (D-20) | before the usage numbers are relied on; any long random string |
-| `CRON_SECRET` | the outbox drain | when Discord goes on |
+| `CRON_SECRET` | an OUTSIDE scheduler calling the drain or the backup | optional: the Worker's own Cron Triggers need no secret |
 | `DISCORD_CLIENT_ID` / `DISCORD_CLIENT_SECRET` | linking accounts | when Discord goes on |
 | `DISCORD_BOT_TOKEN` | assigning roles | when Discord goes on |
 | `PATREON_CLIENT_ID` / `PATREON_CLIENT_SECRET` | linking accounts | when Patreon exists |

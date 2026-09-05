@@ -11,7 +11,15 @@ compatibility_flags = ["nodejs_compat"]
 #
 #   Pages:   pages_build_output_dir = ".svelte-kit/cloudflare"
 #   Workers: main + [assets], which is what is below
-main = ".svelte-kit/cloudflare/_worker.js"
+# THE ENTRY IS A WRAPPER (worker/index.mjs) around the file the adapter emits: the same `fetch`,
+# plus a `scheduled` handler so the Cron Triggers below have something to call (D-33).
+main = "worker/index.mjs"
+
+# THE CLOCK. The outbox (Discord shares and roles) drains every fifteen minutes; a backup of every
+# table is taken weekly, Monday 03:00 UTC. Both run inside this Worker; no external scheduler and
+# no secret are needed. Times are UTC.
+[triggers]
+crons = ["*/15 * * * *", "0 3 * * 1"]
 
 # THE BINDING MUST BE CALLED `ASSETS`. The worker that @sveltejs/adapter-cloudflare generates calls
 # `env.ASSETS.fetch` by name, so this is not a free choice.

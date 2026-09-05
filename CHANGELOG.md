@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.19.2 — 2026-09-05
+
+The Worker keeps its own clock: Cloudflare Cron Triggers drain the outbox every fifteen minutes
+and take a backup every Monday at 03:00 UTC, through a small wrapper around the adapter's worker.
+Nothing to set up and no secret needed; an outside scheduler with the cron key still works.
+
 ## 0.19.1 — 2026-09-05
 
 The tag groups on a map page are a closed concertina by default, opened by hand or when a tag is

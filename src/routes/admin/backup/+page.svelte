@@ -25,11 +25,10 @@
 <div class="panel notice">
   <h3>On a schedule</h3>
   <p>
-    A Worker has no clock of its own. Point any scheduler (cron-job.org, a GitHub Action, a
-    Cloudflare Cron Trigger on a tiny worker) at
-    <code>POST /api/admin/backup</code> with the header <code>x-cron-key: &lt;CRON_SECRET&gt;</code>,
-    weekly. {#if data.hasCronKey}The secret is set.{:else}<strong>CRON_SECRET is not set yet</strong> - set it with <code>wrangler secret put CRON_SECRET</code>.{/if}
-    The same key drains the outbox at <code>POST /api/admin/outbox</code>.
+    The Worker takes a backup itself every Monday at 03:00 UTC, and drains the outbox every
+    fifteen minutes - Cloudflare Cron Triggers, nothing to set up. An outside scheduler can still
+    call <code>POST /api/admin/backup</code> or <code>POST /api/admin/outbox</code> with the header
+    <code>x-cron-key: &lt;CRON_SECRET&gt;</code>{#if data.hasCronKey} (the secret is set){:else} (no secret is set, and none is needed for the built-in schedule){/if}.
   </p>
 </div>
 

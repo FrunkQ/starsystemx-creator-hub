@@ -657,8 +657,16 @@ the manage pages, the account and the downloads.
 **Backups** (`server/backup.ts`, `/admin/backup`): every table, minus the two secret columns, as one
 gzipped JSON document in the bundles bucket, the last eight kept, on a button or from any external
 scheduler with the cron key. The pictures and bundles are already the only copy of themselves in
-R2; the backup names which ones matter. A Worker has no clock, so the schedule is the owner's to
-point at `POST /api/admin/backup`.
+R2; the backup names which ones matter.
+
+**The clock, after all (0.19.2).** "A Worker has no clock" was true of the file the adapter emits,
+which has a `fetch` handler and nothing else. The owner did not know how to set up a scheduler, so
+the hub grew one: `worker/index.mjs` wraps that file - the same `fetch`, plus a `scheduled` handler
+- and `wrangler.toml` carries the Cron Triggers: the outbox every fifteen minutes, a backup every
+Monday at 03:00 UTC. The handler calls the two housekeeping routes in-process; such a request
+never crossed Cloudflare's edge, so it carries neither `cf-connecting-ip` nor `request.cf`, a pair
+no outside caller can leave off, and the routes take their absence as "the Worker itself". No
+secret to set, nothing to point anywhere. `CRON_SECRET` remains for an outside scheduler, optional.
 
 ### D-34. Hub badges can be Discord roles; the config page tries things
 
