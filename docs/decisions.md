@@ -595,6 +595,17 @@ pictured or modelled. Chips narrow; a row's own pills toggle the same tags. A ma
 the path down to it and every surviving branch open; the rest is not drawn. Not remembered between
 visits: a filter that survives a reload reads as a broken map.
 
+**Second pass, same day.** The owner, with a screenshot of the filtered tree: biospheres and
+megastructures should be in the tag list, "and others"; and it still looked busy - only the rows
+the filter matched should show their pills. So: the chips show EVERY tag, grouped by the engine's
+namespace (science, biodiversity, resource, orbit...) - a biosignature on one world is exactly what
+somebody filters for, so nothing hides behind a "more"; and row pills are off by default, shown on
+a row the filter matched (so you see why) or for every row when "Show tags" is switched on, which
+is remembered. A role chip appears only for roles the map has - a map with no megastructures has
+no megastructures chip, and that is the truth rather than a gap. The page also uses the screen:
+the container is near the full width of a 1920 display (prose pages cap themselves), and on a
+wide screen the description sits beside the cover, stacking again on a narrow one.
+
 **Megastructures are a count, not a claim.** Removed from the creator vocabulary (with
 `dyson-structures`); added to the counted roles that earn a browse pill (`facets.ts`
 `ROLE_PILLS`), because "maps with megastructures" is a real question for browse and a real filter

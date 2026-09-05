@@ -1,6 +1,6 @@
 // Filtering the tree by what is in the map (src/lib/treeFilter.ts).
 import { describe, it, expect } from 'vitest';
-import { EMPTY_FILTER, isActive, matches, visibleIds, tagCounts, roleCounts, tagParts } from '../src/lib/treeFilter';
+import { EMPTY_FILTER, isActive, matches, visibleIds, tagCounts, tagGroups, roleCounts, tagParts } from '../src/lib/treeFilter';
 
 const node = (id: string, parent: string | null, role: string, tags: string[] = [], extra = {}) =>
   ({ node_id: id, parent_id: parent, name: id, role_hint: role, tags, ...extra });
@@ -46,6 +46,17 @@ describe('the filter', () => {
   it('counts tags and roles for the chips, most common first', () => {
     expect(tagCounts([earth, mars, luna, node('x', null, 'planet', ['life'])])[0]).toEqual(['life', 2]);
     expect(roleCounts(nodes)).toEqual({ star: 1, planet: 2, moon: 1, station: 1 });
+  });
+
+  it('groups every tag by namespace, biggest group first, and hides nothing', () => {
+    const groups = tagGroups([
+      node('a', null, 'planet', ['science/biosignature', 'resource/helium-3', 'orbit/tidally-locked']),
+      node('b', null, 'planet', ['resource/helium-3', 'resource/water-ice', 'plain']),
+      node('c', null, 'moon', ['resource/helium-3'])
+    ]);
+    expect(groups.map((g) => g.ns)).toEqual(['resource', '', 'orbit', 'science']);
+    expect(groups[0].tags).toEqual([['resource/helium-3', 3], ['resource/water-ice', 1]]);
+    expect(groups.find((g) => g.ns === 'science')?.tags).toEqual([['science/biosignature', 1]]);
   });
 
   it('splits a tag for display', () => {

@@ -19,7 +19,9 @@
   --warn: #ffc266;
   --bad: #ff8080;
   --radius: 10px;
-  --max: 1080px;
+  /* Use the screen (owner, 2026-09-05): near the full width of a 1920 display, capped on ultrawide
+     so lines of prose stay readable. Pages that are prose cap themselves narrower. */
+  --max: 1800px;
 }
 
 * { box-sizing: border-box; }
@@ -63,7 +65,10 @@ header nav {
 }
 .cta:hover { text-decoration: none; filter: brightness(1.08); }
 
-main { max-width: var(--max); margin: 0 auto; padding: 28px 20px 64px; }
+main { max-width: var(--max); margin: 0 auto; padding: 20px 32px 56px; }
+@media (max-width: 720px) { main { padding: 16px 16px 48px; } }
+/* Prose pages (the terms, the takedown page) keep a readable measure however wide the screen. */
+.prose { max-width: 78ch; }
 
 footer {
   border-top: 1px solid var(--edge); background: var(--panel);

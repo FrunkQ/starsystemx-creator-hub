@@ -69,6 +69,33 @@ export function tagCounts(nodes: FilterableNode[]): Array<[string, number]> {
   return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
 }
 
+export interface TagGroup { ns: string; total: number; tags: Array<[string, number]> }
+
+/**
+ * Every tag in the map, grouped by the engine's namespace ("science/biosignature" sits under
+ * science), biggest group first, most common tag first within it. All of them: a tag on one object
+ * is exactly the one somebody filters for, so nothing hides behind a "more".
+ */
+export function tagGroups(nodes: FilterableNode[]): TagGroup[] {
+  const groups = new Map<string, Map<string, number>>();
+  for (const n of nodes) {
+    for (const t of new Set(n.tags)) {
+      const key = t.split('=')[0];
+      const ns = key.includes('/') ? key.slice(0, key.indexOf('/')) : '';
+      const g = groups.get(ns) ?? new Map<string, number>();
+      g.set(t, (g.get(t) ?? 0) + 1);
+      groups.set(ns, g);
+    }
+  }
+  return [...groups.entries()]
+    .map(([ns, g]) => ({
+      ns,
+      total: [...g.values()].reduce((a, b) => a + b, 0),
+      tags: [...g.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    }))
+    .sort((a, b) => b.total - a.total || a.ns.localeCompare(b.ns));
+}
+
 /** Objects by role, for the role chips: the same counting the tree's summaries use. */
 export function roleCounts(nodes: FilterableNode[]): Record<string, number> {
   const out: Record<string, number> = {};

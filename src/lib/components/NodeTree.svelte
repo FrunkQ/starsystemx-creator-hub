@@ -35,7 +35,7 @@
   import { COPY_ICON, TICK_ICON, CODE_ICON, LINK_ICON, orderRoles } from './roleIcons';
   import { buildClip, clipText, deepLink, nodeFromHash, type ClipSource, type CreditLike } from '$lib/bundle/clip';
   import {
-    EMPTY_FILTER, isActive, visibleIds, tagCounts, roleCounts, tagParts, isDescribed,
+    EMPTY_FILTER, isActive, visibleIds, tagGroups, roleCounts, tagParts, isDescribed,
     type TreeFilter, type FilterableNode
   } from '$lib/treeFilter';
 
@@ -67,13 +67,15 @@
   // THE FILTER. Not remembered between visits: a filter that survives a reload reads as a broken
   // map ("where did Jupiter go?").
   let filter = $state<TreeFilter>({ ...EMPTY_FILTER });
-  let showAllTags = $state(false);
-  const TAG_LIMIT = 18;
   const active = $derived(isActive(filter));
   const found = $derived(visibleIds(nodes, filter));
   const roleChips = $derived(orderRoles(roleCounts(nodes)));
-  const tagChips = $derived(tagCounts(nodes));
-  const shownTags = $derived(showAllTags ? tagChips : tagChips.slice(0, TAG_LIMIT));
+  // Every tag, grouped by the engine's namespace: the rare ones are the ones people filter for.
+  const groups = $derived(tagGroups(nodes));
+  // ROW PILLS ARE OFF BY DEFAULT (owner, 2026-09-05: "too busy"). A row shows its tags when the
+  // filter matched it - so you can see why - or when the person switched them on for every row.
+  let showTags = $state(false);
+  const tagsOn = (id: string) => showTags || (active && found.matched.has(id));
   const anyDescribed = $derived(nodes.some(isDescribed));
   const anyPictured = $derived(nodes.some((n) => !!n.image_sha256));
   const anyModelled = $derived(nodes.some((n) => !!n.model_sha256));
@@ -98,6 +100,7 @@
       const saved = JSON.parse(localStorage.getItem(memoryKey) ?? 'null');
       if (saved && typeof saved === 'object') {
         if (saved.sort === 'name' || saved.sort === 'distance') sort = saved.sort;
+        if (typeof saved.showTags === 'boolean') showTags = saved.showTags;
         if (saved.open && typeof saved.open === 'object') { open = saved.open; epoch += 1; }
       }
     } catch { /* no memory is fine */ }
@@ -131,7 +134,7 @@
 
   function remember() {
     try {
-      localStorage.setItem(memoryKey, JSON.stringify({ sort, open }));
+      localStorage.setItem(memoryKey, JSON.stringify({ sort, open, showTags }));
     } catch { /* storage refused: nothing lost but a convenience */ }
   }
 
@@ -278,7 +281,7 @@
         {@render summaryOf(node)}
         {@render actions(node, true)}
       </summary>
-      {#if node.tags.length}
+      {#if node.tags.length && tagsOn(node.node_id)}
         <div class="tags" style="--depth: {depth + 1}">{@render tagList(node.tags, 40)}</div>
       {/if}
       {#if shown[node.node_id]}
@@ -299,7 +302,7 @@
         <span class="name">{node.name}</span>
         {#if node.role_hint}<span class="role">{node.role_hint}</span>{/if}
         {@render distanceOf(node)}
-        {#if node.tags.length}<span class="tags inline">{@render tagList(node.tags, 6)}</span>{/if}
+        {#if node.tags.length && tagsOn(node.node_id)}<span class="tags inline">{@render tagList(node.tags, 6)}</span>{/if}
         {@render actions(node, false)}
       </summary>
       {#if shown[node.node_id]}
@@ -323,20 +326,21 @@
     {#if anyPictured}<button type="button" class="chip" class:on={filter.pictured} onclick={() => (filter.pictured = !filter.pictured)}>with a picture</button>{/if}
     {#if anyModelled}<button type="button" class="chip" class:on={filter.modelled} onclick={() => (filter.modelled = !filter.modelled)}>with a 3D model</button>{/if}
   </div>
-  {#if tagChips.length}
-    <div class="chips">
-      <span class="lbl">Tags in this map</span>
-      {#each shownTags as [t, n] (t)}
-        {@const p = tagParts(t)}
-        <button type="button" class="chip tag" class:on={filter.tags.includes(t)} onclick={() => toggleTag(t)} title={t}>
-          {p.key}{#if p.value}<b>{p.value}</b>{/if}<i>{n}</i>
-        </button>
+  {#if groups.length}
+    <!-- Every tag in the map, by the engine's namespace, so a biosignature on one world is as
+         findable as a lock on sixty. -->
+    <div class="groups">
+      {#each groups as g (g.ns)}
+        <div class="chips group">
+          <span class="lbl">{g.ns || 'other'}</span>
+          {#each g.tags as [t, n] (t)}
+            {@const p = tagParts(t)}
+            <button type="button" class="chip tag" class:on={filter.tags.includes(t)} onclick={() => toggleTag(t)} title={t}>
+              {p.key}{#if p.value}<b>{p.value}</b>{/if}<i>{n}</i>
+            </button>
+          {/each}
+        </div>
       {/each}
-      {#if tagChips.length > TAG_LIMIT}
-        <button type="button" class="chip more" onclick={() => (showAllTags = !showAllTags)}>
-          {showAllTags ? 'fewer' : 'all ' + tagChips.length}
-        </button>
-      {/if}
     </div>
   {/if}
 </div>
@@ -353,6 +357,10 @@
   </div>
   <button type="button" class="ghost" onclick={() => setAll(true)}>Expand all</button>
   <button type="button" class="ghost" onclick={() => setAll(false)}>Collapse all</button>
+  <button type="button" class="ghost" class:on={showTags} onclick={() => { showTags = !showTags; remember(); }}
+    title="Show every object's tags on its row. Off, a row shows them only when the filter matched it.">
+    {showTags ? 'Hide tags' : 'Show tags'}
+  </button>
 </div>
 
 {#key epoch}
@@ -374,6 +382,9 @@
   }
   .chips { display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; }
   .lbl { color: var(--ink-faint); font-size: 0.8rem; margin-right: 4px; }
+  .groups { display: flex; flex-direction: column; gap: 4px; }
+  .group .lbl { min-width: 84px; text-transform: lowercase; letter-spacing: 0.02em; }
+  .ghost.on { background: var(--panel-2); color: var(--ink); }
   .chip {
     display: inline-flex; align-items: center; gap: 5px;
     font: inherit; font-size: 0.8rem; padding: 2px 9px; cursor: pointer;
@@ -384,7 +395,6 @@
   .chip.on :global(.role-icon) { color: var(--accent-ink); }
   .chip.tag b { font-weight: 600; margin-left: 2px; }
   .chip.tag i { font-style: normal; opacity: 0.6; font-size: 0.72rem; }
-  .chip.more { border-style: dashed; }
 
   .bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 0 0 8px; }
   .hint { color: var(--ink-faint); font-size: 0.9rem; margin-right: auto; }

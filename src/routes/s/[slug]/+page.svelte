@@ -106,60 +106,69 @@
     - {total} {total === 1 ? 'object' : 'objects'}
   </p>
 
-  <!-- 1. THE DOWNLOAD. One click, no account. -->
-  <p>
-    <a class="download" href="/api/download/{s.slug}" data-sveltekit-reload>
-      Download for Star System Explorer
-    </a>
-  </p>
-  <p class="download-note">
-    Free. No account needed. Opens directly in
-    <a href="https://starsystemx.com" target="_blank" rel="noopener">Star System Explorer</a>,
-    which runs in your browser - nothing to install.
-  </p>
-  <p>
-    <button class="star" class:on={starred} onclick={toggleStar} disabled={starBusy}
-      title={data.signedIn ? (starred ? 'Take your star back' : 'Give this map a star') : 'Sign in to give this map a star'}>
-      <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg>
-      {starred ? 'Starred' : 'Star this map'} · {stars}
-    </button>
-    {#if data.commentsAvailable}
-      <a class="star" href="#comments" title="Comments on this map">
-        <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
-        {commentCount} {commentCount === 1 ? 'comment' : 'comments'}
-      </a>
-    {/if}
-  </p>
-
-  {#if data.withheldCount > 0}
-    <div class="panel notice">
-      <h3>{data.withheldCount} {data.withheldCount === 1 ? 'picture is' : 'pictures are'} awaiting review</h3>
-      <p>
-        Every image uploaded here is looked at by a person before it is shared onward. The map is
-        complete and downloads normally - those pictures are simply not included yet.
+  <!-- ON A WIDE SCREEN the words sit beside the picture; on a narrow one they stack (owner,
+       2026-09-05). The download stays first in reading order either way (design 2). -->
+  <div class="top">
+    <div class="lead">
+      <!-- 1. THE DOWNLOAD. One click, no account. -->
+      <p class="dl">
+        <a class="download" href="/api/download/{s.slug}" data-sveltekit-reload>
+          Download for Star System Explorer
+        </a>
       </p>
+      <p class="download-note">
+        Free. No account needed. Opens directly in
+        <a href="https://starsystemx.com" target="_blank" rel="noopener">Star System Explorer</a>,
+        which runs in your browser - nothing to install.
+      </p>
+      <p class="social">
+        <button class="star" class:on={starred} onclick={toggleStar} disabled={starBusy}
+          title={data.signedIn ? (starred ? 'Take your star back' : 'Give this map a star') : 'Sign in to give this map a star'}>
+          <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg>
+          {starred ? 'Starred' : 'Star this map'} · {stars}
+        </button>
+        {#if data.commentsAvailable}
+          <a class="star" href="#comments" title="Comments on this map">
+            <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+            {commentCount} {commentCount === 1 ? 'comment' : 'comments'}
+          </a>
+        {/if}
+      </p>
+
+      {#if data.withheldCount > 0}
+        <div class="panel notice">
+          <h3>{data.withheldCount} {data.withheldCount === 1 ? 'picture is' : 'pictures are'} awaiting review</h3>
+          <p>
+            Every image uploaded here is looked at by a person before it is shared onward. The map is
+            complete and downloads normally - those pictures are simply not included yet.
+          </p>
+        </div>
+      {/if}
+
+      <!-- 2. What it is, briefly. -->
+      {#if s.description}
+        <div class="panel"><p>{s.description}</p></div>
+      {/if}
     </div>
-  {/if}
 
-  {#if s.description}
-    <div class="panel"><p>{s.description}</p></div>
-  {/if}
+    <aside class="visual">
+      <!-- 3. The cover image, and it is the only picture on the page. -->
+      {#if data.coverServable && s.cover_sha256}
+        <img class="cover" src="/asset/{s.cover_sha256}" alt="Cover image for {s.title}" />
+      {/if}
 
-  <!-- 3. The cover image, and it is the only picture on the page. -->
-  {#if data.coverServable && s.cover_sha256}
-    <img class="cover" src="/asset/{s.cover_sha256}" alt="Cover image for {s.title}" />
-  {/if}
-
-  {#if data.screenshots.length}
-    <div class="shots">
-      {#each data.screenshots as shot (shot.sha256)}
-        <figure>
-          <img src="/asset/{shot.sha256}" alt={shot.caption ?? 'Screenshot of ' + s.title} loading="lazy" />
-          {#if shot.caption}<figcaption>{shot.caption}</figcaption>{/if}
-        </figure>
-      {/each}
-    </div>
-  {/if}
+      {#if data.screenshots.length}
+        <div class="shots">
+          {#each data.screenshots as shot (shot.sha256)}
+            <figure>
+              <img src="/asset/{shot.sha256}" alt={shot.caption ?? 'Screenshot of ' + s.title} loading="lazy" />
+              {#if shot.caption}<figcaption>{shot.caption}</figcaption>{/if}
+            </figure>
+          {/each}
+        </div>
+      {/if}
+    </aside>
+  </div>
 
   <!-- 4. The data. -->
   <h2>What is in it</h2>
@@ -326,8 +335,18 @@
 </article>
 
 <style>
-  h1 { margin: 0 0 4px; font-size: 1.9rem; letter-spacing: -0.02em; }
-  .by { margin: 0 0 20px; color: var(--ink-faint); }
+  h1 { margin: 0 0 2px; font-size: 1.9rem; letter-spacing: -0.02em; }
+  .by { margin: 0 0 12px; color: var(--ink-faint); }
+  /* Words beside the picture when there is room; stacked when there is not. Less air up top. */
+  .top { display: grid; gap: 18px; grid-template-columns: minmax(0, 1fr); margin: 0 0 8px; }
+  @media (min-width: 1100px) {
+    .top { grid-template-columns: minmax(0, 1.15fr) minmax(360px, 0.85fr); align-items: start; }
+  }
+  .lead .dl, .lead .social { margin: 0 0 8px; }
+  .lead .download-note { margin: 0 0 12px; }
+  .lead .panel { margin: 12px 0 0; }
+  .visual .cover { margin: 0 0 12px; }
+  .visual .shots { margin: 0; }
   .by .badges { display: inline-flex; gap: 4px; vertical-align: middle; margin: 0 4px; }
   .star {
     display: inline-flex; align-items: center; gap: 8px; font: inherit; font-size: 0.92rem;

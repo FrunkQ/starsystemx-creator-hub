@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.17.1 — 2026-09-05
+
+The in-map tag chips show every tag, grouped by namespace, so a biosignature on one world is as
+findable as a lock on sixty. Row pills are off by default: a row shows its tags when the filter
+matched it, or for every row with "Show tags" on. The page uses the screen, and on a wide one the
+description sits beside the cover.
+
 ## 0.17.0 — 2026-09-05
 
 ### The map page, tidied: filter the map, find more maps below
