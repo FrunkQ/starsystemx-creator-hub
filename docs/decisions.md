@@ -573,6 +573,76 @@ the nudge - what counts, how many objects are still undescribed, and that a para
 what a five takes. The public API carries it as `information` (the level on the list, the level
 plus the detail on one map).
 
+### D-31. The map page: filter the map above the data, find more maps below it
+
+The owner (2026-09-05), with a screenshot of the tree: "it is a bit busy - the tags at the top
+should be put lower down and be prefaced 'find more maps with:' (useful info but not a useful UI
+element just now). But above that have the tag list from the actual map available as a filter to
+the bodies below - letting users find planets by in-map tags - in this list also filter on
+megastructures and other map related filters." And: "In tags - why have megastructures - as they
+are functional fields that are counted."
+
+**Two different things were in one place.** The pills at the top of a map page described the MAP
+(campaign, life, has-artwork, stations) and linked to browse; the pills on the rows described the
+OBJECTS (ocean=water, tidally-locked). The first is "find more maps with", the second is "find
+things in this map". They now sit where they belong: the map's pills below the data, prefaced
+and with the counted roles left out (the role summary already says "9 stations"); the objects'
+tags above the tree as a FILTER.
+
+**The filter** (`src/lib/treeFilter.ts`, pure and tested; drawn by `NodeTree.svelte`): a word, a
+role with its count, the map's own tags most common first, and whether an object is described,
+pictured or modelled. Chips narrow; a row's own pills toggle the same tags. A match is shown with
+the path down to it and every surviving branch open; the rest is not drawn. Not remembered between
+visits: a filter that survives a reload reads as a broken map.
+
+**Megastructures are a count, not a claim.** Removed from the creator vocabulary (with
+`dyson-structures`); added to the counted roles that earn a browse pill (`facets.ts`
+`ROLE_PILLS`), because "maps with megastructures" is a real question for browse and a real filter
+inside a map. Browse also sorts by "most written up" (D-30).
+
+### D-32. Maps are cross-posted to the Discord sharing channel, through the outbox
+
+The owner (2026-09-05): a Discord server has run for ages (guild 1443167899933212744); newly
+published and updated maps should be posted to a channel dedicated to sharing.
+
+**An incoming webhook, not the bot.** The channel's own webhook URL goes in `discord_share_webhook`
+(migration 0024 creates the row; the guild id is filled in only if blank). No bot invite, no
+permissions, nothing to reason about; revoking the webhook is the off switch. The role integration
+stays as it was, still gated by `discord_enabled`.
+
+**Through the outbox** (`integrations/share.ts`, `deliver.ts`): a publish writes an intent and
+returns, then drains in `waitUntil` so the post lands within seconds; the drain route retries what
+failed. The dedupe key is the map, the event and the hour, so a publish-unpublish-publish dance is
+one announcement. "New" is a map's first publish (no earlier `system.publish` in the audit log);
+anything after is "Updated". An upload of a new version lands as a draft and is announced when
+the creator publishes it again. The embed carries the title as a link, the byline, the counts and
+the cover, when the cover is servable.
+
+### D-33. Reports close the loop; the notification there is; sitemap, feed, backups
+
+Built together on the owner's "I like all your updates - do them too" (2026-09-05).
+
+**Report one comment** (migration 0024: `report_target` gains `comment`, `reports.comment_id`, one
+report per person per comment). A Report link on every comment the viewer cannot remove.
+
+**The reports page acts.** A map report: take the map down, with a note, or dismiss. A comment
+report: remove the comment or dismiss. A picture report still settles in the review queue. Every
+action closes the report, so the queue empties, which is the only way a queue keeps being read.
+
+**New comments on your maps** (`creators.comments_seen_at`): the account page lists what was said
+under your maps since you last looked, then moves the clock. The honest notification while there
+is no mail; when SMTP exists, mail can follow the same query.
+
+**Sitemap, feed, robots.** `/sitemap.xml` lists every public map page; `/feed.xml` is an Atom feed
+of the thirty newest, linked from every page's head; `/robots.txt` keeps crawlers out of the admin,
+the manage pages, the account and the downloads.
+
+**Backups** (`server/backup.ts`, `/admin/backup`): every table, minus the two secret columns, as one
+gzipped JSON document in the bundles bucket, the last eight kept, on a button or from any external
+scheduler with the cron key. The pictures and bundles are already the only copy of themselves in
+R2; the backup names which ones matter. A Worker has no clock, so the schedule is the owner's to
+point at `POST /api/admin/backup`.
+
 ### D-16. The takedown address is assembled at runtime, never served as text
 
 The owner's instruction was explicit: keep it off the page as scrapable text. It is stored as

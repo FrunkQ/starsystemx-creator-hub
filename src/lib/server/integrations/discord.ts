@@ -18,6 +18,7 @@
 // EVERYTHING HERE IS INERT until `discord_enabled` is true and the secrets are set.
 import type { Db } from './../database.types';
 import type { Gates } from './../config';
+import type { SharePayload } from './share';
 
 const API = 'https://discord.com/api/v10';
 
@@ -146,4 +147,45 @@ export async function applyRole(
   // end state, so treat it as success rather than retrying forever against someone who left.
   if (res.status === 404 && op === 'remove') return;
   if (!res.ok) throw new Error('Discord role ' + op + ' failed (' + res.status + ')');
+}
+
+// --- sharing out --------------------------------------------------------------------------------
+
+/**
+ * Post a map to the sharing channel through an INCOMING WEBHOOK (D-32). No bot, no gateway, no
+ * permissions to reason about: the owner creates the webhook in the channel's settings and pastes
+ * its URL into `discord_share_webhook`. Called by the outbox drain, never from a page request.
+ */
+export async function postShare(webhookUrl: string, share: SharePayload, siteName: string): Promise<void> {
+  const what = share.kind === 'starmap' ? 'starmap' : 'star system';
+  const inside = [
+    share.counts.systems > 1 ? share.counts.systems + ' systems' : '',
+    share.counts.bodies ? share.counts.bodies + ' bodies' : '',
+    share.counts.constructs ? share.counts.constructs + ' constructs' : ''
+  ].filter(Boolean).join(' · ') || 'a map';
+
+  const body = {
+    username: siteName,
+    embeds: [{
+      author: { name: (share.event === 'published' ? 'New ' : 'Updated ') + what },
+      title: share.title,
+      url: share.url,
+      description: share.blurb ?? 'Free to download. Opens in Star System Explorer.',
+      color: 0x6fb3ff,
+      fields: [
+        { name: 'By', value: share.by ?? 'an explorer', inline: true },
+        { name: 'Inside', value: inside, inline: true }
+      ],
+      ...(share.cover ? { image: { url: share.cover } } : {}),
+      footer: { text: 'Free to download, no account needed. Opens in Star System Explorer.' }
+    }]
+  };
+
+  const res = await fetch(webhookUrl, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  // A webhook answers 204 on success; anything else is a reason to retry later.
+  if (!res.ok) throw new Error('Discord webhook refused the post (' + res.status + ')');
 }

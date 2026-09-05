@@ -19,6 +19,8 @@ import { bestDensity } from '$lib/server/density';
 import type { SystemRow } from '$lib/server/database.types';
 import * as ledger from '$lib/server/ledger';
 import * as badges from '$lib/server/integrations/badges';
+import { buildShare, queueShare } from '$lib/server/integrations/share';
+import { drainOutbox } from '$lib/server/integrations/deliver';
 import * as audit from '$lib/server/audit';
 
 async function ownedSystem(sb: ReturnType<typeof db>, id: string, viewerId: string) {
@@ -188,7 +190,7 @@ export const actions: Actions = {
     return { ok: true, reindexed: true };
   },
 
-  publish: async ({ request, params, platform, locals }) => {
+  publish: async ({ request, params, platform, locals, url }) => {
     const env = platform?.env;
     if (!env || !locals.viewer) throw error(401, 'Sign in first.');
     const sb = db(env);
@@ -228,6 +230,34 @@ export const actions: Actions = {
 
     // Publishing (or pulling) a map can earn or lose a community badge.
     await badges.reconcile(sb, gates, locals.viewer.id);
+
+    // CROSS-POST to the Discord sharing channel (D-32): an intent in the outbox, delivered right
+    // away in the background, retried by the drain if not. Never fails the publish.
+    if (wantPublic) {
+      try {
+        const [{ data: full }, { data: creator }, site, { count }] = await Promise.all([
+          sb.from('systems').select('*').eq('id', system.id).maybeSingle(),
+          sb.from('creators').select('handle, display_name').eq('id', locals.viewer.id).maybeSingle(),
+          loadSite(sb, url),
+          // This publish is already audited, so a count above one means it has been public before.
+          sb.from('admin_actions').select('id', { count: 'exact', head: true })
+            .eq('action', 'system.publish').eq('target', 'system:' + system.id)
+        ]);
+        if (full) {
+          const servable = full.cover_sha256
+            ? (await ledger.approvedOnly(sb, [full.cover_sha256])).has(full.cover_sha256)
+            : false;
+          const event = (count ?? 0) > 1 ? 'updated' : 'published';
+          await queueShare(sb, locals.viewer.id, full.id,
+            buildShare(full, creator?.display_name ?? creator?.handle ?? null, site.url, servable, event));
+          platform?.context?.waitUntil(
+            drainOutbox(env, sb, gates, site.name).catch((e) => console.warn('outbox drain failed', e))
+          );
+        }
+      } catch (e) {
+        console.warn('share not queued', e);
+      }
+    }
 
     return { ok: true };
   }

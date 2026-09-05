@@ -23,7 +23,7 @@ export type BundleKindDb = 'starmap' | 'system';
 export type Visibility = 'public' | 'unlisted' | 'private';
 export type CreatorRole = 'user' | 'admin';
 export type CreatorState = 'active' | 'suspended' | 'banned';
-export type ReportTarget = 'system' | 'asset';
+export type ReportTarget = 'system' | 'asset' | 'comment';
 export type ReportState = 'open' | 'actioned' | 'dismissed';
 export type AccountTier = 'free' | 'pro';
 export type IdentityProvider = 'discord' | 'patreon';
@@ -56,6 +56,8 @@ export type CreatorRow = {
   state: CreatorState;
   // 0022: why, in plain words, when suspended or banned. Null when active.
   state_note: string | null;
+  // 0024: when they last looked at the comments on their maps. Null = never; everything is new.
+  comments_seen_at: string | null;
   account_tier: AccountTier;
   created_at: string;
 }
@@ -245,6 +247,8 @@ export type ReportRow = {
   target: ReportTarget;
   system_id: string | null;
   sha256: string | null;
+  // 0024: a report about one comment (target 'comment'); the map it sits under is in system_id.
+  comment_id: string | null;
   reason: string;
   detail: string | null;
   state: ReportState;
@@ -382,7 +386,10 @@ export interface Database {
       >;
       reports: Table<
         ReportRow,
-        [Rel<'reports_system_id_fkey', 'system_id', 'systems', 'id'>]
+        [
+          Rel<'reports_system_id_fkey', 'system_id', 'systems', 'id'>,
+          Rel<'reports_comment_id_fkey', 'comment_id', 'comments', 'id'>
+        ]
       >;
       config: Table<ConfigRow>;
       upload_events: Table<UploadEventRow>;

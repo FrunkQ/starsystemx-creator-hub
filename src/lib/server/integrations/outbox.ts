@@ -11,7 +11,7 @@
 // happens constantly - every publish re-checks the badge rules) queues nothing new.
 import type { Db } from './../database.types';
 
-export type OutboxKind = 'discord.role.add' | 'discord.role.remove';
+export type OutboxKind = 'discord.role.add' | 'discord.role.remove' | 'discord.share';
 
 export interface Intent {
   kind: OutboxKind;

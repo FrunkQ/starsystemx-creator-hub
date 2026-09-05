@@ -14,7 +14,7 @@
   import Badge from '$lib/components/Badge.svelte';
   import InfoDensity from '$lib/components/InfoDensity.svelte';
   import { orderRoles } from '$lib/components/roleIcons';
-  import { formatBytes } from '$lib/bundle/facets';
+  import { formatBytes, ROLE_PILLS } from '$lib/bundle/facets';
   import { COMMENT_MAX } from '$lib/comments';
   let { data } = $props();
 
@@ -25,6 +25,12 @@
   // Comments are counted like stars: the trigger-kept count when the column exists, the rows
   // themselves on a database that has not run 0021 (then there are none).
   const commentCount = $derived(s.comments_count ?? data.comments.length);
+
+  // "Find more maps with": the creator's own tags, then the hub's pills, minus the counted roles.
+  const findMore = $derived([
+    ...((s.tags ?? []) as string[]).map((tag) => ({ tag, mine: true })),
+    ...((s.auto_tags ?? []) as string[]).filter((t) => !ROLE_PILLS.has(t)).map((tag) => ({ tag, mine: false }))
+  ]);
 
   // STARS, not hearts (owner, 2026-09-04: "thematically appropriate"). The column keeps its old
   // name; the word people see is the one that fits a map of stars.
@@ -185,11 +191,7 @@
     </p>
   {/if}
 
-  {#if (s.auto_tags ?? []).length}
-    <div class="pills">
-      {#each s.auto_tags as t}<a class="tag" href="/browse?tag={t}">{t}</a>{/each}
-    </div>
-  {/if}
+  <!-- The map's pills used to sit here. They are "find more maps with", below the data (D-31). -->
 
   <!-- CREDIT FOLLOWS CONTENT. When this map was built partly from clips pasted out of other maps,
        the engine recorded whose (R-16) and the hub says so, with a way back. -->
@@ -234,6 +236,17 @@
     }}
   />
 
+  <!-- FIND MORE MAPS WITH: the pills that describe this map as a whole - the creator's own tags
+       first, then what the hub derived - below the data and prefaced (owner, 2026-09-05; D-31).
+       Useful information, not a useful control up top. The counted roles are left out: the
+       summary above already says "9 stations". -->
+  {#if findMore.length}
+    <div class="find-more">
+      <span class="lbl">Find more maps with:</span>
+      {#each findMore as t (t.tag)}<a class="tag" class:mine={t.mine} href="/browse?tag={t.tag}">{t.tag}</a>{/each}
+    </div>
+  {/if}
+
   <!-- COMMENTS (owner, 2026-09-05). Below the data and above the report: a place to say
        something about the map, not a reason to come here. Registered explorers only, like stars.
        Plain forms, so they work without a script; removal is one click for whoever may. -->
@@ -248,13 +261,23 @@
               <div class="who">
                 <b>{c.by}</b>
                 <time datetime={c.created_at}>{c.created_at.slice(0, 10)}</time>
-                {#if c.removable}
-                  <form method="POST" action="/api/comment">
-                    <input type="hidden" name="slug" value={s.slug} />
-                    <input type="hidden" name="remove" value={c.id} />
-                    <button class="linkish" type="submit">Remove</button>
-                  </form>
-                {/if}
+                <span class="who-acts">
+                  {#if c.removable}
+                    <form method="POST" action="/api/comment">
+                      <input type="hidden" name="slug" value={s.slug} />
+                      <input type="hidden" name="remove" value={c.id} />
+                      <button class="linkish" type="submit">Remove</button>
+                    </form>
+                  {:else if data.mayComment}
+                    <!-- Report ONE comment (D-33): the missing loop now that people can be moderated. -->
+                    <form method="POST" action="/api/report">
+                      <input type="hidden" name="slug" value={s.slug} />
+                      <input type="hidden" name="comment" value={c.id} />
+                      <input type="hidden" name="reason" value="content" />
+                      <button class="linkish quiet" type="submit" title="Report this comment to the hub">Report</button>
+                    </form>
+                  {/if}
+                </span>
               </div>
               <p class="text">{c.body}</p>
             </li>
@@ -321,7 +344,9 @@
   .comments li { border-top: 1px solid var(--edge); padding: 10px 0; }
   .comments .who { display: flex; align-items: baseline; gap: 10px; color: var(--ink-faint); font-size: 0.88rem; }
   .comments .who b { color: var(--ink); font-weight: 600; }
-  .comments .who form { display: inline; margin-left: auto; }
+  .comments .who-acts { margin-left: auto; display: inline-flex; gap: 10px; }
+  .comments .who form { display: inline; }
+  .comments .quiet { color: var(--ink-faint); }
   .comments .text { margin: 6px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
   .comments .panel { margin-top: 12px; }
   .notice-line { color: var(--warn); margin: 0 0 12px; }
@@ -341,12 +366,15 @@
   .roles { color: var(--ink-faint); margin: 0 0 12px; font-size: 0.92rem; display: flex; flex-wrap: wrap; gap: 4px 14px; }
   .rc { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
   .rc :global(.role-icon) { opacity: 0.7; }
-  .pills { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 18px; }
+  .find-more { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 18px 0 0; }
+  .find-more .lbl { color: var(--ink-faint); font-size: 0.9rem; margin-right: 4px; }
+  .find-more a.tag { text-decoration: none; }
+  .find-more a.tag.mine { border-color: var(--accent); }
+  .find-more a.tag:hover { border-color: var(--accent); color: var(--ink); }
   .credits { color: var(--ink-dim); margin: 0 0 18px; font-size: 0.92rem; }
   .credits p { margin: 0 0 6px; }
   .shared { color: var(--ink-faint); }
-  .pills a.tag { text-decoration: none; }
-  .pills a.tag:hover { border-color: var(--accent); }
+  /* The map's pills sit in .find-more, below the data (D-31). */
   .foot-actions { margin-top: 36px; }
   label { display: block; margin: 10px 0; color: var(--ink-dim); }
   select, textarea {

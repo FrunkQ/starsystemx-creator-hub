@@ -20,6 +20,10 @@
   // the orbit. One number per row (`distance`, 0015), one sort, and the hierarchy is never
   // flattened by it. Rows without a number (older uploads) fall back to size, stars first.
   //
+  // FILTER BY WHAT IS IN THE MAP (owner, 2026-09-05; D-31). The roles, the tags the objects carry,
+  // a word, and whether an object is described, pictured or modelled - the rules are in
+  // src/lib/treeFilter.ts. A match is shown with the path down to it; everything else is hidden.
+  //
   // ONE PLACE FOR COPYING, NOT TWO. Every row carries its own copy control, and copying a BRANCH
   // copies everything under it. The format is bundle/clip.ts; the paste side is the engine's R-14.
   //
@@ -30,14 +34,14 @@
   import RoleIcon from './RoleIcon.svelte';
   import { COPY_ICON, TICK_ICON, CODE_ICON, LINK_ICON, orderRoles } from './roleIcons';
   import { buildClip, clipText, deepLink, nodeFromHash, type ClipSource, type CreditLike } from '$lib/bundle/clip';
+  import {
+    EMPTY_FILTER, isActive, visibleIds, tagCounts, roleCounts, tagParts, isDescribed,
+    type TreeFilter, type FilterableNode
+  } from '$lib/treeFilter';
 
-  interface Node {
-    node_id: string;
-    parent_id: string | null;
-    name: string;
+  interface Node extends FilterableNode {
     kind: string;
-    role_hint: string | null;
-    tags: string[];
+    // Required here: the clip is built from it (bundle/clip.ts), so a row always carries one.
     snippet: unknown;
     distance?: number | null;
   }
@@ -59,6 +63,26 @@
   // Whose own JSON is on screen. Rendered lazily: 170 pretty-printed blocks in the DOM at once
   // would be most of the page's weight for something almost nobody opens.
   let shown = $state<Record<string, boolean>>({});
+
+  // THE FILTER. Not remembered between visits: a filter that survives a reload reads as a broken
+  // map ("where did Jupiter go?").
+  let filter = $state<TreeFilter>({ ...EMPTY_FILTER });
+  let showAllTags = $state(false);
+  const TAG_LIMIT = 18;
+  const active = $derived(isActive(filter));
+  const found = $derived(visibleIds(nodes, filter));
+  const roleChips = $derived(orderRoles(roleCounts(nodes)));
+  const tagChips = $derived(tagCounts(nodes));
+  const shownTags = $derived(showAllTags ? tagChips : tagChips.slice(0, TAG_LIMIT));
+  const anyDescribed = $derived(nodes.some(isDescribed));
+  const anyPictured = $derived(nodes.some((n) => !!n.image_sha256));
+  const anyModelled = $derived(nodes.some((n) => !!n.model_sha256));
+
+  const setRole = (role: string) => { filter.role = filter.role === role ? null : role; };
+  const toggleTag = (t: string) => {
+    filter.tags = filter.tags.includes(t) ? filter.tags.filter((x) => x !== t) : [...filter.tags, t];
+  };
+  const clearFilter = () => { filter = { ...EMPTY_FILTER }; };
 
   const memoryKey = $derived('tree:' + source.url);
 
@@ -115,7 +139,11 @@
 
   const tree = $derived.by(() => {
     const byId = new Map<string, TreeNode>();
-    for (const n of nodes) byId.set(n.node_id, { ...n, children: [], total: 0, roles: {} });
+    // Under a filter only the matches and the path down to them exist; the rest is not drawn.
+    for (const n of nodes) {
+      if (active && !found.visible.has(n.node_id)) continue;
+      byId.set(n.node_id, { ...n, children: [], total: 0, roles: {} });
+    }
 
     const roots: TreeNode[] = [];
     for (const n of byId.values()) {
@@ -155,9 +183,11 @@
     return roots;
   });
 
-  const isOpen = (id: string, depth: number) => open[id] ?? expanded ?? depth < openDepth;
+  // Under a filter every surviving branch is open: the point of filtering is to see the matches.
+  const isOpen = (id: string, depth: number) => active || (open[id] ?? expanded ?? depth < openDepth);
 
   function toggled(id: string, e: Event) {
+    if (active) return; // a toggle inside a filtered view is not a preference worth keeping
     open[id] = (e.currentTarget as HTMLDetailsElement).open;
     remember();
   }
@@ -222,8 +252,9 @@
 
 {#snippet tagList(tags: string[], limit: number)}
   {#each tags.slice(0, limit) as t}
-    {@const [key, value] = t.split(/=(.*)/s)}
-    <span class="tag" title={key}>{key.split('/').pop()}{#if value}<b>{value}</b>{/if}</span>
+    {@const p = tagParts(t)}
+    <button type="button" class="tag" class:on={filter.tags.includes(t)} title={'Filter the map by ' + t}
+      onclick={(e) => { swallow(e); toggleTag(t); }}>{p.key}{#if p.value}<b>{p.value}</b>{/if}</button>
   {/each}
   {#if tags.length > limit}<span class="more">+{tags.length - limit}</span>{/if}
 {/snippet}
@@ -237,7 +268,8 @@
 {#snippet branch(node: TreeNode, depth: number)}
   {#if node.children.length}
     <details open={isOpen(node.node_id, depth)} style="--depth: {depth}" data-node={node.node_id}
-      class:hit={hit === node.node_id} ontoggle={(e) => toggled(node.node_id, e)}>
+      class:hit={hit === node.node_id} class:dim={active && !found.matched.has(node.node_id)}
+      ontoggle={(e) => toggled(node.node_id, e)}>
       <summary>
         <RoleIcon role={node.role_hint} kind={node.kind} />
         <span class="name">{node.name}</span>
@@ -259,6 +291,7 @@
   {:else}
     <!-- A leaf opens to its own JSON: that IS the drill-down to a single body. -->
     <details style="--depth: {depth}" data-node={node.node_id} class:hit={hit === node.node_id}
+      class:dim={active && !found.matched.has(node.node_id)}
       open={hit === node.node_id ? true : undefined}
       ontoggle={(e) => { shown[node.node_id] = e.currentTarget.open; }}>
       <summary>
@@ -276,8 +309,43 @@
   {/if}
 {/snippet}
 
+<!-- THE FILTER: what is in this map, as controls. Roles with their counts, then the map's own
+     tags, most common first. Every chip narrows; the row pills below toggle the same tags. -->
+<div class="filters">
+  <input class="q" type="search" placeholder="Find a planet, a station, a tag" bind:value={filter.text} aria-label="Find in this map" />
+  <div class="chips">
+    {#each roleChips as [role, n] (role)}
+      <button type="button" class="chip" class:on={filter.role === role} onclick={() => setRole(role)}>
+        <RoleIcon role={role} size={12} />{n} {role}{n === 1 ? '' : 's'}
+      </button>
+    {/each}
+    {#if anyDescribed}<button type="button" class="chip" class:on={filter.described} onclick={() => (filter.described = !filter.described)}>described</button>{/if}
+    {#if anyPictured}<button type="button" class="chip" class:on={filter.pictured} onclick={() => (filter.pictured = !filter.pictured)}>with a picture</button>{/if}
+    {#if anyModelled}<button type="button" class="chip" class:on={filter.modelled} onclick={() => (filter.modelled = !filter.modelled)}>with a 3D model</button>{/if}
+  </div>
+  {#if tagChips.length}
+    <div class="chips">
+      <span class="lbl">Tags in this map</span>
+      {#each shownTags as [t, n] (t)}
+        {@const p = tagParts(t)}
+        <button type="button" class="chip tag" class:on={filter.tags.includes(t)} onclick={() => toggleTag(t)} title={t}>
+          {p.key}{#if p.value}<b>{p.value}</b>{/if}<i>{n}</i>
+        </button>
+      {/each}
+      {#if tagChips.length > TAG_LIMIT}
+        <button type="button" class="chip more" onclick={() => (showAllTags = !showAllTags)}>
+          {showAllTags ? 'fewer' : 'all ' + tagChips.length}
+        </button>
+      {/if}
+    </div>
+  {/if}
+</div>
+
 <div class="bar">
-  <span class="hint">{nodes.length} {nodes.length === 1 ? 'object' : 'objects'}</span>
+  <span class="hint">
+    {#if active}{found.matched.size} of {nodes.length} match{:else}{nodes.length} {nodes.length === 1 ? 'object' : 'objects'}{/if}
+  </span>
+  {#if active}<button type="button" class="ghost" onclick={clearFilter}>Clear the filter</button>{/if}
   <div class="seg" role="group" aria-label="Order">
     <button type="button" class:on={sort === 'distance'} onclick={() => setSort('distance')}
       title="Nearest first: from the origin star at the top of a starmap, by orbit inside a system">Distance</button>
@@ -292,10 +360,32 @@
     {#each tree as root (root.node_id)}
       {@render branch(root, 0)}
     {/each}
+    {#if active && !tree.length}
+      <p class="none">Nothing in this map matches. <button type="button" class="linkish" onclick={clearFilter}>Clear the filter</button></p>
+    {/if}
   </div>
 {/key}
 
 <style>
+  .filters { display: flex; flex-direction: column; gap: 6px; margin: 0 0 10px; }
+  .q {
+    font: inherit; font-size: 0.9rem; width: min(100%, 360px);
+    background: var(--panel-2); color: var(--ink); border: 1px solid var(--edge); border-radius: 8px; padding: 6px 10px;
+  }
+  .chips { display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; }
+  .lbl { color: var(--ink-faint); font-size: 0.8rem; margin-right: 4px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    font: inherit; font-size: 0.8rem; padding: 2px 9px; cursor: pointer;
+    background: var(--panel-2); color: var(--ink-dim); border: 1px solid var(--edge); border-radius: 999px;
+  }
+  .chip:hover { color: var(--ink); border-color: var(--ink-faint); }
+  .chip.on { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); }
+  .chip.on :global(.role-icon) { color: var(--accent-ink); }
+  .chip.tag b { font-weight: 600; margin-left: 2px; }
+  .chip.tag i { font-style: normal; opacity: 0.6; font-size: 0.72rem; }
+  .chip.more { border-style: dashed; }
+
   .bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 0 0 8px; }
   .hint { color: var(--ink-faint); font-size: 0.9rem; margin-right: auto; }
   .seg { display: inline-flex; border: 1px solid var(--edge); border-radius: 8px; overflow: hidden; }
@@ -319,6 +409,9 @@
   summary:hover { background: var(--panel-2); }
   /* The row a deep link landed on: lit, then let go. */
   details.hit > summary { background: var(--panel-2); box-shadow: inset 3px 0 0 var(--accent); }
+  /* Under a filter, a row that is only the way down to a match. */
+  details.dim > summary > .name { color: var(--ink-faint); font-weight: 500; }
+  .none { margin: 0; padding: 14px 12px; color: var(--ink-faint); }
   .name { color: var(--ink); font-weight: 550; }
   .role { color: var(--ink-faint); font-size: 0.85rem; }
   .dist { color: var(--ink-faint); font-size: 0.8rem; font-variant-numeric: tabular-nums; }
@@ -343,6 +436,11 @@
   .tags { display: flex; flex-wrap: wrap; gap: 4px; padding: 0 12px 8px calc(10px + var(--depth) * 16px); }
   .tags.inline { padding: 0; margin-left: auto; }
   .sum + .acts { margin-left: 0; }
+  /* A row's pills are buttons that toggle the filter, styled as the pills they were. */
+  .tags .tag { font: inherit; cursor: pointer; }
+  .tags .tag:hover { border-color: var(--ink-faint); color: var(--ink); }
+  .tags .tag.on { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); }
+  .tags .tag.on b { color: var(--accent-ink); }
   .tag b { font-weight: 600; color: var(--ink); margin-left: 4px; }
   .more { color: var(--ink-faint); font-size: 0.8rem; align-self: center; }
 

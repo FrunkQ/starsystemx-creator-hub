@@ -42,12 +42,20 @@ export interface Facets {
  * the ones that matter. Uggi's 25 stations are what tell you what kind of map it is.
  */
 const DISTINGUISHING_ROLES = [
-  'moon', 'belt', 'ring', 'small object', 'station', 'ship', 'habitat', 'infrastructure'
+  'moon', 'belt', 'ring', 'small object', 'megastructure', 'station', 'ship', 'habitat', 'infrastructure'
 ] as const;
 
 /** The pill a role earns. Roles are words; pills are slugs. */
 const pillFor = (role: string) =>
   role === 'infrastructure' ? 'infrastructure' : role.replace(/ /g, '-') + 's';
+
+/**
+ * The pills that are COUNTS in disguise (owner, 2026-09-05: "why have megastructures as tags - they
+ * are functional fields that are counted"). They stay as browse FILTERS, because "maps with
+ * stations" is a real question; they are not offered as "find more maps with" on a map page,
+ * whose role summary already says the number.
+ */
+export const ROLE_PILLS: ReadonlySet<string> = new Set(DISTINGUISHING_ROLES.map(pillFor));
 
 export function computeFacets(doc: any, rules?: FacetRule[]): Facets {
   const f: Facets = {

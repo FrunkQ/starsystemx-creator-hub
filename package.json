@@ -1,6 +1,6 @@
 {
   "name": "starsystemx-creator-hub",
-  "version": "0.16.0",
+  "version": "0.17.0",
   "private": true,
   "description": "StarSystemX Creator Hub - share star systems and campaigns for Star System Explorer.",
   "type": "module",

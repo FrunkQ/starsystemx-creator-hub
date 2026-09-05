@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.17.0 — 2026-09-05
+
+### The map page, tidied: filter the map, find more maps below
+
+The map's own pills move below the data, prefaced "Find more maps with:", without the counted
+roles. Above the tree, a filter over what is in the map: a word, a role with its count, the map's
+own tags most common first, and whether an object is described, pictured or modelled. Matches are
+shown with the path down to them; everything else is hidden. Megastructures are a counted role
+(a browse filter), not a creator tag. Browse sorts by "most written up" (D-31).
+
+### Discord sharing
+
+A published map is posted to the Discord sharing channel through an incoming webhook, via the
+outbox, within seconds; a re-publish is "Updated"; a publish-unpublish-publish dance is one post.
+Set `discord_share_webhook` at `/admin/config` (D-32).
+
+### Reports close the loop, and the rest
+
+Report a single comment; the reports page takes a map down, removes a comment or dismisses. New
+comments on your maps since you last looked, on the account page. A sitemap, an Atom feed and
+robots.txt. Backups of every table to R2, on a button or a schedule, at `/admin/backup`. Migration
+0024 (D-33).
+
 ## 0.16.0 — 2026-09-05
 
 ### Information density

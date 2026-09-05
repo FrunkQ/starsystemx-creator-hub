@@ -9,7 +9,7 @@ import { vocabularyFrom } from '$lib/vocabulary';
 const FACET_GROUPS = [
   { label: 'Shape', tags: ['campaign', 'large-campaign', 'single-system', 'built-up', 'multi-star'] },
   // No 'stars'/'planets': every map has them, so they filter nothing (see facets.ts).
-  { label: 'Contains', tags: ['moons', 'belts', 'rings', 'small-objects', 'stations', 'ships', 'habitats', 'infrastructure'] },
+  { label: 'Contains', tags: ['moons', 'belts', 'rings', 'small-objects', 'megastructures', 'stations', 'ships', 'habitats', 'infrastructure'] },
   { label: 'Worlds', tags: ['life', 'habitable', 'oceans', 'ice'] },
   { label: 'Artwork', tags: ['has-artwork', 'has-3d-models'] },
   { label: 'Safe to show players', tags: ['player-safe', 'gm-notes'] }
@@ -23,7 +23,9 @@ export const load: PageServerLoad = async ({ platform, url, setHeaders }) => {
   // Search text, restricted to what a title can contain. PostgREST's `or` syntax reserves commas
   // and parentheses, and a search box is exactly where somebody types them.
   const q = (url.searchParams.get('q') ?? '').replace(/[^\p{L}\p{N} '\-]/gu, '').trim().slice(0, 80);
-  const sort = url.searchParams.get('sort') === 'new' ? 'new' : 'loved';
+  const sortParam = url.searchParams.get('sort');
+  // 'detailed': most written up first (D-30) - the effort the meter rewards, put in front of people.
+  const sort = sortParam === 'new' ? 'new' : sortParam === 'detailed' ? 'detailed' : 'loved';
   const kindParam = url.searchParams.get('kind');
   const kind = kindParam === 'starmap' || kindParam === 'system' ? kindParam : null;
 
@@ -55,7 +57,9 @@ export const load: PageServerLoad = async ({ platform, url, setHeaders }) => {
 
     query = sort === 'new'
       ? query.order('created_at', { ascending: false })
-      : query.order('hearts_count', { ascending: false }).order('created_at', { ascending: false });
+      : sort === 'detailed'
+        ? query.order('info_density', { ascending: false, nullsFirst: false }).order('hearts_count', { ascending: false })
+        : query.order('hearts_count', { ascending: false }).order('created_at', { ascending: false });
     return query.limit(60);
   };
 

@@ -46,7 +46,9 @@ export const DEFAULT_VOCABULARY: VocabGroup[] = [
     hint: 'The premise that makes this version different.',
     tags: [
       'alternate-history', 'what-if', 'terraformed', 'colonised', 'abandoned', 'dead-earth',
-      'alien-earth', 'first-contact', 'megastructures', 'dyson-structures', 'uplifted', 'ai-run', 'post-human'
+      // No 'megastructures' or 'dyson-structures' here: those are COUNTED from the file and offered
+      // as browse filters (facets.ts ROLE_PILLS), not something a creator claims.
+      'alien-earth', 'first-contact', 'uplifted', 'ai-run', 'post-human'
     ]
   },
   {

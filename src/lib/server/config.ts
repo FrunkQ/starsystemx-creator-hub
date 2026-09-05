@@ -44,6 +44,8 @@ export interface Gates {
   discord_guild_id: string;
   discord_role_creator: string;
   discord_role_pro: string;
+  /** Incoming-webhook URL of the sharing channel (D-32). Empty = no cross-posting. */
+  discord_share_webhook: string;
   patreon_enabled: boolean;
   patreon_campaign_id: string;
   patreon_tier_map: Record<string, string>;
@@ -85,6 +87,7 @@ export const GATE_FALLBACKS: Gates = {
   discord_guild_id: '',
   discord_role_creator: '',
   discord_role_pro: '',
+  discord_share_webhook: '',
   patreon_enabled: false,
   patreon_campaign_id: '',
   patreon_tier_map: {}

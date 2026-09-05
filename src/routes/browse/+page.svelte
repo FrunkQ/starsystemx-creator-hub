@@ -10,14 +10,15 @@
   const selected = $derived(new Set(data.selected));
 
   /** The current query, with one change applied. */
-  function href(change: { tag?: string; kind?: string | null; sort?: 'loved' | 'new' }): string {
+  function href(change: { tag?: string; kind?: string | null; sort?: 'loved' | 'new' | 'detailed' }): string {
     const p = new URLSearchParams();
     for (const t of data.selected) if (t !== change.tag) p.append('tag', t);
     if (change.tag && !selected.has(change.tag)) p.append('tag', change.tag);
     if (data.q) p.set('q', data.q);
     const kind = change.kind === undefined ? data.kind : change.kind;
     if (kind) p.set('kind', kind);
-    if ((change.sort ?? data.sort) === 'new') p.set('sort', 'new');
+    const sort = change.sort ?? data.sort;
+    if (sort !== 'loved') p.set('sort', sort);
     const s = p.toString();
     return s ? '/browse?' + s : '/browse';
   }
@@ -97,6 +98,7 @@
       <span class="spacer"></span>
       <a class:on={data.sort === 'loved'} href={href({ sort: 'loved' })}>Most loved</a>
       <a class:on={data.sort === 'new'} href={href({ sort: 'new' })}>Newest</a>
+      <a class:on={data.sort === 'detailed'} href={href({ sort: 'detailed' })} title="The maps with the most written about their objects, first">Most written up</a>
     </div>
 
     {#if data.narrow.length}

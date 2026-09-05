@@ -12,6 +12,8 @@
      whose entire job is to load fast. No token means no script tag at all.
      The {#if} lives INSIDE <svelte:head> - the tag itself cannot sit inside a block. -->
 <svelte:head>
+  <!-- New maps as a feed, for readers and bots (D-33). -->
+  <link rel="alternate" type="application/atom+xml" title="New maps" href="/feed.xml" />
   {#if data?.cfBeaconToken}
     <script
       defer
@@ -38,6 +40,8 @@
         <a href="/admin/review">Review</a>
         <a href="/admin/comments">Comments</a>
         <a href="/admin/explorers">Explorers</a>
+        <a href="/admin/reports">Reports</a>
+        <a href="/admin/backup">Backups</a>
         <a href="/admin/stats">Usage</a>
         <a href="/admin/debug">Debug</a>
       {/if}

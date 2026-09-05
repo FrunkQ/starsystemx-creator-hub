@@ -31,6 +31,21 @@
   </div>
 {/if}
 
+{#if data.fresh.length}
+  <!-- The notification there is, while there is no mail (D-33): shown once, then the clock moves. -->
+  <div class="panel notice">
+    <h3>{data.fresh.length} new {data.fresh.length === 1 ? 'comment' : 'comments'} on your maps since you last looked</h3>
+    <ul class="fresh">
+      {#each data.fresh as c (c.id)}
+        <li>
+          <a href="/s/{c.map.slug}#comments">{c.map.title}</a> · <b>{c.by}</b> · {c.created_at.slice(0, 10)}<br />
+          <span>{c.body.length > 160 ? c.body.slice(0, 160) + '…' : c.body}</span>
+        </li>
+      {/each}
+    </ul>
+  </div>
+{/if}
+
 <!-- The name on the byline, the card and the credit. A choice, not the handle by default. -->
 <form class="panel name" method="POST" action="?/profile">
   <h2>Your name on maps</h2>
@@ -181,6 +196,10 @@
   h2 { margin: 0 0 10px; font-size: 1.1rem; }
   .muted { color: var(--ink-dim); }
   .bad { color: var(--bad); }
+  .fresh { list-style: none; padding: 0; margin: 8px 0 0; }
+  .fresh li { margin: 0 0 8px; color: var(--ink-dim); }
+  .fresh li b { color: var(--ink); font-weight: 600; }
+  .fresh li span { color: var(--ink-faint); }
   .name label { display: block; margin: 8px 0; color: var(--ink-dim); }
   .name input {
     display: block; width: min(100%, 320px); margin-top: 4px; font: inherit;

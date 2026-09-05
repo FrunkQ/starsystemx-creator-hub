@@ -24,7 +24,8 @@ export const GET: RequestHandler = async ({ platform, url, setHeaders }) => {
 
   const tags = url.searchParams.getAll('tag').filter(Boolean).slice(0, 8);
   const q = (url.searchParams.get('q') ?? '').trim().slice(0, 80);
-  const sort = url.searchParams.get('sort') === 'new' ? 'new' : 'loved';
+  const sortParam = url.searchParams.get('sort');
+  const sort = sortParam === 'new' ? 'new' : sortParam === 'detailed' ? 'detailed' : 'loved';
   const page = Math.max(1, Math.min(50, Number.parseInt(url.searchParams.get('page') ?? '1', 10) || 1));
 
   // Built from the column list so a column the database lacks yet can be dropped and the query
@@ -39,7 +40,9 @@ export const GET: RequestHandler = async ({ platform, url, setHeaders }) => {
 
       query = sort === 'new'
         ? query.order('created_at', { ascending: false })
-        : query.order('hearts_count', { ascending: false }).order('created_at', { ascending: false });
+        : sort === 'detailed'
+          ? query.order('info_density', { ascending: false, nullsFirst: false }).order('hearts_count', { ascending: false })
+          : query.order('hearts_count', { ascending: false }).order('created_at', { ascending: false });
 
       return query.range((page - 1) * PAGE, page * PAGE - 1);
     }),
