@@ -11,6 +11,7 @@ import { removalRole, commentNotice } from '$lib/comments';
 import { isBadge } from '$lib/badges';
 import { densityFrom, densityLevel, densitySummary } from '$lib/bundle/density';
 import { bestDensity } from '$lib/server/density';
+import { openLink } from '$lib/openInSse';
 
 export const load: PageServerLoad = async ({ params, platform, setHeaders, url, locals }) => {
   const env = platform?.env;
@@ -139,9 +140,7 @@ export const load: PageServerLoad = async ({ params, platform, setHeaders, url, 
   const [best, pageSite, gates] = await Promise.all([bestDensity(sb), loadSite(sb, url), loadGates(sb)]);
   // "OPEN IN STAR SYSTEM EXPLORER" (D-35): the engine URL with the download URL appended, once the
   // engine can receive one (R-17). The download route already answers cross-origin.
-  const openInSse = gates.open_in_sse_url
-    ? gates.open_in_sse_url + encodeURIComponent(pageSite.url + '/api/download/' + system.slug)
-    : null;
+  const openInSse = openLink(gates.open_in_sse_url, pageSite.url, system.slug);
   const detail = densityFrom(system.info_density, system.info_detail);
   const level = densityLevel(system.info_density, best);
   const density = { level, summary: densitySummary(level, detail), measured: detail !== null };

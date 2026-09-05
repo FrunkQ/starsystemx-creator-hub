@@ -4,6 +4,11 @@
   // A STARMAP AND A SYSTEM LOOK DIFFERENT AT A GLANCE (owner, 2026-09-04): a starmap card carries
   // a second, offset edge - a map with more inside it - and a kind badge on the picture. A system
   // card is plain. Nobody should have to read the counts to know which they are looking at.
+  //
+  // THE WHOLE CARD IS A LINK to the map page, by a stretched title link rather than an anchor
+  // around everything - so the picture can also carry a second control, "Open in SSE" (D-35),
+  // without nesting one link inside another. That control appears once the engine can receive
+  // a URL (R-17); until then the card is as it was.
   import PixelText from '$lib/components/PixelText.svelte';
   import InfoDensity from '$lib/components/InfoDensity.svelte';
   import { densityLevel } from '$lib/bundle/density';
@@ -29,7 +34,8 @@
     system_count?: number;
   }
   // `best`: the top raw density on the hub, which is what a 5 means (server/density.ts).
-  let { system, best = null }: { system: System; best?: number | null } = $props();
+  // `open`: the one-click link into the app (lib/openInSse.ts), or null until the engine has it.
+  let { system, best = null, open = null }: { system: System; best?: number | null; open?: string | null } = $props();
 
   const isStarmap = $derived(system.kind === 'starmap');
 
@@ -60,7 +66,7 @@
   ]);
 </script>
 
-<a class="card" class:starmap={isStarmap} href="/s/{system.slug}">
+<div class="card" class:starmap={isStarmap}>
   <div class="pic">
     {#if system.cover_sha256}
       <!-- Served through the ledger-checking route. A withheld cover simply 404s and the browser
@@ -72,9 +78,15 @@
     <!-- The kind, in the cover font: the same pixels the card's own picture is lettered in. -->
     <!-- Smaller than the cover's own title (owner, 2026-09-05): a tag, not a second line of it. -->
     <span class="kind"><PixelText text={isStarmap ? 'Starmap' : 'System'} scale={1.5} /></span>
+    {#if open}
+      <!-- The dream (owner, 2026-09-05): see a banner, open it in the app, new tab. -->
+      <a class="open" href={open} target="_blank" rel="noopener" title="Open this map in Star System Explorer, in a new tab">
+        Open in SSE
+      </a>
+    {/if}
   </div>
   <div class="body">
-    <h3>{system.title}</h3>
+    <h3><a class="title" href="/s/{system.slug}">{system.title}</a></h3>
     {#if system.blurb || system.summary}<p>{system.blurb ?? system.summary}</p>{/if}
     {#if whatsInIt}<p class="counts">{whatsInIt}</p>{/if}
     {#if pills.length}
@@ -95,14 +107,19 @@
       {/if}
     </div>
   </div>
-</a>
+</div>
 
 <style>
-  a.card { color: inherit; position: relative; }
-  a.card:hover { text-decoration: none; border-color: var(--accent); }
+  .card { color: inherit; position: relative; }
+  .card:hover { border-color: var(--accent); }
+  /* The stretched link: the title's ::after covers the whole card, so anywhere is a click through
+     to the map page - and the open control sits above it. */
+  .title { color: inherit; text-decoration: none; }
+  .title::after { content: ''; position: absolute; inset: 0; }
+  .title:hover { text-decoration: none; }
   /* The second edge: a starmap is a map with maps inside it. */
-  a.card.starmap { outline: 1px solid var(--edge); outline-offset: 3px; }
-  a.card.starmap:hover { outline-color: var(--accent); }
+  .card.starmap { outline: 1px solid var(--edge); outline-offset: 3px; }
+  .card.starmap:hover { outline-color: var(--accent); }
   .pic { position: relative; }
   /* Top-RIGHT: a generated cover letters its title top-left in the same pixels, and two lines of
      the same font in the same corner read as one. */
@@ -112,7 +129,14 @@
     color: var(--ink); background: rgba(10, 13, 20, 0.72);
     border: 1px solid var(--edge); border-radius: 6px; padding: 2px 7px;
   }
-  a.card.starmap .kind { border-color: var(--accent); color: var(--accent); }
+  .card.starmap .kind { border-color: var(--accent); color: var(--accent); }
+  .open {
+    position: absolute; right: 8px; bottom: 8px; z-index: 1;
+    font-size: 0.78rem; font-weight: 600; text-decoration: none;
+    color: var(--accent-ink); background: var(--accent);
+    border-radius: 6px; padding: 4px 9px; opacity: 0.92;
+  }
+  .open:hover { opacity: 1; text-decoration: none; filter: brightness(1.08); }
   .counts { color: var(--ink-faint); font-size: 0.85rem; margin-top: 6px; }
   .pills { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
   .tag.mine { border-color: var(--accent); }

@@ -1,5 +1,6 @@
 <script lang="ts">
   import SystemCard from '$lib/components/SystemCard.svelte';
+  import { openLink } from '$lib/openInSse';
   let { data } = $props();
 </script>
 
@@ -39,7 +40,7 @@
 {:else}
   <div class="grid">
     {#each data.systems as system (system.slug)}
-      <SystemCard {system} best={data.best} />
+      <SystemCard {system} best={data.best} open={openLink(data.openPrefix, data.site.url, system.slug)} />
     {/each}
   </div>
 {/if}

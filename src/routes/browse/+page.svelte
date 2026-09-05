@@ -5,6 +5,7 @@
   // Plain links, not JavaScript state: every filtered view is a URL somebody can paste into a
   // Discord channel. That matters more here than slickness does.
   import SystemCard from '$lib/components/SystemCard.svelte';
+  import { openLink } from '$lib/openInSse';
   let { data } = $props();
 
   const selected = $derived(new Set(data.selected));
@@ -130,7 +131,7 @@
     {:else}
       <div class="grid">
         {#each data.systems as system (system.slug)}
-          <SystemCard {system} best={data.best} />
+          <SystemCard {system} best={data.best} open={openLink(data.openPrefix, data.site.url, system.slug)} />
         {/each}
       </div>
     {/if}

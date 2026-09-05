@@ -606,6 +606,12 @@ no megastructures chip, and that is the truth rather than a gap. The page also u
 the container is near the full width of a 1920 display (prose pages cap themselves), and on a
 wide screen the description sits beside the cover, stacking again on a narrow one.
 
+**Third pass (0.19.1).** The tag groups are a closed concertina by default - "a default closed
+concertina to avoid overload" - opened by hand, or when a tag is picked from a row so what is
+filtering stays visible. And a starmap opens with its stars minimised: sixty stars, each with its
+summary, is the list; a single system still opens to planet level. The owner's words: "stars
+should be minimised - or to planet level in a star map".
+
 **Megastructures are a count, not a claim.** Removed from the creator vocabulary (with
 `dyson-structures`); added to the counted roles that earn a browse pill (`facets.ts`
 `ROLE_PILLS`), because "maps with megastructures" is a real question for browse and a real filter
@@ -697,6 +703,13 @@ file-import path - R-17 in `docs/sse-requirements.md`, a prompt in
 ships dead.
 
 **Also:** the Gates page was reachable only by URL; it is in the admin nav now.
+
+**The dream (0.19.1).** "When you see an image/banner you can just open it in a new tab on SSE."
+So the map page's cover is that link, and every card carries an "Open in SSE" control on its
+picture - both from the same `openLink` (`src/lib/openInSse.ts`), both invisible until the engine
+prefix is set. A card used to be one anchor around everything, which cannot hold a second link;
+it is now a stretched title link (the title's `::after` covers the card) with the open control
+above it, so the whole card still clicks through and the picture can also open the app.
 
 ### D-16. The takedown address is assembled at runtime, never served as text
 

@@ -80,9 +80,16 @@
   const anyPictured = $derived(nodes.some((n) => !!n.image_sha256));
   const anyModelled = $derived(nodes.some((n) => !!n.model_sha256));
 
+  // The tag groups are a CLOSED concertina by default (owner, 2026-09-05: "to avoid overload"),
+  // opened by hand, or when a tag is picked from a row so what is filtering can be seen.
+  let tagsOpen = $state(false);
+  const tagTotal = $derived(groups.reduce((a, g) => a + g.tags.length, 0));
+
   const setRole = (role: string) => { filter.role = filter.role === role ? null : role; };
   const toggleTag = (t: string) => {
-    filter.tags = filter.tags.includes(t) ? filter.tags.filter((x) => x !== t) : [...filter.tags, t];
+    const adding = !filter.tags.includes(t);
+    filter.tags = adding ? [...filter.tags, t] : filter.tags.filter((x) => x !== t);
+    if (adding) tagsOpen = true;
   };
   const clearFilter = () => { filter = { ...EMPTY_FILTER }; };
 
@@ -328,20 +335,27 @@
   </div>
   {#if groups.length}
     <!-- Every tag in the map, by the engine's namespace, so a biosignature on one world is as
-         findable as a lock on sixty. -->
-    <div class="groups">
-      {#each groups as g (g.ns)}
-        <div class="chips group">
-          <span class="lbl">{g.ns || 'other'}</span>
-          {#each g.tags as [t, n] (t)}
-            {@const p = tagParts(t)}
-            <button type="button" class="chip tag" class:on={filter.tags.includes(t)} onclick={() => toggleTag(t)} title={t}>
-              {p.key}{#if p.value}<b>{p.value}</b>{/if}<i>{n}</i>
-            </button>
-          {/each}
-        </div>
-      {/each}
-    </div>
+         findable as a lock on sixty - behind a closed concertina, so sixty-eight chips are not
+         the first thing on the page. -->
+    <details class="tagbox" open={tagsOpen} ontoggle={(e) => (tagsOpen = e.currentTarget.open)}>
+      <summary>
+        Filter by the tags in this map
+        <span class="lbl">{tagTotal} across {groups.length} {groups.length === 1 ? 'group' : 'groups'}{#if filter.tags.length} · {filter.tags.length} selected{/if}</span>
+      </summary>
+      <div class="groups">
+        {#each groups as g (g.ns)}
+          <div class="chips group">
+            <span class="lbl">{g.ns || 'other'}</span>
+            {#each g.tags as [t, n] (t)}
+              {@const p = tagParts(t)}
+              <button type="button" class="chip tag" class:on={filter.tags.includes(t)} onclick={() => toggleTag(t)} title={t}>
+                {p.key}{#if p.value}<b>{p.value}</b>{/if}<i>{n}</i>
+              </button>
+            {/each}
+          </div>
+        {/each}
+      </div>
+    </details>
   {/if}
 </div>
 
@@ -382,7 +396,10 @@
   }
   .chips { display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; }
   .lbl { color: var(--ink-faint); font-size: 0.8rem; margin-right: 4px; }
-  .groups { display: flex; flex-direction: column; gap: 4px; }
+  .groups { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
+  .tagbox { border: 1px solid var(--edge); border-radius: 8px; padding: 6px 10px; background: var(--panel); }
+  .tagbox summary { cursor: pointer; color: var(--ink-dim); font-size: 0.9rem; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+  .tagbox summary:hover { color: var(--ink); }
   .group .lbl { min-width: 84px; text-transform: lowercase; letter-spacing: 0.02em; }
   .ghost.on { background: var(--panel-2); color: var(--ink); }
   .chip {

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.19.1 — 2026-09-05
+
+The tag groups on a map page are a closed concertina by default, opened by hand or when a tag is
+picked from a row. A starmap opens with its stars minimised; a single system opens to planet
+level. The cover on a map page and every card's picture carry the one-click open into the app,
+both appearing once the engine prefix is set.
+
 ## 0.19.0 — 2026-09-05
 
 ### Inspect a debug upload

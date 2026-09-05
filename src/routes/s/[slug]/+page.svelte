@@ -158,7 +158,14 @@
     <aside class="visual">
       <!-- 3. The cover image, and it is the only picture on the page. -->
       {#if data.coverServable && s.cover_sha256}
-        <img class="cover" src="/asset/{s.cover_sha256}" alt="Cover image for {s.title}" />
+        {#if data.openInSse}
+          <!-- The dream (owner, 2026-09-05): see the banner, open it in the app, new tab. -->
+          <a class="cover-link" href={data.openInSse} target="_blank" rel="noopener" title="Open this map in Star System Explorer, in a new tab">
+            <img class="cover" src="/asset/{s.cover_sha256}" alt="Cover image for {s.title}" />
+          </a>
+        {:else}
+          <img class="cover" src="/asset/{s.cover_sha256}" alt="Cover image for {s.title}" />
+        {/if}
       {/if}
 
       {#if data.screenshots.length}
@@ -240,8 +247,11 @@
     Open a star to see what orbits it. Copy any row to take that object - or that object and
     everything beneath it - into your own campaign in Star System Explorer.
   </p>
+  <!-- A starmap opens with its stars minimised - sixty stars is the list, each with its summary;
+       a single system opens to planet level (owner, 2026-09-05). -->
   <NodeTree
     nodes={[...data.bodies, ...data.constructs]}
+    openDepth={s.kind === 'starmap' ? 0 : 1}
     {credits}
     source={{
       site: data.site.name, url: data.site.url + '/s/' + s.slug, title: s.title,
@@ -353,6 +363,8 @@
   .lead .download-note { margin: 0 0 12px; }
   .lead .panel { margin: 12px 0 0; }
   .visual .cover { margin: 0 0 12px; }
+  .cover-link { display: block; }
+  .cover-link:hover .cover { border-color: var(--accent); }
   .visual .shots { margin: 0; }
   .by .badges { display: inline-flex; gap: 4px; vertical-align: middle; margin: 0 4px; }
   .star {
