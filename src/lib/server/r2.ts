@@ -9,6 +9,7 @@
 //   2. a HEAD-and-skip: `has()` before `put()` means a popular asset transfers nothing at all
 //   3. immutability: a content hash never needs invalidation, so far-future caching is safe
 import type { HubEnv } from './db';
+import type { Db } from './database.types';
 
 /** Objects are keyed by hash alone. No user prefix - that would defeat cross-user dedup. */
 export const assetKey = (sha256: string) => `sha256/${sha256}`;
@@ -55,9 +56,7 @@ export async function getBundle(env: HubEnv, systemId: string): Promise<R2Object
  * which this function deliberately does NOT do: the ledger ROW stays even when the bytes go, so a
  * banned hash's verdict outlives the account that uploaded it. Delete bytes; never delete verdicts.
  */
-export async function deleteIfUnreferenced(
-  env: HubEnv, sb: { rpc: (fn: string, args: any) => any }, sha256: string
-): Promise<boolean> {
+export async function deleteIfUnreferenced(env: HubEnv, sb: Db, sha256: string): Promise<boolean> {
   const { data, error } = await sb.rpc('asset_refcount', { p_sha256: sha256 });
   if (error) throw new Error(`refcount failed: ${error.message}`);
   if ((data ?? 0) > 0) return false;

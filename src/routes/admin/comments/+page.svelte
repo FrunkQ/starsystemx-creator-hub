@@ -35,7 +35,7 @@
         <tr>
           <td class="when">{c.created_at.slice(0, 10)}</td>
           <td>{#if c.map}<a href="/s/{c.map.slug}#comments">{c.map.title}</a>{:else}-{/if}</td>
-          <td>{c.by}</td>
+          <td>{#if c.handle}<a href="/admin/explorers/{c.handle}">{c.by}</a>{:else}{c.by}{/if}</td>
           <td class="text">{c.body}</td>
           {#if data.removed}<td class="when">{c.removed_reason ?? ''}</td>{/if}
           <td>

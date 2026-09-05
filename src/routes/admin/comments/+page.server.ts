@@ -20,19 +20,24 @@ export const load: PageServerLoad = async ({ platform, locals, url }) => {
   const { data: rows, error: e } = await filtered.order('created_at', { ascending: false }).limit(100);
   if (e) return { comments: [], removed, problem: e.message };
 
-  const ids = [...new Set((rows ?? []).map((r) => r.creator_id))];
+  const ids = [...new Set((rows ?? []).flatMap((r) => (r.creator_id ? [r.creator_id] : [])))];
   const { data: people } = ids.length
     ? await sb.from('creators').select('id, handle, display_name').in('id', ids)
     : { data: [] as { id: string; handle: string; display_name: string | null }[] };
-  const name = new Map((people ?? []).map((p) => [p.id, p.display_name ?? p.handle]));
+  const person = new Map((people ?? []).map((p) => [p.id, p]));
 
   return {
-    comments: (rows ?? []).map((r) => ({
-      id: r.id, body: r.body, created_at: r.created_at,
-      removed_at: r.removed_at, removed_reason: r.removed_reason,
-      by: name.get(r.creator_id) ?? r.creator_id.slice(0, 8),
-      map: r.systems ? { slug: r.systems.slug, title: r.systems.title } : null
-    })),
+    comments: (rows ?? []).map((r) => {
+      const p = r.creator_id ? person.get(r.creator_id) : undefined;
+      return {
+        id: r.id, body: r.body, created_at: r.created_at,
+        removed_at: r.removed_at, removed_reason: r.removed_reason,
+        // No author left: they deleted their account and chose to leave their words (0022).
+        by: p ? p.display_name ?? p.handle : r.creator_id ? r.creator_id.slice(0, 8) : 'a former explorer',
+        handle: p?.handle ?? null,
+        map: r.systems ? { slug: r.systems.slug, title: r.systems.title } : null
+      };
+    }),
     removed,
     problem: null
   };

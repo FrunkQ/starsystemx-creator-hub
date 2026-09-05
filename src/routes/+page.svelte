@@ -8,6 +8,13 @@
   <meta name="description" content="Star systems and campaign starmaps made by other people, free to download and open in Star System Explorer." />
 </svelte:head>
 
+{#if data.bye}
+  <div class="panel notice">
+    <h3>Your account is gone.</h3>
+    <p>Thank you for exploring. The door is open if you come back.</p>
+  </div>
+{/if}
+
 <section class="hero">
   <h1>Star systems, made by other people.</h1>
   <p>

@@ -30,4 +30,12 @@ describe('what the code assumes about the schema', () => {
     expect(sql).toMatch(/after insert or update of removed_at or delete on comments/);
     expect(sql).toMatch(/alter table systems add column if not exists comments_count/);
   });
+
+  it('lets a comment outlive its author (0022): the creator link is nullable and set null on delete', () => {
+    // accounts.deleteCreator with "keep my comments" relies on this; before 0022 the cascade
+    // would take the comments with the account regardless of the choice.
+    const sql = readFileSync('db/migrations/0022_moderation.sql', 'utf8');
+    expect(sql).toMatch(/alter table comments alter column creator_id drop not null/);
+    expect(sql).toMatch(/references creators \(id\) on delete set null/);
+  });
 });

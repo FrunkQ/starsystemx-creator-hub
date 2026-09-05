@@ -4,6 +4,7 @@
   // A STARMAP AND A SYSTEM LOOK DIFFERENT AT A GLANCE (owner, 2026-09-04): a starmap card carries
   // a second, offset edge - a map with more inside it - and a kind badge on the picture. A system
   // card is plain. Nobody should have to read the counts to know which they are looking at.
+  import PixelText from '$lib/components/PixelText.svelte';
   interface System {
     slug: string;
     title: string;
@@ -63,7 +64,8 @@
     {:else}
       <div class="cover-fallback">{isStarmap ? 'Starmap' : 'System'}</div>
     {/if}
-    <span class="kind">{isStarmap ? 'Starmap' : 'System'}</span>
+    <!-- The kind, in the cover font: the same pixels the card's own picture is lettered in. -->
+    <span class="kind"><PixelText text={isStarmap ? 'Starmap' : 'System'} scale={2} /></span>
   </div>
   <div class="body">
     <h3>{system.title}</h3>

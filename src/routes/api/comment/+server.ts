@@ -10,6 +10,8 @@ import { error, redirect } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import { mayContribute } from '$lib/server/auth';
 import * as audit from '$lib/server/audit';
+import * as badges from '$lib/server/integrations/badges';
+import { loadGates } from '$lib/server/config';
 import { cleanComment, COMMENT_MAX, COMMENTS_PER_HOUR, removalRole } from '$lib/comments';
 
 export const POST: RequestHandler = async ({ request, platform, locals }) => {
@@ -69,5 +71,9 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
   const { error: e } = await sb.from('comments')
     .insert({ id: crypto.randomUUID(), system_id: system.id, creator_id: viewer.id, body });
   if (e) { console.error('comment insert failed', e.message); back('failed'); }
+
+  // Ten comments is a badge (src/lib/badges.ts). Never lets a badge failure fail the post.
+  try { await badges.reconcile(sb, await loadGates(sb), viewer.id); }
+  catch (err) { console.warn('badge reconcile failed', err); }
   back('posted');
 };

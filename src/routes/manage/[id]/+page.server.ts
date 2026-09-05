@@ -194,6 +194,11 @@ export const actions: Actions = {
 
     const wantPublic = String((await request.formData()).get('state') ?? '') === 'public';
 
+    // Taken down by the hub (D-28): the creator keeps the page, not the switch.
+    if (system.state === 'removed') {
+      return fail(403, { message: 'This map was taken down by the hub and cannot be published again.' });
+    }
+
     if (wantPublic) {
       // THE GATE IS RE-CHECKED SERVER-SIDE AT THE MOMENT OF PUBLISHING. The upload-time check is a
       // courtesy; this is the control. A creator can edit claims between the two.

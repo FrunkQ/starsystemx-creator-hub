@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.15.0 — 2026-09-05
+
+### People can be moderated, and can leave
+
+An admin page per explorer: suspend, ban or reinstate with a reason the person reads on their
+account page; remove every comment they have written at once; take a map down (a 404 to everyone,
+the reason on its manage page, no republish) or restore it; delete the account with the handle
+typed back. Everything audited. Anyone can delete their own account from the account page, and
+choose whether their comments go too or stay as "a former explorer's". Migration 0022 (D-28).
+
+### Badges, in pixels
+
+Thirteen earned badges with twelve-by-twelve pixel art: cartographer, constellation, prolific,
+featured, popular, legend, wellspring, crew, artist, modeller, worldbuilder, voice, pioneer. The
+account page shows the whole set with how to earn each; a cartographer's badges follow the byline
+on their map pages. The wordmark and the card labels are set in the cover cards' bitmap font, and
+the error page has learned to say "not on any chart" (D-29).
+
 ## 0.14.0 — 2026-09-05
 
 ### Comments

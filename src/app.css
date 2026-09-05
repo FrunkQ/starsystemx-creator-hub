@@ -51,7 +51,9 @@ header nav {
   max-width: var(--max); margin: 0 auto; padding: 12px 20px;
   display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
 }
-.wordmark { color: var(--ink); font-weight: 650; letter-spacing: -0.01em; }
+/* The wordmark is set in the cover font (PixelText): pixels, in the ink colour, accent on hover. */
+.wordmark { color: var(--ink); font-weight: 650; letter-spacing: -0.01em; display: inline-flex; align-items: center; }
+.wordmark:hover { color: var(--accent); text-decoration: none; }
 .wordmark span { color: var(--ink-faint); font-weight: 500; }
 .spacer { flex: 1; }
 

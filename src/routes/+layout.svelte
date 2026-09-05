@@ -4,6 +4,7 @@
   // is to fix that in one screen and then get out of the way.
   import '../app.css';
   import { version } from '$app/environment';
+  import PixelText from '$lib/components/PixelText.svelte';
   let { children, data } = $props();
 </script>
 
@@ -24,7 +25,10 @@
 
 <header>
   <nav>
-    <a class="wordmark" href="/">{data?.site?.name ?? 'StarSystemX Explorers'}</a>
+    <!-- The wordmark in the cover cards' own bitmap font: the one retro touch the chrome carries. -->
+    <a class="wordmark" href="/" aria-label={data?.site?.name ?? 'StarSystemX Explorers'}>
+      <PixelText text={data?.site?.name ?? 'StarSystemX Explorers'} scale={2} />
+    </a>
     <div class="spacer"></div>
     <a href="/browse">Browse</a>
     <a href="/upload">Share a map</a>
@@ -33,6 +37,7 @@
       {#if data.viewer.role === 'admin'}
         <a href="/admin/review">Review</a>
         <a href="/admin/comments">Comments</a>
+        <a href="/admin/explorers">Explorers</a>
         <a href="/admin/stats">Usage</a>
         <a href="/admin/debug">Debug</a>
       {/if}

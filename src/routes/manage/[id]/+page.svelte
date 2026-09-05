@@ -53,7 +53,7 @@
 
 <h1>{s.title}</h1>
 <p class="by">
-  {s.state === 'public' ? 'Published' : 'Draft'}
+  {s.state === 'public' ? 'Published' : s.state === 'removed' ? 'Taken down' : 'Draft'}
   {#if s.created_with}· made with Star System Explorer {s.created_with}{/if}
   {#if s.legacy_stamped}· uploaded as a legacy save{/if}
   {#if s.revision != null}· revision {s.revision}{/if}
@@ -67,6 +67,17 @@
 </div>
 {#if form?.reindexed}
   <div class="panel notice"><p>Re-indexed from the stored file. The page, the tree and a generated cover are rebuilt from it.</p></div>
+{/if}
+{#if s.state === 'removed'}
+  <!-- The terms: "we will usually say why, because that is decent." -->
+  <div class="panel notice bad">
+    <h3>This map was taken down by the hub</h3>
+    <p>
+      {s.state_note ?? 'No reason was recorded.'} It stays here for you, nobody else can see it, and
+      it cannot be published again. If you think that is wrong, write to the address on the
+      <a href="/takedown">takedown page</a>.
+    </p>
+  </div>
 {/if}
 
 {#if form?.message}
@@ -235,9 +246,9 @@
 
 <!-- 4. Publish. -->
 <form class="panel" method="POST" action="?/publish">
-  <h2>{s.state === 'public' ? 'Published' : 'Not published yet'}</h2>
+  <h2>{s.state === 'public' ? 'Published' : s.state === 'removed' ? 'Taken down' : 'Not published yet'}</h2>
   <input type="hidden" name="state" value={s.state === 'public' ? 'draft' : 'public'} />
-  <button class="primary" type="submit" disabled={s.state !== 'public' && !data.mayPublish}>
+  <button class="primary" type="submit" disabled={s.state === 'removed' || (s.state !== 'public' && !data.mayPublish)}>
     {s.state === 'public' ? 'Take it down' : 'Publish'}
   </button>
 </form>

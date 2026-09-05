@@ -34,11 +34,12 @@ export type RemovalRole = 'author' | 'cartographer' | 'admin';
  */
 export function removalRole(
   viewer: { id: string; role: string } | null | undefined,
-  comment: { creator_id: string },
+  comment: { creator_id: string | null },
   mapCreatorId: string
 ): RemovalRole | null {
   if (!viewer) return null;
-  if (viewer.id === comment.creator_id) return 'author';
+  // A former explorer's comment (author deleted, comment kept) has no author left to claim it.
+  if (comment.creator_id && viewer.id === comment.creator_id) return 'author';
   if (viewer.id === mapCreatorId) return 'cartographer';
   if (viewer.role === 'admin') return 'admin';
   return null;

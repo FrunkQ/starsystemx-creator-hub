@@ -1,10 +1,10 @@
 <script lang="ts">
+  import Badge from '$lib/components/Badge.svelte';
+  import { BADGE_IDS, CATALOGUE } from '$lib/badges';
   let { data, form } = $props();
 
-  const BADGE_LABEL: Record<string, string> = {
-    cartographer: 'Cartographer - charted something and shared it',
-    featured: 'Featured - a map people loved'
-  };
+  // The whole set is shown: earned in colour, the rest as dim shapes with how to get them.
+  const earned = $derived(new Set(data.badges));
 
   // What has come back: stars and comments, accumulated across every map, like for like.
   const stars = $derived(data.systems.reduce((a, s) => a + (s.hearts_count ?? 0), 0));
@@ -18,6 +18,18 @@
   {data.me?.display_name ?? data.me?.handle}
   {#if data.me?.account_tier === 'pro'}<span class="tag">Pro</span>{/if}
 </p>
+
+{#if data.me && data.me.state !== 'active'}
+  <!-- The terms: "we will usually say why, because that is decent." -->
+  <div class="panel notice bad">
+    <h3>Your account is {data.me.state}</h3>
+    <p>
+      {data.me.state_note ?? 'No reason was recorded.'} You can still read and download. You cannot
+      upload, star, comment or report. If you think that is wrong, write to the address on the
+      <a href="/takedown">takedown page</a>.
+    </p>
+  </div>
+{/if}
 
 <!-- The name on the byline, the card and the credit. A choice, not the handle by default. -->
 <form class="panel name" method="POST" action="?/profile">
@@ -58,16 +70,21 @@
   {/if}
 </div>
 
-{#if data.badges.length}
-  <div class="panel">
-    <h2>Badges</h2>
-    <ul class="badges">
-      {#each data.badges as badge}
-        <li><span class="tag">{BADGE_LABEL[badge] ?? badge}</span></li>
-      {/each}
-    </ul>
-  </div>
-{/if}
+<div class="panel">
+  <h2>Badges</h2>
+  <p class="muted">
+    {earned.size} of {BADGE_IDS.length}. Earned by doing things, never handed out - and lost again
+    if the thing goes away.
+  </p>
+  <ul class="gallery">
+    {#each BADGE_IDS as id (id)}
+      <li class:got={earned.has(id)}>
+        <Badge badge={id} size={40} earned={earned.has(id)} />
+        <div><b>{CATALOGUE[id].name}</b><span>{CATALOGUE[id].how}</span></div>
+      </li>
+    {/each}
+  </ul>
+</div>
 
 <div class="panel">
   <h2>Connected apps</h2>
@@ -144,6 +161,20 @@
   </div>
 {/if}
 
+<!-- The other half of "your stuff stays yours": the way to take it all back. -->
+<form class="panel danger-zone" method="POST" action="?/delete">
+  <h2>Delete your account</h2>
+  <p class="muted">
+    Your maps go, your sign-in goes, and any picture nobody else uses is freed from storage. It
+    cannot be undone. Your comments are your call:
+  </p>
+  <label><input type="radio" name="comments" value="keep" checked /> Keep them, shown as a former explorer's</label>
+  <label><input type="radio" name="comments" value="remove" /> Delete them too</label>
+  <label class="confirm">Type <code>{data.me?.handle}</code> to confirm <input name="confirm" autocomplete="off" /></label>
+  <button class="danger" type="submit">Delete my account</button>
+  {#if form?.deleteMessage}<span class="bad"> {form.deleteMessage}</span>{/if}
+</form>
+
 <style>
   h1 { margin: 0 0 4px; }
   .by { margin: 0 0 20px; color: var(--ink-faint); }
@@ -156,7 +187,18 @@
     background: var(--panel-2); color: var(--ink); border: 1px solid var(--edge); border-radius: 8px; padding: 8px;
   }
   .name p { margin: 6px 0 10px; max-width: 62ch; }
-  .badges { list-style: none; padding: 0; margin: 0; display: flex; gap: 8px; flex-wrap: wrap; }
   ul { margin: 0; padding-left: 18px; }
-  .badges { padding-left: 0; }
+  .gallery { list-style: none; padding: 0; margin: 12px 0 0; display: grid; gap: 10px 18px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+  .gallery li { display: flex; gap: 12px; align-items: center; color: var(--ink-faint); }
+  .gallery li.got { color: var(--ink); }
+  .gallery li div { display: flex; flex-direction: column; line-height: 1.3; }
+  .gallery li b { font-weight: 600; }
+  .gallery li span { font-size: 0.85rem; color: var(--ink-faint); }
+  .danger-zone { border-color: var(--bad); }
+  .danger-zone label { display: block; margin: 6px 0; color: var(--ink-dim); }
+  .danger-zone .confirm input {
+    display: block; width: min(100%, 320px); margin-top: 4px; font: inherit;
+    background: var(--panel-2); color: var(--ink); border: 1px solid var(--edge); border-radius: 8px; padding: 8px;
+  }
+  .danger-zone code { background: var(--panel-2); border: 1px solid var(--edge); border-radius: 4px; padding: 1px 5px; }
 </style>

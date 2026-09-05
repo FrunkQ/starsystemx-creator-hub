@@ -154,7 +154,7 @@
           <tbody>
             {#each s.top_maps as m (m.slug)}
               <tr>
-                <td><a href="/s/{m.slug}">{m.title}</a></td><td>{m.handle}</td>
+                <td><a href="/s/{m.slug}">{m.title}</a></td><td><a href="/admin/explorers/{m.handle}">{m.handle}</a></td>
                 <td>{fmt(m.download_count)}</td><td>{fmt(m.downloads_period)}</td><td>{fmt(m.hearts_count)}</td><td>{fmt(m.comments_count)}</td>
               </tr>
             {/each}
@@ -170,7 +170,7 @@
           <thead><tr><th>Explorer</th><th>Maps</th><th>Downloads</th><th>Stars</th><th>Comments</th><th>Stored</th></tr></thead>
           <tbody>
             {#each s.top_creators as c (c.handle)}
-              <tr><td>{c.handle}</td><td>{fmt(c.maps)}</td><td>{fmt(c.downloads)}</td><td>{fmt(c.hearts)}</td><td>{fmt(c.comments)}</td><td>{formatBytes(n(c.bundle_bytes))}</td></tr>
+              <tr><td><a href="/admin/explorers/{c.handle}">{c.handle}</a></td><td>{fmt(c.maps)}</td><td>{fmt(c.downloads)}</td><td>{fmt(c.hearts)}</td><td>{fmt(c.comments)}</td><td>{formatBytes(n(c.bundle_bytes))}</td></tr>
             {/each}
           </tbody>
         </table>

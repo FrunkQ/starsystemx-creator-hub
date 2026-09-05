@@ -4,54 +4,74 @@
 // Neither knows who published a map that forty people downloaded - and that is the thing actually
 // worth a badge in a community of makers.
 //
-// Badge rules are DERIVED, never set. `deriveBadges` is a pure function of what the database
-// already knows, so it can be re-run at any time and always agrees with itself. That is what makes
-// the outbox dedupe key safe: re-deriving on every publish queues nothing new.
+// Badge rules are DERIVED, never set. The rules and the art live in src/lib/badges.ts (pure, so
+// they are tested and drawn on the client); this file gathers the facts they look at, stores the
+// result, and queues the Discord role changes. Re-deriving on every publish queues nothing new,
+// which is what makes the outbox dedupe key safe.
 import type { Db } from './../database.types';
 import type { Gates } from './../config';
 import * as outbox from './outbox';
+import { deriveBadgeSet, isBadge, type Badge, type BadgeFacts } from '$lib/badges';
 
-export const BADGES = {
-  /**
-   * Published at least one public map.
-   *
-   * NOT called `explorer`: everyone who signs up is an Explorer, so a badge saying so would mean
-   * nothing and reward nothing. A cartographer is an explorer who charted something and gave the
-   * chart to other people - which is exactly what this badge is for.
-   */
-  cartographer: 'cartographer',
-  /** A published map has passed a heart threshold. */
-  featured: 'featured'
-} as const;
+export type { Badge };
 
-export type Badge = (typeof BADGES)[keyof typeof BADGES];
+/** What the hub knows about a person that a badge rule can look at. Each query failing quietly
+ *  reads as "none", which is the honest answer when a table does not exist yet. */
+export async function gatherFacts(sb: Db, creatorId: string): Promise<BadgeFacts> {
+  const [{ data: maps }, { data: me }] = await Promise.all([
+    sb.from('systems')
+      .select('slug, kind, hearts_count, download_count, carried_images, carried_models, body_count, construct_count, content_credits')
+      .eq('creator_id', creatorId).eq('state', 'public').eq('visibility', 'public'),
+    sb.from('creators').select('created_at').eq('id', creatorId).maybeSingle()
+  ]);
+  const rows = maps ?? [];
+  const slugs = rows.map((m) => m.slug);
 
-const FEATURED_HEARTS = 25;
+  const [usedIn, comments, before] = await Promise.all([
+    slugs.length
+      ? sb.from('systems').select('id', { count: 'exact', head: true })
+          .eq('state', 'public').eq('visibility', 'public').neq('creator_id', creatorId)
+          .overlaps('content_credit_slugs', slugs)
+          .then((r) => r.count ?? 0, () => 0)
+      : Promise.resolve(0),
+    sb.from('comments').select('id', { count: 'exact', head: true })
+      .eq('creator_id', creatorId).is('removed_at', null)
+      .then((r) => r.count ?? 0, () => 0),
+    me?.created_at
+      ? sb.from('creators').select('id', { count: 'exact', head: true }).lt('created_at', me.created_at)
+          .then((r) => r.count, () => null)
+      : Promise.resolve(null as number | null)
+  ]);
+
+  return {
+    maps: rows.map((m) => ({
+      kind: m.kind, stars: m.hearts_count ?? 0, downloads: m.download_count ?? 0,
+      images: m.carried_images ?? 0, models: m.carried_models ?? 0,
+      objects: (m.body_count ?? 0) + (m.construct_count ?? 0),
+      credits: Array.isArray(m.content_credits) ? m.content_credits.length : 0
+    })),
+    usedIn,
+    comments,
+    joinedRank: before == null ? null : before + 1
+  };
+}
 
 export async function deriveBadges(sb: Db, creatorId: string): Promise<Badge[]> {
-  const { data: published } = await sb.from('systems')
-    .select('hearts_count')
-    .eq('creator_id', creatorId).eq('state', 'public').eq('visibility', 'public');
-
-  const rows = published ?? [];
-  const badges: Badge[] = [];
-  if (rows.length > 0) badges.push(BADGES.cartographer);
-  if (rows.some((r) => (r.hearts_count ?? 0) >= FEATURED_HEARTS)) badges.push(BADGES.featured);
-  return badges;
+  return deriveBadgeSet(await gatherFacts(sb, creatorId));
 }
 
 /**
  * Recompute a creator's badges and queue any Discord role changes.
  *
- * Safe to call on every publish, unpublish, heart and removal. Cheap, idempotent, and the outbox
- * collapses the duplicates.
+ * Safe to call on every publish, unpublish, star, comment, takedown and account-page view. Cheap,
+ * idempotent, and the outbox collapses the duplicates.
  */
 export async function reconcile(sb: Db, gates: Gates, creatorId: string): Promise<void> {
   const should = new Set(await deriveBadges(sb, creatorId));
 
   const { data: existing } = await sb.from('creator_badges')
     .select('badge').eq('creator_id', creatorId);
-  const has = new Set((existing ?? []).map((b) => b.badge as Badge));
+  const has = new Set((existing ?? []).map((b) => b.badge).filter(isBadge));
 
   for (const badge of should) {
     if (!has.has(badge)) {
@@ -78,7 +98,7 @@ export async function reconcile(sb: Db, gates: Gates, creatorId: string): Promis
     .maybeSingle();
   if (!identity) return; // no linked Discord account: nothing to push, and that is fine
 
-  const roleFor: Partial<Record<Badge, string>> = { [BADGES.cartographer]: gates.discord_role_creator };
+  const roleFor: Partial<Record<Badge, string>> = { cartographer: gates.discord_role_creator };
 
   for (const [badge, roleId] of Object.entries(roleFor)) {
     if (!roleId) continue;

@@ -11,6 +11,7 @@
   //      taking the whole map. It serves the same funnel - a clip used is SSE opened.
   import NodeTree from '$lib/components/NodeTree.svelte';
   import RoleIcon from '$lib/components/RoleIcon.svelte';
+  import Badge from '$lib/components/Badge.svelte';
   import { orderRoles } from '$lib/components/roleIcons';
   import { formatBytes } from '$lib/bundle/facets';
   import { COMMENT_MAX } from '$lib/comments';
@@ -94,6 +95,7 @@
   <p class="by">
     {s.kind === 'starmap' ? 'A campaign starmap' : 'A star system'}
     {#if data.creator}by {data.creator.display_name ?? data.creator.handle}{/if}
+    {#if data.creatorBadges.length}<span class="badges">{#each data.creatorBadges as b (b)}<Badge badge={b} size={18} />{/each}</span>{/if}
     - {total} {total === 1 ? 'object' : 'objects'}
   </p>
 
@@ -295,6 +297,7 @@
 <style>
   h1 { margin: 0 0 4px; font-size: 1.9rem; letter-spacing: -0.02em; }
   .by { margin: 0 0 20px; color: var(--ink-faint); }
+  .by .badges { display: inline-flex; gap: 4px; vertical-align: middle; margin: 0 4px; }
   .star {
     display: inline-flex; align-items: center; gap: 8px; font: inherit; font-size: 0.92rem;
     background: var(--panel); color: var(--ink-dim); border: 1px solid var(--edge); border-radius: 8px;

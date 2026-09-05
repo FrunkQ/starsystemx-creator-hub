@@ -43,9 +43,14 @@ and bumps the format, and this goes red on a fixture it does not understand.
 anything else), then publish. **Patreon and Discord hooks are built and switched off** — the schema
 is the expensive part to change later, so it exists now; see `docs/integrations.md`.
 
-**Stars and comments** are the community layer: both need an account, both are counted on the map
-and accumulated for its cartographer, and a comment is removed (by its author, the cartographer or
-an admin) rather than deleted. See `docs/decisions.md` D-27.
+**Stars, comments and badges** are the community layer: stars and comments need an account, both
+are counted on the map and accumulated for its cartographer, and a comment is removed (by its
+author, the cartographer or an admin) rather than deleted. Badges are derived from what the hub
+knows and drawn as pixel sprites. See `docs/decisions.md` D-27 and D-29.
+
+**People can be moderated and can leave.** An admin page per explorer suspends, bans, takes maps
+down, removes every comment at once, or deletes the account; anyone can delete their own account
+and choose whether their comments stay as "a former explorer's". D-28.
 
 Not built yet: account deletion, the Patreon OAuth callback (the webhook and entitlement logic are
 done), and in-app sign-in for SSE (`docs/sse-requirements.md` R-06).

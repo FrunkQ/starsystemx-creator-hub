@@ -54,6 +54,8 @@ export type CreatorRow = {
   display_name: string | null;
   role: CreatorRole;
   state: CreatorState;
+  // 0022: why, in plain words, when suspended or banned. Null when active.
+  state_note: string | null;
   account_tier: AccountTier;
   created_at: string;
 }
@@ -85,6 +87,8 @@ export type SystemRow = {
   bundle_format: number;
   published_gm_tree: boolean;
   state: SystemState;
+  // 0022: why, in plain words, when taken down by the hub. Null otherwise.
+  state_note: string | null;
   visibility: Visibility;
   cover_sha256: string | null;
   hearts_count: number;
@@ -248,7 +252,8 @@ export type ReportRow = {
 export type CommentRow = {
   id: string;
   system_id: string;
-  creator_id: string;
+  // Null once its author deleted their account and chose to leave their comments (0022).
+  creator_id: string | null;
   body: string;
   created_at: string;
   removed_at: string | null;

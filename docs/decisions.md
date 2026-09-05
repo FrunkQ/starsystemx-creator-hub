@@ -486,6 +486,64 @@ comment (report the map with "Something else" for now). Each is a product decisi
 read again (`tolerantSelect`), the way writes already did, so the card lists survive a deploy that
 runs ahead of a migration. The card column list lives in one place (`server/cards.ts`).
 
+### D-28. People can be suspended, banned and deleted; things can be taken down; a comment can outlive its author
+
+The owner's ask (2026-09-05): admin tools to remove all of one person's posts, and account removal
+with the person choosing what happens to their comments - "I like the former explorer option."
+
+**What the terms promise is now what the code does.** "Content can be removed and accounts
+suspended or banned at our discretion... we will usually say why, because that is decent." Every
+operation in `src/lib/server/accounts.ts` takes a note, stores it where the person will read it
+(`creators.state_note`, `systems.state_note`, migration 0022), and is audited.
+
+**The admin's explorer page** (`/admin/explorers`, then one per handle) is the one place a person
+is acted on: suspend, ban or reinstate with a note; remove every live comment at once (soft, like
+a single removal, restorable from the comments page); take a map down (a 404 to everyone, the
+reason on its manage page, no republish - state `removed`) or restore it (to public: that is what a
+takedown was about); delete the account with the handle typed back. Not on yourself.
+
+**A ban is about the person, a takedown about the thing.** A suspended or banned account can still
+sign in and read; it cannot upload, star, comment or report (`mayContribute`, unchanged). Its maps
+stay up unless taken down separately.
+
+**Deletion** removes the row and everything that cascades from it, then the sign-in, then the
+bytes nobody references any more (`deleteIfUnreferenced`: a picture another map uses stays; a
+banned verdict outlives the account, as before). Rows first: if the sign-in cannot be removed, the
+report says so and nothing is half-done. The person's own delete is on the account page with the
+same confirmation, and lands on the front page with one kind sentence.
+
+**Comments are the person's choice; the schema had to allow it.** Until 0022, deleting a creator
+cascaded their comments away regardless. Now the comment's creator link is nullable and set null
+on delete: a kept comment shows as "a former explorer", and nobody can claim it as its author. An
+admin deleting a spammer ticks "delete their comments too".
+
+### D-29. Badges are earned, drawn in pixels, and the site is allowed some character
+
+The owner (2026-09-05): "we need more badges. And a graphic to go along with them. something
+appropriately retro - i kinda like the 8-bit feel. maybe have a touch of that around. not
+embracing it... but something to give it character - it is a little corporate and bland - we need
+to reflect our own terms of service", then "its a web site - we can have a 'bit of fun'".
+
+**Thirteen badges, all derived** (`src/lib/badges.ts`): cartographer, constellation, prolific,
+featured, popular, legend, wellspring, crew, artist, modeller, worldbuilder, voice, pioneer. Each is
+a pure function of what the hub already knows - public maps and their counts, credit in both
+directions, live comments, sign-up order - so the set can be recomputed any time and a badge is
+lost when what earned it goes away. The server gathers the facts (`integrations/badges.ts`) on
+publish, unpublish, takedown, comment, and whenever the person opens their account page, which
+covers what no hot path calls (downloads, being credited). Thresholds are named constants and
+pinned by tests.
+
+**The art is twelve-by-twelve pixel sprites**, drawn as SVG rectangles (`Badge.svelte`), because
+the cover cards already letter their titles in a 5x7 bitmap font and the badges belong to the same
+family. The account page shows the whole set - earned in colour, the rest dim, each with how to
+get it in one plain sentence - and a cartographer's badges sit after the byline on their map pages.
+
+**The touch, not the theme:** the wordmark and the card kind-labels are now set in that same
+bitmap font (`PixelText.svelte`, `src/lib/pixel.ts`, no font file - the page rule stands), and the
+error page gets the status in big pixels and a sentence. Body text stays a system font. The "how"
+lines, the notices and the empty states are written in the terms' register: plain, short, a
+little dry ("Ten comments. Decent ones, we assume.").
+
 ### D-16. The takedown address is assembled at runtime, never served as text
 
 The owner's instruction was explicit: keep it off the page as scrapable text. It is stored as

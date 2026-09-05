@@ -4,9 +4,11 @@ import { tolerantSelect } from '$lib/server/tolerant';
 import { CARD_COLUMNS, CARD_OPTIONAL, type CardRow } from '$lib/server/cards';
 
 // SSR, one query, no engine. The page must be fast at LOADING (design 2).
-export const load: PageServerLoad = async ({ platform, setHeaders }) => {
+export const load: PageServerLoad = async ({ platform, setHeaders, url }) => {
   const env = platform?.env;
-  if (!env?.SUPABASE_URL) return { systems: [], configured: false, failed: false };
+  // Where a deleted account lands. Said once, kindly, on a page that is otherwise the same for everyone.
+  const bye = url.searchParams.has('bye');
+  if (!env?.SUPABASE_URL) return { systems: [], configured: false, failed: false, bye };
 
   const sb = db(env);
   const { data, error } = await tolerantSelect<CardRow[]>(CARD_COLUMNS, CARD_OPTIONAL, (cols) =>
@@ -21,11 +23,11 @@ export const load: PageServerLoad = async ({ platform, setHeaders }) => {
   // failure either - a 60-second cache on a broken read turns a blip into a minute of wrong page.
   if (error) {
     console.error('front page query failed', error.message);
-    return { systems: [], configured: true, failed: true };
+    return { systems: [], configured: true, failed: true, bye };
   }
 
   // Short edge cache: the front page is the same for everybody and is the most-hit route.
   setHeaders({ 'cache-control': 'public, max-age=60' });
 
-  return { systems: data ?? [], configured: true, failed: false };
+  return { systems: data ?? [], configured: true, failed: false, bye };
 };

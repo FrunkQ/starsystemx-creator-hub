@@ -8,6 +8,7 @@ import { loadSite } from '$lib/server/site';
 import { loadGates } from '$lib/server/config';
 import { mayContribute } from '$lib/server/auth';
 import { removalRole, commentNotice } from '$lib/comments';
+import { isBadge } from '$lib/badges';
 
 export const load: PageServerLoad = async ({ params, platform, setHeaders, url, locals }) => {
   const env = platform?.env;
@@ -35,8 +36,10 @@ export const load: PageServerLoad = async ({ params, platform, setHeaders, url, 
     sb.from('system_assets').select('sha256').eq('system_id', system.id)
   ]);
 
-  const [{ data: shots }, { data: reusers }] = await Promise.all([
+  const [{ data: shots }, { data: badgeRows }, { data: reusers }] = await Promise.all([
     sb.from('system_screenshots').select('sha256, caption, ordinal').eq('system_id', system.id).order('ordinal'),
+    // The cartographer's badges, drawn after the byline (src/lib/badges.ts).
+    sb.from('creator_badges').select('badge').eq('creator_id', system.creator_id),
     // "USED IN": public maps whose credits point at this one (0019). The other half of "credit
     // follows content" - a cartographer sees where their work went. Fails quietly before 0019.
     sb.from('systems').select('slug, title, creator_id')
@@ -76,14 +79,15 @@ export const load: PageServerLoad = async ({ params, platform, setHeaders, url, 
     .select('id, creator_id, body, created_at')
     .eq('system_id', system.id).is('removed_at', null)
     .order('created_at', { ascending: true }).limit(200);
-  const commenterIds = [...new Set((commentRows ?? []).map((c) => c.creator_id))];
+  const commenterIds = [...new Set((commentRows ?? []).flatMap((c) => (c.creator_id ? [c.creator_id] : [])))];
   const { data: commenters } = commenterIds.length
     ? await sb.from('creators').select('id, handle, display_name').in('id', commenterIds)
     : { data: [] as { id: string; handle: string; display_name: string | null }[] };
   const commenterName = new Map((commenters ?? []).map((c) => [c.id, c.display_name ?? c.handle]));
   const comments = (commentRows ?? []).map((c) => ({
     id: c.id, body: c.body, created_at: c.created_at,
-    by: commenterName.get(c.creator_id) ?? 'an explorer',
+    // No author left: they deleted their account and chose to leave their words (0022).
+    by: c.creator_id ? commenterName.get(c.creator_id) ?? 'an explorer' : 'a former explorer',
     // Who may take it down is decided here, once; the page only draws the button.
     removable: !!removalRole(locals.viewer, c, system.creator_id)
   }));
@@ -131,6 +135,7 @@ export const load: PageServerLoad = async ({ params, platform, setHeaders, url, 
   return {
     system,
     creator,
+    creatorBadges: (badgeRows ?? []).map((b) => b.badge).filter(isBadge),
     bodies: bodies ?? [],
     constructs: constructs ?? [],
     usedIn,
