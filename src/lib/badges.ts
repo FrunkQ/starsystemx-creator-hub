@@ -15,13 +15,16 @@
 
 export type Badge =
   | 'cartographer' | 'constellation' | 'prolific' | 'featured' | 'popular' | 'legend'
-  | 'wellspring' | 'crew' | 'artist' | 'modeller' | 'worldbuilder' | 'voice' | 'pioneer';
+  | 'wellspring' | 'crew' | 'artist' | 'modeller' | 'worldbuilder' | 'chronicler' | 'voice'
+  | 'pioneer' | 'keeper';
 
 export interface BadgeFacts {
   /** The explorer's PUBLIC maps. Nothing hidden, draft or taken down counts. */
   maps: Array<{
     kind: string; stars: number; downloads: number;
     images: number; models: number; objects: number; credits: number;
+    /** The raw information density, 0..1 (bundle/density.ts). */
+    density: number;
   }>;
   /** Public maps by OTHER people that credit this explorer's work. */
   usedIn: number;
@@ -29,10 +32,14 @@ export interface BadgeFacts {
   comments: number;
   /** Where this explorer came in the sign-up order, from 1. Null when unknown. */
   joinedRank: number | null;
+  /** Runs the place. */
+  admin: boolean;
 }
 
 export const THRESHOLDS = {
-  prolific: 5, featured: 25, popular: 100, legend: 1000, worldbuilder: 100, voice: 10, pioneer: 100
+  prolific: 5, featured: 25, popular: 100, legend: 1000, worldbuilder: 100, voice: 10, pioneer: 100,
+  /** Raw density, absolute rather than relative to the best: a badge should not be lost because somebody else wrote more. */
+  chronicler: 0.6
 } as const;
 
 export interface BadgeSpec {
@@ -271,6 +278,26 @@ export const CATALOGUE: Record<Badge, BadgeSpec> = {
     ],
     earned: (f) => f.maps.some((m) => m.objects >= THRESHOLDS.worldbuilder)
   },
+  chronicler: {
+    name: 'Chronicler',
+    how: 'Wrote up the worlds in a map, most of them, properly.',
+    ink: '#c9b37a', light: '#f4ead0', dark: '#8a7a4a', alt: '#6fb3ff',
+    art: [
+      '............',
+      '.####..####.',
+      '#++++##++++#',
+      '#+--+##+--+#',
+      '#++++##++++#',
+      '#+--+##+--+#',
+      '#++++##++++#',
+      '#+--+##++++#',
+      '#++++##++++#',
+      '.####..####.',
+      '.....##.....',
+      '............'
+    ],
+    earned: (f) => f.maps.some((m) => m.density >= THRESHOLDS.chronicler)
+  },
   voice: {
     name: 'Voice',
     how: 'Ten comments. Decent ones, we assume.',
@@ -310,6 +337,26 @@ export const CATALOGUE: Record<Badge, BadgeSpec> = {
       '...o....o...'
     ],
     earned: (f) => f.joinedRank != null && f.joinedRank <= THRESHOLDS.pioneer
+  },
+  keeper: {
+    name: 'Keeper',
+    how: 'Keeps the lights on and the celestial bodies clothed.',
+    ...gold, alt: '#ff8080',
+    art: [
+      '............',
+      '....####....',
+      '...#++++#...',
+      '...#+oo+#...',
+      '...#++++#...',
+      '....####....',
+      '.....##.....',
+      '.....##.....',
+      '.....##.##..',
+      '.....##.##..',
+      '.....####...',
+      '............'
+    ],
+    earned: (f) => f.admin
   }
 };
 

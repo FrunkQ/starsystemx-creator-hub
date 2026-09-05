@@ -4,6 +4,8 @@ import { json, error } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import { PUBLIC_CORS, preflight } from '$lib/server/cors';
 import * as ledger from '$lib/server/ledger';
+import { bestDensity } from '$lib/server/density';
+import { densityFrom, densityLevel } from '$lib/bundle/density';
 
 export const GET: RequestHandler = async ({ platform, params, setHeaders }) => {
   const env = platform?.env;
@@ -19,6 +21,7 @@ export const GET: RequestHandler = async ({ platform, params, setHeaders }) => {
     sb.from('creators').select('handle, display_name').eq('id', map.creator_id).maybeSingle()
   ]);
 
+  const best = await bestDensity(sb);
   const { data: shots } = await sb.from('system_screenshots')
     .select('sha256, caption, ordinal').eq('system_id', map.id).order('ordinal');
   const approved = await ledger.approvedOnly(sb, (shots ?? []).map((s) => s.sha256 as string));
@@ -36,6 +39,12 @@ export const GET: RequestHandler = async ({ platform, params, setHeaders }) => {
     sizeBytes: map.source_bytes,
     hearts: map.hearts_count,
     comments: map.comments_count ?? 0,
+    // How much of it is written about (D-30): the level 0..5 against the best on the hub, the raw
+    // 0..1 score, and the objects counted. Null when the map has not been measured yet.
+    information: map.info_density == null ? null : {
+      level: densityLevel(map.info_density, best),
+      ...densityFrom(map.info_density, map.info_detail)
+    },
     downloads: map.download_count,
     tags: map.tags,
     autoTags: map.auto_tags,

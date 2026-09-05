@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.16.0 — 2026-09-05
+
+### Information density
+
+How much of a map is written about, 0 to 5, with 5 the best on the hub: a weighted mean of how
+many objects have a description and how long it is (moons half, belts half, rings a quarter,
+small objects and barycentres not at all). Shown as an "i" with a ring of five on every card, in
+the map page's facts, and on the manage page as a nudge saying what would lift it. Measured on
+upload and re-index; existing maps are measured once on their next view. Migration 0023 (D-30).
+
+Two more badges: Chronicler, for writing up most of a map; Keeper, for running the place.
+
 ## 0.15.2 — 2026-09-05
 
 The card's kind label is a little smaller than the cover's own title, so it reads as a tag.

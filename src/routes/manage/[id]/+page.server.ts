@@ -15,6 +15,7 @@ import {
 import { reindexSystem } from '$lib/server/reindex';
 import { coverOptionsFrom } from '$lib/cover/generate';
 import { tolerantWrite } from '$lib/server/tolerant';
+import { bestDensity } from '$lib/server/density';
 import type { SystemRow } from '$lib/server/database.types';
 import * as ledger from '$lib/server/ledger';
 import * as badges from '$lib/server/integrations/badges';
@@ -69,6 +70,8 @@ export const load: PageServerLoad = async ({ params, platform, locals }) => {
   return {
     vocabulary: vocabularyFrom(vocabRow?.value ?? null),
     system,
+    // What a 5 on the information meter means today (D-30) - the nudge is measured against it.
+    best: await bestDensity(sb),
     screenshots: (shots ?? []).map((s) => ({
       ...s,
       approved: approved.has(s.sha256),

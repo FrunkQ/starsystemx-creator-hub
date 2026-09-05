@@ -128,7 +128,7 @@
     {:else}
       <div class="grid">
         {#each data.systems as system (system.slug)}
-          <SystemCard {system} />
+          <SystemCard {system} best={data.best} />
         {/each}
       </div>
     {/if}

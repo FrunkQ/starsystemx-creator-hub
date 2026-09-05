@@ -2,9 +2,9 @@
 import { describe, it, expect } from 'vitest';
 import { CATALOGUE, BADGE_IDS, deriveBadgeSet, THRESHOLDS, type BadgeFacts } from '../src/lib/badges';
 
-const none: BadgeFacts = { maps: [], usedIn: 0, comments: 0, joinedRank: null };
+const none: BadgeFacts = { maps: [], usedIn: 0, comments: 0, joinedRank: null, admin: false };
 const map = (over: Partial<BadgeFacts['maps'][number]> = {}) => ({
-  kind: 'system', stars: 0, downloads: 0, images: 0, models: 0, objects: 3, credits: 0, ...over
+  kind: 'system', stars: 0, downloads: 0, images: 0, models: 0, objects: 3, credits: 0, density: 0, ...over
 });
 const withMap = (over: Partial<BadgeFacts['maps'][number]> = {}) => deriveBadgeSet({ ...none, maps: [map(over)] });
 
@@ -43,10 +43,16 @@ describe('what earns a badge', () => {
     expect(withMap({ models: 1 })).toContain('modeller');
   });
 
+  it('a chronicler wrote up most of a map; a keeper runs the place', () => {
+    expect(withMap({ density: THRESHOLDS.chronicler - 0.01 })).not.toContain('chronicler');
+    expect(withMap({ density: THRESHOLDS.chronicler })).toContain('chronicler');
+    expect(deriveBadgeSet({ ...none, admin: true })).toEqual(['keeper']);
+  });
+
   it('comes out in catalogue order, whatever the facts', () => {
     const all = deriveBadgeSet({
-      maps: Array.from({ length: 5 }, () => map({ kind: 'starmap', stars: 100, downloads: 5000, images: 2, models: 1, objects: 300, credits: 1 })),
-      usedIn: 3, comments: 40, joinedRank: 1
+      maps: Array.from({ length: 5 }, () => map({ kind: 'starmap', stars: 100, downloads: 5000, images: 2, models: 1, objects: 300, credits: 1, density: 1 })),
+      usedIn: 3, comments: 40, joinedRank: 1, admin: true
     });
     expect(all).toEqual(BADGE_IDS);
   });

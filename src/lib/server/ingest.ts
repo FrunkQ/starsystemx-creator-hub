@@ -22,6 +22,7 @@ import { tolerantWrite, tolerantWriteMany } from './tolerant';
 import { readProvenance } from '$lib/bundle/provenance';
 import { detectGmContent } from '$lib/bundle/gmContent';
 import { computeFacets, deriveTags } from '$lib/bundle/facets';
+import { informationDensity, type Density } from '$lib/bundle/density';
 import { stripGmContent } from '$lib/bundle/strip';
 import { checkFreshness } from '$lib/bundle/freshness';
 import { zipSync, strToU8 } from 'fflate';
@@ -305,6 +306,8 @@ export async function ingest(
   // drift from what the file actually contains.
   const facets = computeFacets(doc);
   const autoTags = deriveTags(facets, { hasGmContent: gm.hasGmContent });
+  // How much of it is written about (D-30), measured from the same document.
+  const density = informationDensity(doc);
   const systemId = opts.replacesSystemId ?? crypto.randomUUID();
 
   // THE SLUG FIRST: a designed cover can carry a QR code to the page, so the address has to exist
@@ -343,7 +346,7 @@ export async function ingest(
     sourceBytes: bytes.length, isUpdate: !!opts.replacesSystemId, flagged, novelCount: novel.length,
     createdWith: madeWith.createdWith, legacyStamped: format.legacyStamped,
     revision: madeWith.revision, exportMode: madeWith.exportMode,
-    attestation: opts.attestation, facets, autoTags
+    attestation: opts.attestation, facets, autoTags, density
   });
 
   // The original zip is kept for provenance and re-packing, NEVER served raw - serving it would
@@ -432,6 +435,7 @@ interface WriteArgs {
   exportMode: string | null;
   facets: ReturnType<typeof computeFacets>;
   autoTags: string[];
+  density: Density;
   attestation: { accepted: boolean; textVersion: number; textShown: string };
 }
 
@@ -474,6 +478,9 @@ async function writeRows(sb: Db, a: WriteArgs): Promise<string> {
     // hub maps it points at, by slug, so the original's page can say "used in" (0019).
     content_credits: shaped.contentCredits.length ? shaped.contentCredits : null,
     content_credit_slugs: creditSlugs(shaped.contentCredits),
+    // How much of it is written about (0023, D-30): the raw score and the detail behind it.
+    info_density: a.density.raw,
+    info_detail: { total: a.density.total, described: a.density.described, avgLength: a.density.avgLength },
     // The derived rows are current as of now (0020); the page's one-shot re-index skips this map.
     reindexed_at: new Date().toISOString()
   }, (row) => Promise.resolve(sb.from('systems').upsert(row as Partial<SystemRow>)));

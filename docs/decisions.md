@@ -544,6 +544,35 @@ error page gets the status in big pixels and a sentence. Body text stays a syste
 lines, the notices and the empty states are written in the terms' register: plain, short, a
 little dry ("Ten comments. Decent ones, we assume.").
 
+### D-30. Information density: a 0 to 5 for how much of a map is written about, 5 being the best here
+
+The owner (2026-09-05): "if people have taken the time and effort to write descriptions for all
+their objects then lets have a dynamically scaled 'i' icon with a value 0-5. 0 being no notes in
+their file and 5 being the best we have. It will be a factor of %age of objects and lengths of
+descriptions (ignoring small bodies, with moons being less important) but the rest carrying honest
+weight in a 'information density' measure. To encourage people to 'make the effort'."
+
+**The measure** (`src/lib/bundle/density.ts`, pure, tested): every object that counts carries a
+weight - moons a half, belts a half, rings a quarter, small objects and barycentres nothing,
+everything else one - and its description a quality from 0 to 1, linear to a solid paragraph
+(280 characters) and no more for a novel; under 12 characters is a placeholder, not a description.
+The raw score is the weighted mean, so coverage and length are one number. The public `description`
+only: GM notes are withheld from players and stripped on a player export, so they are not
+information the map gives anyone. Measured on upload and on re-index and stored (`info_density`,
+`info_detail`, migration 0023); a map that predates the measure is re-indexed once on first view.
+
+**The level is relative.** 0 when nothing is described; otherwise 1 to 5 against the best raw
+score among public maps, so the best map on the hub is a 5 and one at a fifth of it is a 1. The
+scale moves as the library improves, which is the point: "5 being the best we have". The
+Chronicler badge, by contrast, is ABSOLUTE (raw 0.6), because a badge should not be lost because
+somebody else wrote more.
+
+**Where it shows:** the "i" with a ring of five segments (`InfoDensity.svelte`) on every card, in
+the facts row of the map page with the words behind it as the tooltip, and on the manage page as
+the nudge - what counts, how many objects are still undescribed, and that a paragraph each is
+what a five takes. The public API carries it as `information` (the level on the list, the level
+plus the detail on one map).
+
 ### D-16. The takedown address is assembled at runtime, never served as text
 
 The owner's instruction was explicit: keep it off the page as scrapable text. It is stored as

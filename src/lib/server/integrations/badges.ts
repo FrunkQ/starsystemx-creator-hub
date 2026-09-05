@@ -19,10 +19,11 @@ export type { Badge };
  *  reads as "none", which is the honest answer when a table does not exist yet. */
 export async function gatherFacts(sb: Db, creatorId: string): Promise<BadgeFacts> {
   const [{ data: maps }, { data: me }] = await Promise.all([
-    sb.from('systems')
-      .select('slug, kind, hearts_count, download_count, carried_images, carried_models, body_count, construct_count, content_credits')
+    // `*`: info_density is 0023's, and naming it before that migration fails the read - which
+    // would read as "no maps" and strip every badge. A person's own maps are few.
+    sb.from('systems').select('*')
       .eq('creator_id', creatorId).eq('state', 'public').eq('visibility', 'public'),
-    sb.from('creators').select('created_at').eq('id', creatorId).maybeSingle()
+    sb.from('creators').select('created_at, role').eq('id', creatorId).maybeSingle()
   ]);
   const rows = maps ?? [];
   const slugs = rows.map((m) => m.slug);
@@ -48,11 +49,13 @@ export async function gatherFacts(sb: Db, creatorId: string): Promise<BadgeFacts
       kind: m.kind, stars: m.hearts_count ?? 0, downloads: m.download_count ?? 0,
       images: m.carried_images ?? 0, models: m.carried_models ?? 0,
       objects: (m.body_count ?? 0) + (m.construct_count ?? 0),
-      credits: Array.isArray(m.content_credits) ? m.content_credits.length : 0
+      credits: Array.isArray(m.content_credits) ? m.content_credits.length : 0,
+      density: typeof m.info_density === 'number' ? m.info_density : 0
     })),
     usedIn,
     comments,
-    joinedRank: before == null ? null : before + 1
+    joinedRank: before == null ? null : before + 1,
+    admin: me?.role === 'admin'
   };
 }
 

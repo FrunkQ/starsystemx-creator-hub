@@ -5,6 +5,8 @@
   // a second, offset edge - a map with more inside it - and a kind badge on the picture. A system
   // card is plain. Nobody should have to read the counts to know which they are looking at.
   import PixelText from '$lib/components/PixelText.svelte';
+  import InfoDensity from '$lib/components/InfoDensity.svelte';
+  import { densityLevel } from '$lib/bundle/density';
   interface System {
     slug: string;
     title: string;
@@ -15,6 +17,8 @@
     hearts_count: number;
     // Absent from a list read until migration 0021 has run (server/cards.ts).
     comments_count?: number;
+    // Absent until 0023; null until the map has been measured (bundle/density.ts).
+    info_density?: number | null;
     download_count: number;
     // Derived facets, present when the card is rendered from a query that selected them.
     auto_tags?: string[];
@@ -24,7 +28,8 @@
     construct_count?: number;
     system_count?: number;
   }
-  let { system }: { system: System } = $props();
+  // `best`: the top raw density on the hub, which is what a 5 means (server/density.ts).
+  let { system, best = null }: { system: System; best?: number | null } = $props();
 
   const isStarmap = $derived(system.kind === 'starmap');
 
@@ -83,6 +88,11 @@
         <span class="stars" title="{system.comments_count} {system.comments_count === 1 ? 'comment' : 'comments'}"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>{system.comments_count}</span>
       {/if}
       <span>{system.download_count} downloads</span>
+      <!-- How much is written about it, 0 to 5 against the best on the hub (D-30). -->
+      {#if system.info_density != null}
+        {@const level = densityLevel(system.info_density, best)}
+        <span class="stars" title="Information {level} of 5"><InfoDensity {level} size={15} /></span>
+      {/if}
     </div>
   </div>
 </a>

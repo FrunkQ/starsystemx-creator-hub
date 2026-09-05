@@ -12,6 +12,7 @@
   import NodeTree from '$lib/components/NodeTree.svelte';
   import RoleIcon from '$lib/components/RoleIcon.svelte';
   import Badge from '$lib/components/Badge.svelte';
+  import InfoDensity from '$lib/components/InfoDensity.svelte';
   import { orderRoles } from '$lib/components/roleIcons';
   import { formatBytes } from '$lib/bundle/facets';
   import { COMMENT_MAX } from '$lib/comments';
@@ -167,6 +168,13 @@
     {#if s.carried_models}<div><b>{s.carried_models}</b> 3D models</div>{/if}
     <div><b>{formatBytes(s.source_bytes ?? 0)}</b> download</div>
     {#if s.created_with}<div>made with SSE <b>{s.created_with}</b></div>{/if}
+    <!-- HOW MUCH IS WRITTEN ABOUT IT (D-30): the "i" with its ring of five, 5 being the best here. -->
+    {#if data.density.measured}
+      <div class="density" title={data.density.summary}>
+        <InfoDensity level={data.density.level} size={20} title={data.density.summary} />
+        <b>{data.density.level}</b> of 5 described
+      </div>
+    {/if}
   </div>
 
   {#if roles.length}
@@ -329,6 +337,7 @@
   .muted { color: var(--ink-dim); margin: 0 0 12px; }
   .facts { display: flex; flex-wrap: wrap; gap: 8px 22px; margin: 0 0 10px; color: var(--ink-dim); }
   .facts b { color: var(--ink); font-variant-numeric: tabular-nums; }
+  .facts .density { display: inline-flex; align-items: center; gap: 6px; }
   .roles { color: var(--ink-faint); margin: 0 0 12px; font-size: 0.92rem; display: flex; flex-wrap: wrap; gap: 4px 14px; }
   .rc { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
   .rc :global(.role-icon) { opacity: 0.7; }

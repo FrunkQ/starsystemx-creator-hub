@@ -9,6 +9,8 @@ import { loadGates } from '$lib/server/config';
 import { mayContribute } from '$lib/server/auth';
 import { removalRole, commentNotice } from '$lib/comments';
 import { isBadge } from '$lib/badges';
+import { densityFrom, densityLevel, densitySummary } from '$lib/bundle/density';
+import { bestDensity } from '$lib/server/density';
 
 export const load: PageServerLoad = async ({ params, platform, setHeaders, url, locals }) => {
   const env = platform?.env;
@@ -56,7 +58,12 @@ export const load: PageServerLoad = async ({ params, platform, setHeaders, url, 
   // ROWS WRITTEN BEFORE THE CURRENT READER get rebuilt from the stored file, once, in the
   // background (server/reindex.ts): distances, positions, small objects, credits. The page served
   // now is the old reading; the next view has the new one. Never on the request's critical path.
-  const stale = !system.reindexed_at && (bodies?.length ?? 0) > 0 && (bodies ?? []).every((b) => b.distance == null);
+  const stale = (bodies?.length ?? 0) > 0 && (
+    (!system.reindexed_at && (bodies ?? []).every((b) => b.distance == null))
+    // 0023: measured on upload and re-index; a map that predates the measure gets it once. The
+    // key is only present once the column exists, so this cannot loop before the migration.
+    || ('info_density' in system && system.info_density == null)
+  );
   if (stale && platform?.context?.waitUntil) {
     platform.context.waitUntil(
       Promise.all([loadSite(sb, url), loadGates(sb)])
@@ -128,6 +135,12 @@ export const load: PageServerLoad = async ({ params, platform, setHeaders, url, 
   const approved = await ledger.approvedOnly(sb, hashes);
   const withheldCount = hashes.length - approved.size;
 
+  // HOW MUCH IS WRITTEN ABOUT IT (D-30): the stored score, against the best on the hub.
+  const best = await bestDensity(sb);
+  const detail = densityFrom(system.info_density, system.info_detail);
+  const level = densityLevel(system.info_density, best);
+  const density = { level, summary: densitySummary(level, detail), measured: detail !== null };
+
   // The page after a form round-trip must be fresh: a cached copy would not show the comment just
   // posted, and would read as lost.
   setHeaders({ 'cache-control': notice ? 'no-store' : 'public, max-age=60' });
@@ -139,6 +152,7 @@ export const load: PageServerLoad = async ({ params, platform, setHeaders, url, 
     bodies: bodies ?? [],
     constructs: constructs ?? [],
     usedIn,
+    density,
     starred,
     comments,
     commentsAvailable: !commentsErr,

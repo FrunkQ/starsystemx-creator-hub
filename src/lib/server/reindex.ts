@@ -23,6 +23,7 @@ import * as r2 from './r2';
 import { openBundle } from '$lib/bundle/open';
 import { normalise, creditSlugs } from '$lib/bundle/normalise';
 import { computeFacets, deriveTags } from '$lib/bundle/facets';
+import { informationDensity } from '$lib/bundle/density';
 import { detectGmContent } from '$lib/bundle/gmContent';
 import { tolerantWrite } from './tolerant';
 import { writeNodeRows } from './ingest';
@@ -43,6 +44,7 @@ export async function reindexSystem(
   const shaped = normalise(doc);
   const facets = computeFacets(doc);
   const autoTags = deriveTags(facets, { hasGmContent: detectGmContent(doc).hasGmContent });
+  const density = informationDensity(doc);
 
   // Node images are keyed by bundle path; the link table remembers which hash sits at each.
   const { data: assets } = await sb.from('system_assets').select('sha256, bundle_path').eq('system_id', systemId);
@@ -64,6 +66,8 @@ export async function reindexSystem(
     auto_tags: autoTags,
     content_credits: shaped.contentCredits.length ? shaped.contentCredits : null,
     content_credit_slugs: creditSlugs(shaped.contentCredits),
+    info_density: density.raw,
+    info_detail: { total: density.total, described: density.described, avgLength: density.avgLength },
     reindexed_at: new Date().toISOString()
   }, (row) => Promise.resolve(sb.from('systems').update(row as Partial<SystemRow>).eq('id', systemId)));
   if (error) return { ok: false, message: 'could not update the map: ' + error.message };

@@ -112,6 +112,10 @@ export type SystemRow = {
   content_credit_slugs: string[];
   // 0020: when the derived rows were last rebuilt. Null = predates the current reader; re-index once.
   reindexed_at: string | null;
+  // 0023: how much of the map is written about (bundle/density.ts): the raw 0..1 score, and the
+  // detail behind it {total, described, avgLength}. Null until measured.
+  info_density: number | null;
+  info_detail: unknown;
   blurb: string | null;
   tags: string[];
   // Derived facets (db/migrations/0007). Facts the hub computed, kept separate from `tags` so a

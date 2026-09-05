@@ -9,6 +9,8 @@ import { db } from '$lib/server/db';
 import { PUBLIC_CORS, preflight } from '$lib/server/cors';
 import { tolerantSelect } from '$lib/server/tolerant';
 import { CARD_COLUMNS, CARD_OPTIONAL, type CardRow } from '$lib/server/cards';
+import { bestDensity } from '$lib/server/density';
+import { densityLevel } from '$lib/bundle/density';
 
 const PAGE = 30;
 
@@ -27,18 +29,23 @@ export const GET: RequestHandler = async ({ platform, url, setHeaders }) => {
 
   // Built from the column list so a column the database lacks yet can be dropped and the query
   // run again (tolerant.ts).
-  const { data, error: e } = await tolerantSelect<ListRow[]>(LIST_COLUMNS, CARD_OPTIONAL, (cols) => {
-    let query = db(env).from('systems').select(cols).eq('state', 'public').eq('visibility', 'public');
+  const sb = db(env);
+  const [{ data, error: e }, best] = await Promise.all([
+    tolerantSelect<ListRow[]>(LIST_COLUMNS, CARD_OPTIONAL, (cols) => {
+      let query = sb.from('systems').select(cols).eq('state', 'public').eq('visibility', 'public');
 
-    if (tags.length) query = query.contains('auto_tags', tags);
-    if (q) query = query.ilike('title', '%' + q + '%');
+      if (tags.length) query = query.contains('auto_tags', tags);
+      if (q) query = query.ilike('title', '%' + q + '%');
 
-    query = sort === 'new'
-      ? query.order('created_at', { ascending: false })
-      : query.order('hearts_count', { ascending: false }).order('created_at', { ascending: false });
+      query = sort === 'new'
+        ? query.order('created_at', { ascending: false })
+        : query.order('hearts_count', { ascending: false }).order('created_at', { ascending: false });
 
-    return query.range((page - 1) * PAGE, page * PAGE - 1);
-  });
+      return query.range((page - 1) * PAGE, page * PAGE - 1);
+    }),
+    // What a 5 on the information meter means today (D-30).
+    bestDensity(sb)
+  ]);
 
   // Same rule as the web pages: a failed query must not be served as an empty library.
   if (e) {
@@ -48,7 +55,8 @@ export const GET: RequestHandler = async ({ platform, url, setHeaders }) => {
 
   setHeaders({ 'cache-control': 'public, max-age=60', ...PUBLIC_CORS });
   return json({
-    maps: data ?? [],
+    // `information`: 0..5, how much of the map is written about, 5 being the best on the hub.
+    maps: (data ?? []).map((m) => ({ ...m, information: densityLevel(m.info_density, best) })),
     page,
     pageSize: PAGE,
     // The app builds its own download url from the slug; given here so the contract is explicit.

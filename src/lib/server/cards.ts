@@ -6,13 +6,13 @@ import type { SystemRow } from './database.types';
 
 export const CARD_COLUMNS = [
   'slug', 'title', 'summary', 'blurb', 'kind', 'cover_sha256', 'hearts_count', 'comments_count',
-  'download_count', 'auto_tags', 'tags', 'body_count', 'construct_count', 'system_count'
+  'info_density', 'download_count', 'auto_tags', 'tags', 'body_count', 'construct_count', 'system_count'
 ] as const;
 
 /** Columns a card read survives without: each named by a migration that may not have run. */
-export const CARD_OPTIONAL = ['comments_count'] as const;
+export const CARD_OPTIONAL = ['comments_count', 'info_density'] as const;
 
 export type CardRow = Pick<SystemRow,
   'slug' | 'title' | 'summary' | 'blurb' | 'kind' | 'cover_sha256' | 'hearts_count' | 'download_count' |
   'auto_tags' | 'tags' | 'body_count' | 'construct_count' | 'system_count'
-> & { comments_count?: number };
+> & { comments_count?: number; info_density?: number | null };

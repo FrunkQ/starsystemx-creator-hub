@@ -2,6 +2,7 @@ import type { PageServerLoad } from './$types';
 import { db } from '$lib/server/db';
 import { tolerantSelect } from '$lib/server/tolerant';
 import { CARD_COLUMNS, CARD_OPTIONAL, type CardRow } from '$lib/server/cards';
+import { bestDensity } from '$lib/server/density';
 import { vocabularyFrom } from '$lib/vocabulary';
 
 /** Pills the hub DERIVES from the file, grouped - see 0007's note on why these are kept apart. */
@@ -28,7 +29,8 @@ export const load: PageServerLoad = async ({ platform, url, setHeaders }) => {
 
   const empty = {
     systems: [], groups: FACET_GROUPS, mine: [] as { label: string; tags: string[] }[],
-    selected, q, sort, kind, counts: {} as Record<string, number>, narrow: [] as string[]
+    selected, q, sort, kind, counts: {} as Record<string, number>, narrow: [] as string[],
+    best: null as number | null
   };
   if (!env?.SUPABASE_URL) return { ...empty, configured: false, failed: false };
 
@@ -57,9 +59,11 @@ export const load: PageServerLoad = async ({ platform, url, setHeaders }) => {
     return query.limit(60);
   };
 
-  const [{ data, error }, { data: vocabRow }] = await Promise.all([
+  const [{ data, error }, { data: vocabRow }, best] = await Promise.all([
     tolerantSelect<CardRow[]>(CARD_COLUMNS, CARD_OPTIONAL, build),
-    sb.from('config').select('value').eq('key', 'creator_vocabulary').maybeSingle()
+    sb.from('config').select('value').eq('key', 'creator_vocabulary').maybeSingle(),
+    // What a 5 on the information meter means today (D-30).
+    bestDensity(sb)
   ]);
   const mine = vocabularyFrom(vocabRow?.value ?? null).map((g) => ({ label: g.label, tags: g.tags }));
 
@@ -90,5 +94,5 @@ export const load: PageServerLoad = async ({ platform, url, setHeaders }) => {
     .map(([t]) => t);
 
   setHeaders({ 'cache-control': 'public, max-age=60' });
-  return { ...empty, systems: data ?? [], mine, counts, narrow: total >= 4 ? narrow : [], configured: true, failed: false };
+  return { ...empty, systems: data ?? [], mine, counts, narrow: total >= 4 ? narrow : [], best, configured: true, failed: false };
 };

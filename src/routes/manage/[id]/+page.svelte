@@ -1,7 +1,12 @@
 <script lang="ts">
+  import InfoDensity from '$lib/components/InfoDensity.svelte';
+  import { densityFrom, densityLevel, densitySummary, FULL_DESCRIPTION } from '$lib/bundle/density';
   let { data, form } = $props();
 
   const s = $derived(data.system);
+  // HOW MUCH IS WRITTEN ABOUT IT (D-30), and what would lift it: the nudge to make the effort.
+  const density = $derived(densityFrom(s.info_density, s.info_detail));
+  const infoLevel = $derived(densityLevel(s.info_density, data.best));
   let uploading = $state(false);
   let uploadMessage = $state<string | null>(null);
 
@@ -76,6 +81,28 @@
       {s.state_note ?? 'No reason was recorded.'} It stays here for you, nobody else can see it, and
       it cannot be published again. If you think that is wrong, write to the address on the
       <a href="/takedown">takedown page</a>.
+    </p>
+  </div>
+{/if}
+{#if density}
+  <!-- The nudge (D-30). Plain about what counts and what a five takes; never a scold. -->
+  <div class="panel nudge">
+    <h2><InfoDensity level={infoLevel} size={22} /> Information {infoLevel} of 5</h2>
+    <p class="muted">
+      {densitySummary(infoLevel, density)}
+      {#if infoLevel >= 5}
+        As well written up as any map here.
+      {:else if density.total === 0}
+        Nothing here carries weight for it: small objects and barycentres do not count.
+      {:else if density.described < density.total}
+        Describing the other {density.total - density.described}
+        {density.total - density.described === 1 ? 'object' : 'objects'} in Star System Explorer and
+        uploading a new version lifts it. A solid paragraph each, about {FULL_DESCRIPTION} characters,
+        is what a five takes. Small objects do not count; moons count half.
+      {:else}
+        Every object has something. Longer - a solid paragraph each, about {FULL_DESCRIPTION}
+        characters - is what a five takes.
+      {/if}
     </p>
   </div>
 {/if}
@@ -256,6 +283,8 @@
 <style>
   h1 { margin: 0 0 4px; }
   .by { margin: 0 0 6px; color: var(--ink-faint); }
+  .nudge h2 { display: flex; align-items: center; gap: 8px; margin: 0 0 6px; font-size: 1.05rem; }
+  .nudge p { margin: 0; max-width: 72ch; }
   .actions { margin: 0 0 20px; color: var(--ink-faint); }
   .inline { display: inline; }
   .linkish { background: none; border: none; padding: 0; font: inherit; color: var(--accent); cursor: pointer; }
