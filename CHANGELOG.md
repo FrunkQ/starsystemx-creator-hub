@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.36.0 — 2026-09-06
+
+### The cover preview is drawn in your browser
+
+Picking a font on a picture-backed cover returned a 1102. It was not the decode this time - that is
+cached - it was the PNG encode: 65ms for a card over a photograph against a free plan's 10ms of
+CPU, where a drawn card is 14ms. A photograph does not compress, so deflate does real work.
+
+The preview now runs the SAME renderer in the page. Not a second implementation - `src/lib/cover/`
+is plain TypeScript and the card is deterministic, so the browser draws byte-for-byte what the hub
+would have. Previews now cost the Worker nothing at all, and `/api/cover/preview` is deleted with
+the change.
+
+Saving a cover still renders once on the server, because a stored cover is auto-approved on the
+grounds that the hub drew it.
+
 ## 0.35.0 — 2026-09-06
 
 ### "Copy for Star System Explorer" on a system

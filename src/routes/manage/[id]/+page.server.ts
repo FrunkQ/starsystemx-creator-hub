@@ -11,7 +11,7 @@ import { loadSite } from '$lib/server/site';
 import { sanitiseTags } from '$lib/vocabulary';
 import { loadVocabulary, proposeTag } from '$lib/server/tags';
 import {
-  storeGeneratedCover, linkCover, factsFor, regenerateGeneratedCover, coverIsScreenshot
+  storeGeneratedCover, linkCover, factsFor, regenerateGeneratedCover, coverIsScreenshot, coverNodeFrom
 } from '$lib/server/cover';
 import { reindexSystem } from '$lib/server/reindex';
 import { coverOptionsFrom } from '$lib/cover/generate';
@@ -36,7 +36,7 @@ async function ownedSystem(sb: ReturnType<typeof db>, id: string, viewerId: stri
 /** The base a designed card can be drawn over: only these two can be read on a Worker. */
 const DRAWABLE = new Set(['image/png', 'image/jpeg']);
 
-export const load: PageServerLoad = async ({ params, platform, locals }) => {
+export const load: PageServerLoad = async ({ params, platform, locals, url }) => {
   const env = platform?.env;
   if (!env) throw error(500, 'not configured');
   if (!locals.viewer) throw error(401, 'Sign in first.');
@@ -44,12 +44,16 @@ export const load: PageServerLoad = async ({ params, platform, locals }) => {
   const sb = db(env);
   const system = await ownedSystem(sb, params.id, locals.viewer.id);
 
-  const [{ data: shots }, { data: claims }, gates, { data: me }] = await Promise.all([
+  const [{ data: shots }, { data: claims }, gates, { data: me }, { data: bodies }, { data: constructs }] = await Promise.all([
     sb.from('system_screenshots').select('sha256, ordinal, caption').eq('system_id', system.id).order('ordinal'),
     sb.from('asset_claims').select('sha256, no_provenance, cc_by_breach, title, credit, license, source_url')
       .eq('system_id', system.id),
     loadGates(sb),
-    sb.from('creators').select('account_tier').eq('id', locals.viewer.id).maybeSingle()
+    sb.from('creators').select('account_tier, display_name, handle').eq('id', locals.viewer.id).maybeSingle(),
+    // THE CARD IS DRAWN IN THE BROWSER NOW (D-57), so the page needs what the rasteriser needs.
+    // These are the same rows `factsFor` reads; `coverNodeFrom` is the same reduction.
+    sb.from('bodies').select('*').eq('system_id', system.id),
+    sb.from('constructs').select('*').eq('system_id', system.id)
   ]);
 
   const hashes = (claims ?? []).map((c) => c.sha256);
@@ -116,6 +120,14 @@ export const load: PageServerLoad = async ({ params, platform, locals }) => {
     coverIsScreenshot: !!system.cover_sha256 && shotHashes.includes(system.cover_sha256),
     designer: { allowed, proOnly },
     label: gates.cover_label,
+    // Everything `renderCover` wants, minus the picture - which the browser already has, because
+    // it is the thing that prepared it (D-54).
+    coverNodes: [...(bodies ?? []), ...(constructs ?? [])].map(coverNodeFrom),
+    coverSubject: {
+      title: system.title, creator: me?.display_name ?? me?.handle ?? locals.viewer.handle, kind: system.kind,
+      systems: system.system_count, bodies: system.body_count, constructs: system.construct_count,
+      url: (await loadSite(sb, url)).url + '/s/' + system.slug, label: gates.cover_label
+    },
     reindexedAt: system.reindexed_at ?? null
   };
 };

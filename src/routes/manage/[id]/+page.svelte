@@ -2,7 +2,7 @@
   import InfoDensity from '$lib/components/InfoDensity.svelte';
   import { densityFrom, densityLevel, densitySummary, FULL_DESCRIPTION } from '$lib/bundle/density';
   import { coverCrop } from '$lib/cover/image';
-  import { COVER_W, COVER_H } from '$lib/cover/generate';
+  import { COVER_W, COVER_H, renderCover } from '$lib/cover/generate';
   let { data, form } = $props();
 
   const s = $derived(data.system);
@@ -81,6 +81,7 @@
       if (!put.ok) throw new Error(await put.text().catch(() => 'the hub would not take it'));
 
       sent.add(key);
+      baseImage = { width: COVER_W, height: COVER_H, rgb };
       prepared++;
     } catch (e) {
       prepareError = (e as Error).message ?? 'that picture could not be prepared';
@@ -94,6 +95,7 @@
     cover.base = 'image';
     cover.baseImage = sha256;
     source = null;
+    baseImage = null;
     prepare(sha256, cover.focusX, cover.focusY);
   }
 
@@ -104,18 +106,42 @@
     if (cover.baseImage) prepare(cover.baseImage, cover.focusX, cover.focusY);
   }
 
-  const previewUrl = $derived(
-    '/api/cover/preview?' + new URLSearchParams({
-      systemId: s.id, base: cover.base, palette: cover.palette, font: cover.font,
-      title: onOff(cover.title), byline: onOff(cover.byline), counts: onOff(cover.counts),
-      label: onOff(cover.label), qr: onOff(cover.qr),
-      baseImage: cover.base === 'image' ? (cover.baseImage ?? '') : '',
-      focusX: String(cover.focusX), focusY: String(cover.focusY),
-      // Cache-buster: the preview is an <img>, and the fitted pixels behind it change when the
-      // slider moves. Without this the browser shows the previous crop from its own cache.
-      v: String(prepared)
-    }).toString()
-  );
+  // ============================================================================================
+  // THE PREVIEW IS DRAWN HERE, IN THE BROWSER (D-57).
+  //
+  // It used to be an <img> pointing at `/api/cover/preview`, so every tick box and every font
+  // redrew the card on the Worker. Measured: a card over a PHOTOGRAPH costs about 65ms to PNG-encode
+  // against a free plan's 10ms of CPU, and a plain drawn card 14ms - which is why picking a font on
+  // a picture-backed cover returned a 1102 and picking one on a drawn card did not.
+  //
+  // IT IS NOT A SECOND RASTERISER. `src/lib/cover/` is plain TypeScript with no server in it, and
+  // fflate runs in a browser, so this is the SAME `renderCover` the hub runs - byte-for-byte, by
+  // construction, because the card is deterministic. Two implementations would drift; one module in
+  // two places cannot.
+  // ============================================================================================
+  let previewUrl = $state('');
+  /** The picture the browser prepared, kept so the preview can draw over it without a round trip. */
+  let baseImage = $state<{ width: number; height: number; rgb: Uint8Array } | null>(null);
+
+  $effect(() => {
+    // Read everything the card depends on, so this re-runs when any of it changes.
+    const options = { ...cover };
+    const picture = baseImage;
+    let url: string | null = null;
+    try {
+      const png = renderCover({
+        ...data.coverSubject,
+        nodes: data.coverNodes,
+        baseImage: options.base === 'image' ? picture : null
+      } as never, options as never);
+      url = URL.createObjectURL(new Blob([png as unknown as BlobPart], { type: 'image/png' }));
+      previewUrl = url;
+    } catch {
+      // A card that cannot be drawn is not worth an error message on this page: the Save button
+      // still works, and the hub draws its own copy from the same options.
+    }
+    return () => { if (url) URL.revokeObjectURL(url); };
+  });
 
 
 

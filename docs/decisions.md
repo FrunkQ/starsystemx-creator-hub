@@ -1465,6 +1465,44 @@ a `CLIP_FORMAT` bump in `bundle/clip.ts` - the number exists precisely so the sh
 without breaking what is already out there - and it should arrive as a SEAM REPORT block (D-37)
 rather than as a description.
 
+### D-57. The preview is drawn in the browser, by the same rasteriser
+
+The owner, 2026-09-06, on a second 1102: *"got another Error 1102... while selecting a font on the
+custom icon map. that need to be rendered client side too?"* Yes, and the measurement says why.
+
+**IT WAS NOT THE DECODE THIS TIME - THAT WAS ALREADY CACHED (D-53). IT IS THE ENCODE.** PNG-encoding
+1200x630 with fflate:
+
+| what is being encoded | cost |
+|---|---|
+| a drawn card - flat colours, gradients | **14 ms** |
+| a card over a photograph | **65 ms** |
+
+A photograph does not compress, so deflate does real work on 2.27 MB of it. Against a free plan's
+10 ms that is the whole budget five times over - **which is exactly why picking a font on a
+picture-backed cover failed and picking one on a drawn card did not.** The drawn card was over
+budget too and survives on Cloudflare's leniency; the photograph is not close.
+
+**A FIRST MEASUREMENT SAID 400ms AND WAS WRONG** - it was the first call, before the JIT had warmed.
+Measuring twice cost thirty seconds and would otherwise have justified a much more drastic change.
+
+**And the fix is not a second rasteriser.** `src/lib/cover/` is plain TypeScript with no server in
+it, and fflate runs in a browser - so the page imports the SAME `renderCover` the hub runs. The card
+is deterministic by design (D-22: no randomness, every angle from a hash), so what the browser draws
+is byte-for-byte what the hub would have drawn. **One module in two places cannot drift; two
+implementations would.**
+
+So the preview costs the Worker nothing at all now - not for a photograph, not for a drawn card,
+not per keystroke. `/api/cover/preview` is deleted with the change rather than left as a second way
+to do it. The picture the browser prepared (D-54) is already in memory, so drawing over it needs no
+round trip either.
+
+**WHAT IS STILL SERVER-SIDE, and honestly:** pressing "Use this cover" still renders once on the
+Worker, because a cover is stored AUTO-APPROVED on the grounds that the hub drew it (D-21), and
+bytes the browser hands over are bytes nobody has looked at. That is one ~80ms request instead of
+one per keystroke. If it proves flaky, the answer is not to trust the upload - it is to let a
+browser-supplied cover go through the ordinary picture review like any other image.
+
 ### D-16. The takedown address is assembled at runtime, never served as text
 
 The owner's instruction was explicit: keep it off the page as scrapable text. It is stored as

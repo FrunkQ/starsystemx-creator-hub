@@ -39,7 +39,7 @@ function chunk(type: string, data: Uint8Array): Uint8Array {
 }
 
 /** `rgb` is width * height * 3 bytes, row-major, top row first. */
-export function encodePng(width: number, height: number, rgb: Uint8Array): Uint8Array {
+export function encodePng(width: number, height: number, rgb: Uint8Array, level: 0 | 1 | 6 = 6): Uint8Array {
   if (rgb.length !== width * height * 3) throw new Error('encodePng: buffer is not width*height*3');
 
   const ihdr = new Uint8Array(13);
@@ -57,7 +57,7 @@ export function encodePng(width: number, height: number, rgb: Uint8Array): Uint8
     raw.set(rgb.subarray(y * stride, (y + 1) * stride), y * (stride + 1) + 1);
   }
 
-  const parts = [SIGNATURE, chunk('IHDR', ihdr), chunk('IDAT', zlibSync(raw, { level: 6 })), chunk('IEND', new Uint8Array(0))];
+  const parts = [SIGNATURE, chunk('IHDR', ihdr), chunk('IDAT', zlibSync(raw, { level })), chunk('IEND', new Uint8Array(0))];
   const out = new Uint8Array(parts.reduce((n, p) => n + p.length, 0));
   let at = 0;
   for (const p of parts) { out.set(p, at); at += p.length; }
