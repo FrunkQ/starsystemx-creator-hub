@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.22.1 — 2026-09-06
+
+The number circle an ordinary Explorer needed: new comments on your own maps, on your own name in
+the banner. It was already on the account page - which is the one place you do not go to find out
+whether you need to - and looking there still clears it. One head count for a signed-in page view,
+none for an anonymous one.
+
 ## 0.22.0 — 2026-09-06
 
 ### The banner is a banner again

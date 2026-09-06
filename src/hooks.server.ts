@@ -53,7 +53,7 @@ export const handle: Handle = async ({ event, resolve }) => {
         const creatorId = await creatorForToken(sb, access);
         if (creatorId) {
           const { data } = await sb.from('creators')
-            .select('id, handle, role, state').eq('id', creatorId).maybeSingle();
+            .select('id, handle, role, state, comments_seen_at').eq('id', creatorId).maybeSingle();
           event.locals.viewer = data ?? null;
         }
       } catch {

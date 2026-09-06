@@ -1,7 +1,7 @@
 import type { LayoutServerLoad } from './$types';
 import { db } from '$lib/server/db';
 import { loadSite, DEFAULT_SITE_NAME } from '$lib/server/site';
-import { outstandingCounts, EMPTY_COUNTS } from '$lib/server/outstanding';
+import { outstandingCounts, newCommentsFor, EMPTY_COUNTS } from '$lib/server/outstanding';
 
 // Analytics, and deliberately the smallest possible amount of it.
 //
@@ -24,12 +24,18 @@ export const load: LayoutServerLoad = async ({ platform, locals, url }) => {
     ? await loadSite(db(env), url)
     : { name: DEFAULT_SITE_NAME, url: url.origin };
 
-  // OUTSTANDING WORK, for the number circles in the staff nav - and only for staff, because it is
-  // three counts on every page view and nobody else's nav has anywhere to put them.
-  const counts =
+  // OUTSTANDING WORK, for the number circles (D-38). The staff counts are for staff only - three
+  // counts on every page view, and nobody else's nav has anywhere to put them. The new-comments
+  // count is for anybody signed in: it is the one thing waiting for an ordinary Explorer, and it
+  // was previously visible only by going to the page that clears it.
+  const [counts, newComments] = await Promise.all([
     locals.viewer?.role === 'admin' && env?.SUPABASE_URL
-      ? await outstandingCounts(db(env))
-      : EMPTY_COUNTS;
+      ? outstandingCounts(db(env))
+      : Promise.resolve(EMPTY_COUNTS),
+    locals.viewer && env?.SUPABASE_URL
+      ? newCommentsFor(db(env), locals.viewer.id, locals.viewer.comments_seen_at)
+      : Promise.resolve(null)
+  ]);
 
   return {
     site,
@@ -37,6 +43,7 @@ export const load: LayoutServerLoad = async ({ platform, locals, url }) => {
     // Only what the chrome needs. Never the whole viewer object - it carries state the nav has no
     // business knowing, and a layout payload is serialised into every page.
     viewer: locals.viewer ? { handle: locals.viewer.handle, role: locals.viewer.role } : null,
-    counts
+    counts,
+    newComments
   };
 };

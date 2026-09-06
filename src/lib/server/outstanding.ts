@@ -30,6 +30,33 @@ export async function outstandingCounts(sb: Db): Promise<AdminCounts> {
   return { review, reports, debug };
 }
 
+/**
+ * NEW COMMENTS ON YOUR OWN MAPS - the number circle on a signed-in person's own name.
+ *
+ * This is the hub's only notification while there is no SMTP (D-33), and until now it was only
+ * visible by GOING to the account page, which is the one place you do not go to find out whether
+ * you need to. Reading it there moves the clock, so the badge clears by being looked at.
+ *
+ * ONE head count, with an inner join to the maps, so it costs a signed-in page view one query and
+ * an anonymous one nothing. Your own comments are not news, and a removed comment is not either.
+ */
+export async function newCommentsFor(
+  sb: Db, creatorId: string, seenAt: string | null | undefined
+): Promise<number | null> {
+  try {
+    let q = (sb as any).from('comments')
+      .select('id, systems!inner(creator_id)', { count: 'exact', head: true })
+      .eq('systems.creator_id', creatorId)
+      .is('removed_at', null)
+      .or('creator_id.is.null,creator_id.neq.' + creatorId);
+    if (seenAt) q = q.gt('created_at', seenAt);
+    const { count: n, error } = await q;
+    return error || typeof n !== 'number' ? null : n;
+  } catch {
+    return null;
+  }
+}
+
 /** One count, or null. `head: true` returns no rows at all - the number is in the response header. */
 async function count(sb: Db, table: string, where: (q: any) => any): Promise<number | null> {
   try {

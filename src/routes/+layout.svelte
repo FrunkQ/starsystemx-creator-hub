@@ -47,6 +47,13 @@
       <a class="me" href="/account">
         {data.viewer.handle}
         {#if data.viewer.role === 'admin'}<span class="role">admin</span>{/if}
+        <!-- What is waiting for THIS person: comments on their maps since they last looked. The
+             account page clears it by showing them, which is why it can be a number and not a dot. -->
+        {#if (data.newComments ?? 0) > 0}
+          <span class="badge" title="{data.newComments} new comments on your maps">
+            {badgeLabel(data.newComments ?? 0)}
+          </span>
+        {/if}
       </a>
       <!-- ONE staff link, not eight. The areas are grouped in the strip below, which appears on the
            admin pages themselves; a public map page has no business carrying the review queue. The

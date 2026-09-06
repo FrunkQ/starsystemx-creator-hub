@@ -76,6 +76,7 @@ header .role {
 }
 /* ONE staff entry, carrying the work waiting. The areas themselves live in the strip below. */
 header .staff-link { display: inline-flex; align-items: center; gap: 7px; color: var(--warn); }
+header .badge,
 header .staff-link .badge {
   min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;
   background: var(--bad); color: #1a0606;

@@ -7,6 +7,12 @@ export interface Viewer {
   handle: string;
   role: 'user' | 'admin';
   state: 'active' | 'suspended' | 'banned';
+  /**
+   * When they last looked at the comments on their maps (D-33). Carried on the viewer because the
+   * chrome puts a number circle on their own name, and this row is already being read - one more
+   * column on a query that happens anyway, rather than a second query on every page.
+   */
+  comments_seen_at?: string | null;
 }
 
 /** Resolve the signed-in creator from a Supabase access token. Null when signed out. */
@@ -15,7 +21,7 @@ export async function viewerFromToken(sb: Db, token: string | null): Promise<Vie
   const { data, error } = await sb.auth.getUser(token);
   if (error || !data?.user) return null;
   const { data: row } = await sb.from('creators')
-    .select('id, handle, role, state').eq('id', data.user.id).maybeSingle();
+    .select('id, handle, role, state, comments_seen_at').eq('id', data.user.id).maybeSingle();
   return (row as Viewer) ?? null;
 }
 
