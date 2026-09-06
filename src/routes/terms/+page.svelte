@@ -46,6 +46,37 @@
     learn of it, and repeat offenders lose the account.
   </p>
 
+  <!-- ADDED 2026-09-06 at the owner's request (D-61): "people are going to be putting together
+       their fave sci-fi universe - we need to ensure everyone knows this is fan made content and
+       no liability of ownership is made by the user or SSE." The same position the footer and
+       every map page state, set out at length in the one place that can. -->
+  <h2 id="fan-work">Fan work, and other people’s universes</h2>
+  <p>
+    A great many maps here are fan work: somebody’s take on Star Trek, Dune, the Imperium, the
+    Belt. That is welcome, and it is what the hub is for. It is also worth being plain about what
+    it means.
+  </p>
+  <p>
+    <strong>Everything on this hub is fan-made.</strong> Where a map draws on an existing universe,
+    that universe — its names, its worlds, its trademarks and its copyrights — belongs to whoever
+    owns it. It does not belong to the person who made the map, and it does not belong to Star
+    System Explorer. Nothing here is official, endorsed, licensed or approved by any rights holder,
+    and no affiliation with one is claimed or implied. A map that names its setting says so on its
+    own page; a map that does not is covered by this section just the same.
+  </p>
+  <p>
+    We do not tell you whether your fan work is lawful where you live, because we cannot: fair
+    dealing, fair use and the rest turn on the specific work in the specific country, and a hub
+    asserting it on your behalf would be making a promise it could not keep. What we can tell you
+    is the practical position — you are the person responsible for what you upload (above), and if
+    a rights holder asks us to take something down, <a href="#takedown">we will</a>.
+  </p>
+  <p>
+    <strong>If you own rights in something here</strong>, you do not need a lawyer to talk to us.
+    <a href="/takedown">Tell us</a> and we will act. We would rather hear from you early than
+    argue with you late.
+  </p>
+
   <h2 id="keep-it-tabletop-safe">Keep it tabletop-safe</h2>
   <p>
     This is a place for star maps, not a file host. No pornography or sexual content, no real-world

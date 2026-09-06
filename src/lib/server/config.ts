@@ -28,6 +28,8 @@ export interface Gates {
   legacy_bundle_format: number;
   attestation_text_version: number;
   max_screenshots_per_system: number;
+  max_screenshot_bytes: number;
+  max_screenshot_edge: number;
 
   // Tier benefits. A tier is a set of config rows, not a branch in code - same reasoning as the
   // gates themselves: what Pro is worth will be tuned, and tuning it should not need a deploy.
@@ -117,6 +119,13 @@ export const GATE_FALLBACKS: Gates = {
   legacy_bundle_format: 1,
   attestation_text_version: 1,
   max_screenshots_per_system: 8,
+  // WHAT A SCREENSHOT IS ALLOWED TO BE (D-60). Both were hard-coded, and the byte one had been
+  // 8 MB since the first week without anybody choosing it. A screenshot is shown at about 1200px
+  // and cropped to a 1200x630 cover, so 2048 on the long edge is already generous - and the
+  // browser shrinks anything larger BEFORE it is sent, so this is a bandwidth saving as much as a
+  // storage one. Raise either from the Config page; neither needs a deploy.
+  max_screenshot_bytes: 8 * 1024 * 1024,
+  max_screenshot_edge: 2048,
 
   pro_uploads_per_user_per_day: 10,
   pro_max_bundle_bytes: 200 * 1024 * 1024,

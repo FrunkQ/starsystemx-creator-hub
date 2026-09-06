@@ -23,6 +23,7 @@ import * as r2 from './r2';
 import * as ledger from './ledger';
 import { readZip } from '$lib/bundle/read';
 import { isZip, README_NAME } from '$lib/bundle/contract';
+import { fanWorkFileNotice } from '$lib/fanWork';
 
 export interface PackResult {
   bytes: Uint8Array;
@@ -38,7 +39,7 @@ export interface PackResult {
  * something is missing rather than wondering why a planet has no picture.
  */
 export async function packForDownload(
-  env: HubEnv, sb: Db, systemId: string, slug: string
+  env: HubEnv, sb: Db, systemId: string, slug: string, fanSetting?: string | null
 ): Promise<PackResult | null> {
   const stored = await r2.getBundle(env, systemId);
   if (!stored) return null;
@@ -46,6 +47,12 @@ export async function packForDownload(
   const raw = new Uint8Array(await stored.arrayBuffer());
 
   // An assetless .json save has nothing to withhold and nothing to repack.
+  //
+  // AND NOTHING TO WRITE A NOTICE INTO, which is worth saying out loud: the fan-work notice below
+  // rides in README.txt, and a bare .json download has no README and must not grow one - it is a
+  // document the engine parses, and adding a key to somebody's save to carry a legal notice would
+  // be editing their file. For those, the notice lives on the page the download came from and in
+  // the response header the route sets.
   if (!isZip(raw)) return { bytes: raw, withheld: [], filename: slug + '.json' };
 
   const { data: rows, error } = await sb.from('system_assets')
@@ -69,6 +76,14 @@ export async function packForDownload(
 
   if (withheld.length) out[README_NAME] = strToU8(withheldNote(out[README_NAME], withheld));
 
+  // THE FAN-WORK NOTICE TRAVELS WITH THE FILE (D-61). A notice that only exists on a web page
+  // protects nothing once the zip has been passed around a Discord server, and this is a hub whose
+  // whole purpose is files leaving it. Always written, whether or not a setting was named - the map
+  // that needs it most is the one nobody filled the field in on.
+  //
+  // APPENDED, never replacing: README.txt is the engine's, and this is a paragraph after it.
+  out[README_NAME] = strToU8(appendNotice(out[README_NAME], fanWorkFileNotice(fanSetting)));
+
   return { bytes: zipSync(out), withheld, filename: slug + '.sse.zip' };
 }
 
@@ -77,6 +92,11 @@ export async function packForDownload(
  * as a hub that is being careful, which is the difference between feeling fair and feeling
  * arbitrary (design 6.7).
  */
+function appendNotice(existing: Uint8Array | undefined, notice: string): string {
+  const head = existing ? new TextDecoder().decode(existing).replace(/\s+$/, '') + '\n\n' : '';
+  return head + notice + '\n';
+}
+
 function withheldNote(existing: Uint8Array | undefined, withheld: string[]): string {
   const head = existing ? new TextDecoder().decode(existing) + '\n\n' : '';
   return head +

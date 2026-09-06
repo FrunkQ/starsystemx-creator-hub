@@ -13,13 +13,18 @@
 // publishing until it is filled in. This covers the part a machine cannot check - whether what they
 // filled in is TRUE.
 
-export const ATTESTATION_TEXT_VERSION = 1;
+import { FAN_WORK_ATTESTATION } from './fanWork';
+
+// VERSION 2 (2026-09-06, D-61) adds the fan-work sentence. The version is stored WITH each answer,
+// so every record made before today still says exactly what its creator was shown - which is the
+// only reason a stored attestation is worth anything.
+export const ATTESTATION_TEXT_VERSION = 2;
 
 export const ATTESTATION_TEXT =
   'I made everything in this save, or I have the right to share it, and the credits and licences ' +
   'I have recorded are accurate to the best of my knowledge. I understand that maps here are ' +
   'downloaded and reused by other people, and that if a claim is made about this map I am the ' +
-  'person responsible for it.';
+  'person responsible for it. ' + FAN_WORK_ATTESTATION;
 
 /** Shown under the checkbox. Sets the tone: this is a community of makers, not a compliance form. */
 export const ATTESTATION_NOTE =

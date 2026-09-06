@@ -133,3 +133,23 @@ export function coverFit(img: DecodedImage, W: number, H: number, focusX = 0.5, 
   }
   return { width: W, height: H, rgb: out };
 }
+
+/**
+ * HOW FAR A PICTURE HAS TO SHRINK to fit inside a longest-edge limit, or null when it already does.
+ *
+ * NULL RATHER THAN THE SAME SIZE BACK, deliberately: the caller's question is "does this need
+ * re-encoding", and re-encoding a picture that did not need it would throw away quality and, for a
+ * PNG of a map, usually make the file BIGGER. Null is the answer "leave it exactly as it is".
+ *
+ * The aspect ratio is kept, so the longest edge lands on the limit and the other falls where it
+ * falls. Rounding can cost a pixel; nothing downstream cares, and 1 is the floor so a very long
+ * thin picture cannot round its short edge to zero.
+ */
+export function shrinkTo(
+  width: number, height: number, maxEdge: number
+): { width: number; height: number } | null {
+  const longest = Math.max(width, height);
+  if (!(longest > maxEdge) || !(maxEdge > 0)) return null;
+  const k = maxEdge / longest;
+  return { width: Math.max(1, Math.round(width * k)), height: Math.max(1, Math.round(height * k)) };
+}

@@ -7,6 +7,7 @@
   import PixelText from '$lib/components/PixelText.svelte';
   // The one file that holds an address (D-37). This is the APP's own home, so production:
   // a general "go and look at the tool" link, not a feature link that has to wait for a release.
+  import { FAN_WORK_FOOTER } from '$lib/fanWork';
   import { SSE_PROD_ORIGIN } from '$lib/addresses';
   import StaffNav from '$lib/components/StaffNav.svelte';
   import { outstanding, badgeLabel, EMPTY_COUNTS } from '$lib/adminNav';
@@ -101,10 +102,15 @@
     </p>
     <a class="cta" href={SSE_PROD_ORIGIN} target="_blank" rel="noopener">Open Star System Explorer</a>
   </div>
+  <!-- ON EVERY PAGE (owner, 2026-09-06; D-61): "we need to ensure everyone knows this is fan made
+       content and no liability of ownership is made by the user or SSE." The per-map notice names
+       the setting; this one is the floor, and it is here so that no page anywhere is without it. -->
+  <p class="fan">{FAN_WORK_FOOTER}</p>
   <div class="small">
     <!-- Written and owner-signed-off 2026-08-28. `acceptable-use` is a 308 to the relevant section
          of the terms: there is deliberately no separate AUP document. -->
     <a href="/terms">Terms</a>
+    <a href="/terms#fan-work">Fan work</a>
     <a href="/acceptable-use">Acceptable use</a>
     <a href="/takedown">Report a copyright problem</a>
     <!-- Which build this is, from package.json (svelte.config.js). Ops, not decoration. -->

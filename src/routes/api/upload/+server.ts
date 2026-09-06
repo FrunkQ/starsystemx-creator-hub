@@ -15,6 +15,7 @@ import { gatesForTier } from '$lib/server/entitlements';
 import { tolerantWrite } from '$lib/server/tolerant';
 import type { UploadEventRow } from '$lib/server/database.types';
 import { ATTESTATION_TEXT, ATTESTATION_TEXT_VERSION } from '$lib/attestation';
+import { cleanSetting } from '$lib/fanWork';
 import * as badges from '$lib/server/integrations/badges';
 
 export const POST: RequestHandler = async ({ request, platform, locals }) => {
@@ -92,7 +93,10 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
   try {
     const site = await loadSite(sb, new URL(request.url));
     result = await ingest(env, sb, viewer!, gates, bytes, {
-      confirmGmTree, stripGm, confirmStale, replacesSystemId, attestation, site
+      confirmGmTree, stripGm, confirmStale, replacesSystemId, attestation, site,
+      // Which universe this is fan work of, if they named one (D-61). Free text, tidied but never
+      // corrected - it is the creator's own declaration.
+      fanSetting: cleanSetting(form.get('fanSetting'))
     });
   } catch (e) {
     console.error('ingest failed', e);

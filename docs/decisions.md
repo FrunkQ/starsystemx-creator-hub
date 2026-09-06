@@ -1564,6 +1564,96 @@ there is a problem and links down, the panel is where the work happens, and the 
 why it is asleep (D-55). Three places, each doing one job, rather than one notice trying to do all
 three.
 
+### D-60. The browser prepares the cover; it only SENDS it when the cover is saved
+
+Two reports in one message, 2026-09-06: *"when I re-enter the map editor the picture shows default
+even if the current one is a newly uploaded image"* and *"are we only saving the pixels we need for
+our screen banner display... probably too high and we should restrict by configurable default."*
+
+**The first was a hole left by D-57.** Moving the preview into the browser meant the fitted pixels
+live in a variable, and a page that has just loaded has none - so a cover restored from
+`cover_options` as `base: 'image'` drew the fallback card and looked as though the picture had been
+forgotten. Nothing prepared it until a thumbnail was clicked. The fix is an effect on arrival: if
+the saved cover is a picture, fit it before drawing anything.
+
+**Looking for it found something worse.** `slide()` called `prepare()` on every input event, and
+`prepare` uploaded. Dragging the slider therefore POSTed **2.27 MB of raw RGB per distinct crop
+position** and left an R2 object behind for each one. A regression I introduced in D-54, and the
+owner had not noticed it yet.
+
+The split it needed was there in the requirement all along and I had not seen it:
+
+- **Fitting is free** - a canvas draw the browser does for nothing. Do it on every change.
+- **Sending is not** - it exists so the hub can draw its own copy. Do it once, on save.
+
+So `fitLocally` runs on mount, on picking a picture and on every slider tick; `uploadFit` runs from
+the form's submit handler and nowhere else. A `wanted` slot catches the crop asked for while a fit
+was in flight, so the slider never ends up behind the last thing that finished.
+
+**And the honest answer to the storage question was no, we were not.** Three copies existed: the
+full-resolution original as the asset, a 1200x630 raw fit per crop, and the rendered card. The
+original is right to keep - it is the creator's picture and it travels in the bundle - but the
+2048x2100 upload was 1.3 MB of pixels nothing would ever display at that size, and every abandoned
+crop position was a further 2.27 MB. Both are fixed: the browser shrinks anything past
+`max_screenshot_edge` (2048) BEFORE it uploads, and a new fit sweeps the old crops for that picture.
+
+**Two hard-coded numbers became config rows** - `max_screenshot_bytes` (was 8 MB in an `if`) and
+`max_screenshot_edge` - because the owner asked for "a configurable default" and because a limit
+nobody chose is a limit nobody can change. **The creator is told when a picture is scaled**: a
+picture quietly resized behind somebody's back is the kind of thing they find out about later and
+stop trusting the page over.
+
+### D-61. Fan work is named as fan work, on every page and inside every file
+
+The owner, 2026-09-06: *"people are going to be putting together their fave sci-fi universe - we
+need to ensure everyone knows this is fan made content and no liability of ownership is made by the
+user or SSE."*
+
+He is right about what is coming, and the hub had already invited it: the Game system tag group
+ships `star-trek-adventures`, `warhammer-40k`, `dune-rpg` and `star-wars-rpg`. A starmap of the
+Alpha Quadrant with no notice on it looks, to a rights holder skimming the page, exactly like
+somebody claiming it.
+
+**Two layers, and the difference between them is the whole design.**
+
+1. **The blanket.** Every map page, the footer of every page, and every download carries the notice
+   whether or not anybody filled a field in. It has to be unconditional, because **the map that
+   needs the notice most is the one where the field was left empty.**
+2. **The name.** `systems.fan_setting` (0034) holds the universe the creator says it is - free text
+   with a `<datalist>` of the obvious ones, the same control as the licence field (D-59). When it is
+   there, the notice NAMES what is disclaimed: "an unofficial fan work based on Star Trek... not
+   made, endorsed or approved by the owners of Star Trek... all trademarks and copyrights in Star
+   Trek belong to their respective owners." That is a categorically stronger statement than a
+   generic one, and it reads as somebody being careful rather than somebody covering themselves.
+
+**Why not a tag.** There is already a Universe group and a Game system group and a setting nearly
+fits. It is not a tag because a tag is a shared vocabulary that goes through review before it can be
+used, and **a creator must not have to wait for a moderator before they can disclaim somebody else's
+trademark.** Tags are for finding maps; this is a declaration.
+
+**The wording lives in one module** (`src/lib/fanWork.ts`), for the same reason as `attestation.ts`:
+it appears on the map page, on the cards, in the terms, in the upload form and inside the downloaded
+README, and five copies would drift on the first change.
+
+**It travels with the file.** A notice that exists only on a web page protects nothing once the zip
+has been passed around a Discord server, and this is a hub whose entire purpose is files leaving it.
+`packForDownload` appends it to `README.txt`. **A bare `.json` save does not get one** - it is a
+document the engine parses, and adding a key to somebody's save to carry a legal notice would be
+editing their file - so those carry it in an `x-fan-work` response header instead, which meant
+adding `access-control-expose-headers`: a cross-origin reader cannot see a header it is not told
+about, and the engine reads this endpoint cross-origin.
+
+**Fair use is not claimed, deliberately and in the tests.** Whether a given map qualifies turns on
+that map in that country. A hub asserting it on everybody's behalf would be making a legal claim it
+could not stand behind, so `tests/fanWork.test.ts` asserts the phrase is absent.
+
+**The attestation went to version 2** with the fan-work sentence added. The version is stored with
+each answer, so every record made before today still says exactly what its creator was shown - which
+is the only reason a stored attestation is worth anything.
+
+**Tone matters here.** The pill and the notice are grey, not red. Fan work is welcome; a warning
+colour would read as "something is wrong with this map" and put people off making it.
+
 ### D-16. The takedown address is assembled at runtime, never served as text
 
 The owner's instruction was explicit: keep it off the page as scrapable text. It is stored as

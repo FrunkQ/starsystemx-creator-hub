@@ -52,8 +52,12 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
       { status: 400 }
     );
   }
-  if (file.size > 8 * 1024 * 1024) {
-    return json({ ok: false, message: 'That image is larger than 8 MB.' }, { status: 400 });
+  // The browser shrinks an oversized picture before it gets here (D-60), so this is the backstop
+  // for everything that did not come from that page - and it says the number rather than assuming
+  // the reader knows what the limit is this week.
+  if (file.size > gates.max_screenshot_bytes) {
+    const mb = Math.round((gates.max_screenshot_bytes / (1024 * 1024)) * 10) / 10;
+    return json({ ok: false, message: 'That image is larger than ' + mb + ' MB.' }, { status: 400 });
   }
 
   const { count } = await sb.from('system_screenshots')

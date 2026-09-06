@@ -1,5 +1,44 @@
 # Changelog
 
+## 0.39.0 - 2026-09-06
+
+### Fan work says so, on every page and inside every file
+
+People are going to build their favourite universe here, so the hub now states plainly what that
+is. Every map page, every card and the footer of every page carry the notice; it is written into
+the README of every download, so it travels with the file rather than living on a web page nobody
+who received the zip has seen.
+
+A creator can name the setting - on the upload form or later on the manage page, picked from a list
+or typed - and the notice then names it too: *"an unofficial fan work based on Star Trek. It is not
+made, endorsed or approved by the owners of Star Trek, and no ownership of Star Trek is claimed by
+the person who made this map or by Star System Explorer."* Leaving it empty is a normal answer; the
+blanket notice is unconditional either way.
+
+The terms have a Fan work section, and the upload attestation now includes the sentence.
+
+**Migration 0034 adds `systems.fan_setting` and is the owner's to run.** Everything works before it
+does - the notice is shown, the field is simply not stored yet.
+
+### The cover editor stops uploading while you drag
+
+Sliding the crop was POSTing 2.27 MB of pixels for every position it passed through. The browser
+now fits the picture locally on every change - which is free - and sends it once, when the cover is
+saved. A new fit sweeps the crops that picture no longer uses.
+
+### Re-opening the map editor shows your actual cover
+
+A cover set to one of your own pictures drew the default card until you clicked a thumbnail again.
+It now prepares the saved picture on arrival.
+
+### Screenshots are scaled to what the hub can display
+
+A 2048x2100 upload was stored at full resolution and shown at about 1200. Anything past 2048 on its
+long edge is now scaled down in the browser before it is sent, keeping its format, and the page
+says so. The 8 MB size cap was hard-coded in an `if` and is now a config row, alongside the new edge
+limit - both changeable from the Config page.
+
+
 ## 0.38.0 — 2026-09-06
 
 ### Every credit on your map, in one place

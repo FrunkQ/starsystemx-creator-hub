@@ -18,6 +18,7 @@
   import { orderRoles } from '$lib/components/roleIcons';
   import { formatBytes, ROLE_PILLS } from '$lib/bundle/facets';
   import { COMMENT_MAX } from '$lib/comments';
+  import { FAN_WORK_BADGE, fanWorkNotice, cleanSetting } from '$lib/fanWork';
   let { data } = $props();
 
   const s = $derived(data.system);
@@ -100,6 +101,7 @@
   type Origin = { url: string; title: string | null; creator: string | null };
   type Credit = { title: string; creator: string | null; url: string | null; chain?: Origin[] };
   type Stop = { url: string | null; title: string | null; creator: string | null };
+  const fanSetting = $derived(cleanSetting((s as { fan_setting?: string | null }).fan_setting));
   const credits = $derived((Array.isArray(s.content_credits) ? s.content_credits : []) as Credit[]);
   // The original of each credit, and the maps it passed through on the way here.
   const lineage = (c: Credit): { original: Stop; via: Stop[] } => {
@@ -145,6 +147,14 @@
     {#if data.creatorBadges.length}<span class="badges">{#each data.creatorBadges as b (b)}<Badge badge={b} size={18} />{/each}</span>{/if}
     - {total} {total === 1 ? 'object' : 'objects'}
   </p>
+
+  <!-- SAY IT WHERE IT IS READ (owner, 2026-09-06; D-61). A starmap of somebody else's universe
+       with no notice on it looks, to a rights holder skimming this page, exactly like a claim on
+       it. The pill is above the fold and names the setting; the full wording is at the bottom
+       beside the credits, where a reader who wants the sentence will look for it. -->
+  {#if fanSetting}
+    <p class="fan-pill"><a href="#fan-work">{FAN_WORK_BADGE}: {fanSetting}</a></p>
+  {/if}
 
   <!-- ON A WIDE SCREEN the words sit beside the picture; on a narrow one they stack (owner,
        2026-09-05). The download stays first in reading order either way (design 2). -->
@@ -279,6 +289,13 @@
     </div>
   {/if}
 
+  <!-- THE NOTICE, unconditional. It is shown whether or not a setting was named, because the map
+       that needs it most is the one nobody remembered to fill the field in on. The wording lives
+       in `$lib/fanWork.ts` so the page, the download and the terms cannot drift apart. -->
+  <p class="fan-work" id="fan-work">
+    <b>{FAN_WORK_BADGE}.</b> {fanWorkNotice(fanSetting)}
+  </p>
+
   <!-- The other direction: where this map's work has gone. -->
   {#if data.usedIn.length}
     <p class="credits">
@@ -399,6 +416,19 @@
 
 <style>
   h1 { margin: 0 0 2px; font-size: 1.9rem; letter-spacing: -0.02em; }
+  /* Quiet, not a warning. This is a fact about the map, not a problem with it - a red banner would
+     read as "something is wrong here" and put people off sharing fan work at all. */
+  .fan-pill { margin: 0 0 12px; }
+  .fan-pill a {
+    display: inline-block; padding: 2px 9px; border-radius: 999px; text-decoration: none;
+    font-size: 0.8rem; color: var(--ink-faint); border: 1px solid var(--rule);
+  }
+  .fan-pill a:hover { color: var(--ink); border-color: var(--ink-faint); }
+  .fan-work {
+    margin: 18px 0; padding: 12px 14px; border: 1px solid var(--rule); border-radius: 8px;
+    color: var(--ink-faint); font-size: 0.86rem; line-height: 1.5;
+  }
+  .fan-work b { color: var(--ink); }
   .by { margin: 0 0 12px; color: var(--ink-faint); }
   /* Words beside the picture when there is room; stacked when there is not. Less air up top. */
   .top { display: grid; gap: 18px; grid-template-columns: minmax(0, 1fr); margin: 0 0 8px; }

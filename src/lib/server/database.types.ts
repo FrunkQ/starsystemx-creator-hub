@@ -116,6 +116,9 @@ export type SystemRow = {
   content_credit_slugs: string[];
   // 0020: when the derived rows were last rebuilt. Null = predates the current reader; re-index once.
   reindexed_at: string | null;
+  // 0034: the existing universe this map is unofficial fan work OF, as the creator typed it (D-61).
+  // Null means they did not name one - the blanket notice applies to every map either way.
+  fan_setting: string | null;
   // 0023: how much of the map is written about (bundle/density.ts): the raw 0..1 score, and the
   // detail behind it {total, described, avgLength}. Null until measured.
   info_density: number | null;

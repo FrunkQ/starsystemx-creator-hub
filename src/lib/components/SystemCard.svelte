@@ -12,12 +12,14 @@
   import PixelText from '$lib/components/PixelText.svelte';
   import InfoDensity from '$lib/components/InfoDensity.svelte';
   import { densityLevel } from '$lib/bundle/density';
+  import { FAN_WORK_BADGE } from '$lib/fanWork';
   interface System {
     slug: string;
     title: string;
     summary: string | null;
     blurb?: string | null;
     kind: string;
+    fan_setting?: string | null;
     cover_sha256: string | null;
     hearts_count: number;
     // Absent from a list read until migration 0021 has run (server/cards.ts).
@@ -89,6 +91,9 @@
     <h3><a class="title" href="/s/{system.slug}">{system.title}</a></h3>
     {#if system.blurb || system.summary}<p>{system.blurb ?? system.summary}</p>{/if}
     {#if whatsInIt}<p class="counts">{whatsInIt}</p>{/if}
+    <!-- WHOSE UNIVERSE, when it is somebody else's (D-61). On the card as well as the page,
+         because a browser scrolling a grid should be able to see it without opening anything. -->
+    {#if system.fan_setting}<p class="fan">{FAN_WORK_BADGE}: {system.fan_setting}</p>{/if}
     {#if pills.length}
       <div class="pills">{#each pills as p (p.t)}<span class="tag" class:mine={p.mine}>{p.t}</span>{/each}</div>
     {/if}
@@ -142,6 +147,11 @@
     border-radius: 6px; padding: 4px 9px; opacity: 0.92;
   }
   .open:hover { opacity: 1; text-decoration: none; filter: brightness(1.08); }
+  /* Quieter than the counts: a fact about the map, not a warning about it. */
+  .fan {
+    margin: 2px 0 0; font-size: 0.72rem; color: var(--ink-faint);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
   .counts { color: var(--ink-faint); font-size: 0.85rem; margin-top: 6px; }
   .pills { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
   .tag.mine { border-color: var(--accent); }

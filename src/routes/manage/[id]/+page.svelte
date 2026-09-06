@@ -1,7 +1,8 @@
 <script lang="ts">
   import InfoDensity from '$lib/components/InfoDensity.svelte';
   import { densityFrom, densityLevel, densitySummary, FULL_DESCRIPTION } from '$lib/bundle/density';
-  import { coverCrop } from '$lib/cover/image';
+  import { coverCrop, shrinkTo } from '$lib/cover/image';
+  import { SETTINGS, SETTING_MAX, fanWorkNotice } from '$lib/fanWork';
   import { LICENCES } from '$lib/licences';
   import { COVER_W, COVER_H, renderCover } from '$lib/cover/generate';
   let { data, form } = $props();
@@ -32,14 +33,18 @@
   //
   // The owner chose this over a paid plan: "i dont wanna be on the hook for any runaway cost."
   // ============================================================================================
+  /** The picture the browser prepared, kept so the preview can draw over it without a round trip. */
+  let baseImage = $state<{ width: number; height: number; rgb: Uint8Array } | null>(null);
+  /** True while the browser is fitting a picture; false while it is merely sitting there. */
+  let fitting = $state(false);
+  /** True only while the fitted pixels are on their way to the hub, which is once, on save. */
   let preparing = $state(false);
   let prepareError = $state<string | null>(null);
-  /** Bumped when new pixels land, so the preview <img> asks for them rather than using its cache. */
-  let prepared = $state(0);
-  /** Which crops this page has already sent, so sliding back and forth does not re-upload. */
-  const sent = new Set<string>();
   /** The chosen picture's real size, for deciding which way it can slide. */
   let source = $state<{ width: number; height: number } | null>(null);
+  /** The source image, decoded once and kept, so sliding is a redraw rather than a re-download. */
+  let bitmap: ImageBitmap | null = null;
+  let bitmapFor: string | null = null;
 
   /** Which axis has any slack. A cover fit only ever has one, and offering both would be a lie. */
   const slides = $derived.by(() => {
@@ -50,15 +55,29 @@
     return got > wanted ? 'x' : ('y' as const);
   });
 
-  async function prepare(sha256: string, focusX: number, focusY: number) {
-    const key = [sha256, focusX.toFixed(2), focusY.toFixed(2)].join(':');
-    if (sent.has(key) || preparing) return;
-    preparing = true;
+  /**
+   * FIT THE PICTURE LOCALLY. Free, instant, and it does NOT talk to the hub.
+   *
+   * It used to upload on every change, which meant dragging the slider posted 2.27 MB per position
+   * and left an R2 object behind for each one (D-60). The hub only needs the pixels when the cover
+   * is SAVED, so that is when they are sent - and everything before that is a canvas redraw the
+   * browser does for nothing.
+   */
+  async function fitLocally(sha256: string, focusX: number, focusY: number) {
+    // One fit at a time. The slider fires on every pixel of travel and the decode is awaited, so
+    // without this a drag would start a dozen overlapping fits and the LAST to finish - not the
+    // last the creator asked for - would win.
+    if (fitting) { wanted = { sha256, focusX, focusY }; return; }
+    fitting = true;
     prepareError = null;
     try {
-      const res = await fetch('/private/asset/' + sha256);
-      if (!res.ok) throw new Error('that picture could not be read');
-      const bitmap = await createImageBitmap(await res.blob());
+      if (bitmapFor !== sha256 || !bitmap) {
+        const res = await fetch('/private/asset/' + sha256);
+        if (!res.ok) throw new Error('that picture could not be read');
+        bitmap?.close();
+        bitmap = await createImageBitmap(await res.blob());
+        bitmapFor = sha256;
+      }
       source = { width: bitmap.width, height: bitmap.height };
 
       const canvas = new OffscreenCanvas(COVER_W, COVER_H);
@@ -66,45 +85,95 @@
       if (!ctx) throw new Error('this browser cannot prepare a picture');
       const { sx, sy, sw, sh } = coverCrop(bitmap.width, bitmap.height, COVER_W, COVER_H, focusX, focusY);
       ctx.drawImage(bitmap, sx, sy, sw, sh, 0, 0, COVER_W, COVER_H);
-      bitmap.close();
 
-      // RGBA from the canvas, RGB to the hub: the alpha channel is a quarter of the upload and the
-      // card has nothing to be transparent over.
+      // RGBA from the canvas, RGB for the rasteriser: the alpha channel is a quarter of the bytes
+      // and a card has nothing to be transparent over.
       const rgba = ctx.getImageData(0, 0, COVER_W, COVER_H).data;
       const rgb = new Uint8Array(COVER_W * COVER_H * 3);
       for (let i = 0, o = 0; o < rgb.length; i += 4, o += 3) {
         rgb[o] = rgba[i]; rgb[o + 1] = rgba[i + 1]; rgb[o + 2] = rgba[i + 2];
       }
-
-      const put = await fetch('/api/cover/fit?' + new URLSearchParams({
-        systemId: s.id, sha256, focusX: String(focusX), focusY: String(focusY)
-      }), { method: 'POST', headers: { 'content-type': 'application/octet-stream' }, body: rgb });
-      if (!put.ok) throw new Error(await put.text().catch(() => 'the hub would not take it'));
-
-      sent.add(key);
       baseImage = { width: COVER_W, height: COVER_H, rgb };
-      prepared++;
     } catch (e) {
       prepareError = (e as Error).message ?? 'that picture could not be prepared';
+      baseImage = null;
+    } finally {
+      fitting = false;
+      // Catch up with wherever the slider got to while this one was running.
+      const next = wanted;
+      wanted = null;
+      if (next && (next.sha256 !== sha256 || next.focusX !== focusX || next.focusY !== focusY)) {
+        void fitLocally(next.sha256, next.focusX, next.focusY);
+      }
+    }
+  }
+
+  /** The crop asked for while a fit was already running, so the slider never ends up behind. */
+  let wanted: { sha256: string; focusX: number; focusY: number } | null = null;
+
+  /**
+   * SEND THE PIXELS, once, when the cover is being saved - because the hub draws its own copy of
+   * the card and has no way to decode the picture itself (D-53). Skipped when the crop on screen
+   * has already been sent from this page.
+   */
+  async function uploadFit(): Promise<void> {
+    const sha256 = cover.baseImage;
+    if (cover.base !== 'image' || !sha256 || !baseImage) return;
+    const key = [sha256, cover.focusX.toFixed(2), cover.focusY.toFixed(2)].join(':');
+    if (sent.has(key)) return;
+    preparing = true;
+    try {
+      const put = await fetch('/api/cover/fit?' + new URLSearchParams({
+        systemId: s.id, sha256, focusX: String(cover.focusX), focusY: String(cover.focusY)
+      }), { method: 'POST', headers: { 'content-type': 'application/octet-stream' },
+        // The cast is the Workers types insisting on their own BodyInit; a Uint8Array is a body.
+        body: baseImage.rgb as unknown as BodyInit });
+      if (!put.ok) throw new Error(await put.text().catch(() => 'the hub would not take it'));
+      sent.add(key);
+    } catch (e) {
+      prepareError = (e as Error).message ?? 'the picture could not be sent';
     } finally {
       preparing = false;
     }
   }
 
-  /** Pick a picture: prepare it at the current crop, then let the preview ask for it. */
+  /** Which crops this page has already sent, so saving twice does not upload twice. */
+  const sent = new Set<string>();
+
+  /** Pick a picture: fit it at the current crop and let the preview draw it. */
   function choosePicture(sha256: string) {
     cover.base = 'image';
     cover.baseImage = sha256;
     source = null;
     baseImage = null;
-    prepare(sha256, cover.focusX, cover.focusY);
+    fitLocally(sha256, cover.focusX, cover.focusY);
   }
 
-  /** Slide it: same picture, a different crop, so the pixels are made again. */
+  /** Slide it: same picture, a different crop, redrawn locally. Nothing is uploaded. */
   function slide(value: number) {
     if (slides === 'x') cover.focusX = value;
     else cover.focusY = value;
-    if (cover.baseImage) prepare(cover.baseImage, cover.focusX, cover.focusY);
+    if (cover.baseImage) fitLocally(cover.baseImage, cover.focusX, cover.focusY);
+  }
+
+  /**
+   * ON ARRIVAL, DRAW WHAT IS ACTUALLY SAVED (D-60). The designer's options come from the row, so a
+   * map whose cover is one of the creator's pictures opens with `base: 'image'` - but the PIXELS
+   * live in the browser now, and a page that has just loaded has none, so the preview fell back to
+   * the drawn card and looked as though the picture had been forgotten.
+   */
+  $effect(() => {
+    if (cover.base === 'image' && cover.baseImage && !baseImage && !prepareError && !fitting) {
+      fitLocally(cover.baseImage, cover.focusX, cover.focusY);
+    }
+  });
+
+  /** Send the pixels before the design is saved, so the hub can draw the same card. */
+  async function saveCover(e: SubmitEvent) {
+    if (cover.base !== 'image') return;
+    e.preventDefault();
+    await uploadFit();
+    (e.currentTarget as HTMLFormElement).submit();
   }
 
   // ============================================================================================
@@ -121,8 +190,6 @@
   // two places cannot.
   // ============================================================================================
   let previewUrl = $state('');
-  /** The picture the browser prepared, kept so the preview can draw over it without a round trip. */
-  let baseImage = $state<{ width: number; height: number; rgb: Uint8Array } | null>(null);
 
   $effect(() => {
     // Read everything the card depends on, so this re-runs when any of it changes.
@@ -146,13 +213,71 @@
 
 
 
+  /**
+   * SHRINK A PICTURE THAT IS BIGGER THAN THE HUB NEEDS, in the browser, before it is sent (D-60).
+   *
+   * The owner uploaded a 2048x2100 JPEG and asked the fair question: *"are we only saving the
+   * pixels we need for our screen banner display... probably too high and we should restrict by
+   * configurable default."* We were not - the full-resolution original was kept as the asset. It
+   * is shown at about 1200px and cropped to a 1200x630 cover, so everything past the limit was
+   * bytes nobody would ever look at.
+   *
+   * WHY THE BROWSER AND NOT THE HUB: decoding a picture is the single most expensive thing this
+   * Worker does and a free plan gives it 10ms (D-53). The same rule as the cover fit.
+   *
+   * THE FORMAT IS KEPT. A map screenshot is usually a PNG full of thin lines and small text, and
+   * re-encoding one as JPEG to save a few hundred kilobytes would put ringing on exactly the parts
+   * a reader is trying to read. GIF is left alone entirely - it may be animated, and a resize would
+   * silently flatten it to one frame.
+   */
+  async function shrinkIfHuge(file: File): Promise<File> {
+    const edge = data.limits.screenshotEdge;
+    if (!edge || file.type === 'image/gif') return file;
+    try {
+      const bmp = await createImageBitmap(file);
+      const to = shrinkTo(bmp.width, bmp.height, edge);
+      if (!to) { bmp.close(); return file; }
+
+      const canvas = new OffscreenCanvas(to.width, to.height);
+      const ctx = canvas.getContext('2d', { alpha: true });
+      if (!ctx) { bmp.close(); return file; }
+      ctx.drawImage(bmp, 0, 0, to.width, to.height);
+      bmp.close();
+
+      const type = file.type === 'image/png' || file.type === 'image/webp' ? file.type : 'image/jpeg';
+      const blob = await canvas.convertToBlob({ type, quality: 0.92 });
+      // A shrink that made the file BIGGER is not a saving; keep the original and say nothing.
+      if (blob.size >= file.size) return file;
+      shrank = to.width + ' x ' + to.height;
+      return new File([blob], file.name, { type });
+    } catch {
+      // A browser that cannot do this sends the original and meets the byte gate at the far end.
+      return file;
+    }
+  }
+
+  /** The size a picture was shrunk to, so the creator is told rather than surprised. */
+  let shrank = $state<string | null>(null);
+
+  /** Mirrors the setting field, so the sentence under it updates as it is typed. */
+  let fanSetting = $state(s.fan_setting ?? '');
+
   async function addScreenshot(e: Event) {
     const input = e.currentTarget as HTMLInputElement;
-    const file = input.files?.[0];
-    if (!file) return;
+    const chosen = input.files?.[0];
+    if (!chosen) return;
 
     uploading = true;
     uploadMessage = null;
+    shrank = null;
+    const file = await shrinkIfHuge(chosen);
+    if (file.size > data.limits.screenshotBytes) {
+      uploadMessage = 'That image is larger than '
+        + Math.round((data.limits.screenshotBytes / (1024 * 1024)) * 10) / 10 + ' MB.';
+      uploading = false;
+      input.value = '';
+      return;
+    }
     const body = new FormData();
     body.set('systemId', s.id);
     body.set('image', file);
@@ -259,6 +384,27 @@
               placeholder="What is this map for? What is interesting about it? What would a GM do with it?"
     >{s.description ?? ''}</textarea>
   </label>
+  <!-- WHICH UNIVERSE, if it is somebody else's (owner, 2026-09-06; D-61). Here rather than only on
+       the upload form because most of the library was uploaded before the question existed, and
+       because a creator changes their mind about what a map is. Empty is a normal answer. -->
+  <label>
+    Is this set in an existing universe?
+    <input name="fanSetting" list="settings" maxlength={SETTING_MAX}
+           value={s.fan_setting ?? ''} placeholder="Star Trek, Dune, The Expanse... or leave empty"
+           autocomplete="off" oninput={(e) => (fanSetting = (e.currentTarget as HTMLInputElement).value)} />
+    <datalist id="settings">
+      {#each SETTINGS as name (name)}<option value={name}></option>{/each}
+    </datalist>
+  </label>
+  <p class="muted small">
+    {#if fanSetting.trim()}
+      Your map page will say: "{fanWorkNotice(fanSetting)}"
+    {:else}
+      Leave it empty if this is your own universe. Fan work is welcome - naming the setting just
+      lets your map page disclaim it properly, which protects you as much as anyone.
+    {/if}
+  </p>
+
   <fieldset class="vocab">
     <legend>Tags</legend>
     <p class="muted">
@@ -322,6 +468,9 @@
            onchange={addScreenshot} disabled={uploading} />
   </label>
   {#if uploadMessage}<p class="muted">{uploadMessage}</p>{/if}
+  <!-- Say it was shrunk. A picture quietly resized behind somebody's back is the kind of thing
+       they find out about later and stop trusting the page over. -->
+  {#if shrank}<p class="muted small">Scaled down to {shrank} - the hub shows covers at 1200 x 630.</p>{/if}
 
   {#if data.screenshots.length}
     <div class="shots">
@@ -395,7 +544,7 @@
   {/if}
   <div class="designer">
     <img class="preview" src={previewUrl} alt="Cover preview" width="1200" height="630" />
-    <form method="POST" action="?/design" class="controls">
+    <form method="POST" action="?/design" class="controls" onsubmit={saveCover}>
       <!-- ONE PLACE TO CHOOSE THE PICTURE (owner, 2026-09-06; D-44): the drawn card, or any
            screenshot you have ever added. One that cannot be used is shown and greyed with the
            reason, rather than left out of a list you would then have to guess about. -->
@@ -423,7 +572,7 @@
              crop happens - they can slide it"). A cover fit only ever has slack on ONE axis, so the
              page offers whichever is the live one rather than a slider that does nothing. -->
         {#if cover.base === 'image'}
-          {#if preparing}
+          {#if fitting && !baseImage}
             <p class="muted">Preparing the picture...</p>
           {:else if prepareError}
             <p class="bad">{prepareError}</p>
@@ -488,7 +637,9 @@
       <input type="hidden" name="qr" value={onOff(cover.qr)} />
       <input type="hidden" name="focusX" value={cover.focusX} />
       <input type="hidden" name="focusY" value={cover.focusY} />
-      <button class="primary" type="submit" disabled={!data.designer.allowed}>Use this cover</button>
+      <button class="primary" type="submit" disabled={!data.designer.allowed || preparing}>
+        {preparing ? 'Sending the picture...' : 'Use this cover'}
+      </button>
       <p class="muted small">
         {#if data.coverIsScreenshot}Current cover: one of your screenshots.{:else if s.cover_sha256}Current cover: a card like this.{:else}No cover yet.{/if}
       </p>

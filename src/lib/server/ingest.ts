@@ -19,6 +19,7 @@ import type { Db, SystemRow, UploadEventRow, NodeRow, ConstructRow } from './dat
 import { checkBundleFormat } from '$lib/bundle/format';
 import { checkProvenance, noProvenance, breachesCcBy } from '$lib/bundle/attribution';
 import { tolerantWrite, tolerantWriteMany } from './tolerant';
+import { cleanSetting } from '$lib/fanWork';
 import { readProvenance } from '$lib/bundle/provenance';
 import { detectGmContent } from '$lib/bundle/gmContent';
 import { computeFacets, deriveTags } from '$lib/bundle/facets';
@@ -103,6 +104,12 @@ export async function ingest(
      * answer, and responsibility sits with the person who ticked it (docs/decisions.md D-09).
      */
     attestation: { accepted: boolean; textVersion: number; textShown: string };
+    /**
+     * Which existing universe this is fan work OF, if the creator named one (D-61). Optional, and
+     * an empty answer is not a failure: the hub's fan-work notice is unconditional either way, and
+     * this only lets it name what is being disclaimed.
+     */
+    fanSetting?: string | null;
   }
 ): Promise<IngestResult> {
   // Reassigned when the creator asks the hub to strip GM material out (below).
@@ -352,7 +359,8 @@ export async function ingest(
     sourceBytes: bytes.length, isUpdate: !!opts.replacesSystemId, flagged, novelCount: novel.length,
     createdWith: madeWith.createdWith, legacyStamped: format.legacyStamped,
     revision: madeWith.revision, exportMode: madeWith.exportMode,
-    attestation: opts.attestation, facets, autoTags, density
+    attestation: opts.attestation, facets, autoTags, density,
+    fanSetting: cleanSetting(opts.fanSetting)
   });
 
   // The original zip is kept for provenance and re-packing, NEVER served raw - serving it would
@@ -443,6 +451,7 @@ interface WriteArgs {
   autoTags: string[];
   density: Density;
   attestation: { accepted: boolean; textVersion: number; textShown: string };
+  fanSetting: string | null;
 }
 
 async function writeRows(sb: Db, a: WriteArgs): Promise<string> {
@@ -487,6 +496,10 @@ async function writeRows(sb: Db, a: WriteArgs): Promise<string> {
     // How much of it is written about (0023, D-30): the raw score and the detail behind it.
     info_density: a.density.raw,
     info_detail: { total: a.density.total, described: a.density.described, avgLength: a.density.avgLength },
+    // The universe this is fan work of, if the creator named one (0034, D-61). Tolerant like the
+    // rest of this row: the column arrives when the owner runs the migration, and the upload works
+    // in the meantime.
+    fan_setting: a.fanSetting,
     // The derived rows are current as of now (0020); the page's one-shot re-index skips this map.
     reindexed_at: new Date().toISOString()
   }, (row) => Promise.resolve(sb.from('systems').upsert(row as Partial<SystemRow>)));

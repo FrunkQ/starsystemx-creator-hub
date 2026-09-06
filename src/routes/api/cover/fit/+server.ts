@@ -57,10 +57,22 @@ export const POST: RequestHandler = async ({ request, platform, locals, url }) =
     throw error(400, 'expected ' + EXPECTED + ' bytes of RGB, got ' + bytes.length);
   }
 
-  await env.HUB_BUNDLES.put(fitKey(sha256, focusX, focusY), bytes as unknown as ArrayBuffer, {
+  const key = fitKey(sha256, focusX, focusY);
+  await env.HUB_BUNDLES.put(key, bytes as unknown as ArrayBuffer, {
     // The key carries the hash AND the crop, so these bytes can never mean anything else.
     httpMetadata: { contentType: 'application/octet-stream', cacheControl: 'public, max-age=31536000, immutable' }
   });
 
-  return json({ ok: true, bytes: bytes.length });
+  // SWEEP THE CROPS THIS PICTURE NO LONGER USES (D-60). The crop is in the key by design, so every
+  // position the creator settles on writes a new 2.27 MB object and the old one has nothing left
+  // that can ever ask for it - a cover row names exactly one crop. Listing is cheap and costs no
+  // CPU worth counting; leaving them is a bucket that only grows.
+  //
+  // AFTER the put, never before: a sweep that ran first could delete the only copy and then fail
+  // to write the replacement.
+  const stale = await env.HUB_BUNDLES.list({ prefix: 'cache/fit/' + sha256 + '-' });
+  const gone = stale.objects.map((o) => o.key).filter((k) => k !== key);
+  if (gone.length) await env.HUB_BUNDLES.delete(gone);
+
+  return json({ ok: true, bytes: bytes.length, swept: gone.length });
 };

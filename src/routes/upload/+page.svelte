@@ -5,6 +5,7 @@
   // fixtures have been run through the parser (tests/fixture.test.ts) - not because a release note
   // said the stamp existed.
   import { ATTESTATION_TEXT, ATTESTATION_NOTE } from '$lib/attestation';
+  import { SETTINGS, SETTING_MAX, fanWorkNotice } from '$lib/fanWork';
 
   let { data } = $props();
 
@@ -12,6 +13,7 @@
   // Whether a file is being dragged over the drop zone, so it can light up and say "yes, here".
   let dragging = $state(false);
   let attested = $state(false);
+  let fanSetting = $state('');
   // Set only after the hub has DETECTED GM content and the creator has said they meant it.
   let confirmGmTree = $state(false);
   let stripGm = $state(false);
@@ -34,6 +36,7 @@
     if (stripGm) body.set('stripGm', 'on');
     if (confirmStale) body.set('confirmStale', 'on');
     if (attested) body.set('attest', 'on');
+    if (fanSetting.trim()) body.set('fanSetting', fanSetting.trim());
     try {
       const res = await fetch('/api/upload', { method: 'POST', body });
       result = await res.json();
@@ -101,6 +104,25 @@
       <span>{ATTESTATION_TEXT}</span>
     </label>
     <p class="note">{ATTESTATION_NOTE}</p>
+
+    <!-- WHICH UNIVERSE, if it is somebody else's (owner, 2026-09-06; D-61). Optional, and phrased
+         so that leaving it empty is a normal answer rather than a skipped question - most maps are
+         nobody's but their maker's. A name here makes the notice on the map page NAME what is
+         being disclaimed, which is worth far more than the blanket sentence on its own. -->
+    <label class="setting">
+      Is this set in an existing universe?
+      <input name="fanSetting" list="settings" maxlength={SETTING_MAX} bind:value={fanSetting}
+             placeholder="Star Trek, Dune, The Expanse... or leave empty" autocomplete="off" />
+      <datalist id="settings">
+        {#each SETTINGS as name (name)}<option value={name}></option>{/each}
+      </datalist>
+    </label>
+    {#if fanSetting.trim()}
+      <p class="note">{fanWorkNotice(fanSetting)}</p>
+    {:else}
+      <p class="note">Leave it empty if this is your own universe. Fan work is welcome here - naming
+        the setting just lets the map page say so properly.</p>
+    {/if}
   </fieldset>
 
   <button class="primary" type="submit" disabled={!file || !attested || busy}>
@@ -213,6 +235,8 @@
   fieldset { border: 1px solid var(--edge); border-radius: var(--radius); margin: 18px 0; padding: 12px 14px; }
   legend { color: var(--ink-faint); padding: 0 6px; font-size: 0.9rem; }
   .attest { border-color: var(--accent); }
+  .setting { display: block; margin-top: 0.75rem; font-weight: 600; }
+  .setting input { display: block; width: 100%; margin-top: 0.25rem; font-weight: 400; }
   .check { display: flex; gap: 10px; align-items: start; margin: 4px 0 10px; }
   .check span { color: var(--ink); }
   .note { margin: 0; color: var(--ink-faint); font-size: 0.9rem; }

@@ -6,6 +6,7 @@
 import type { PageServerLoad, Actions } from './$types';
 import { error, fail, redirect } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
+import { cleanSetting } from '$lib/fanWork';
 import { loadGates } from '$lib/server/config';
 import { loadSite } from '$lib/server/site';
 import { sanitiseTags } from '$lib/vocabulary';
@@ -138,6 +139,9 @@ export const load: PageServerLoad = async ({ params, platform, locals, url }) =>
     coverIsScreenshot: !!system.cover_sha256 && shotHashes.includes(system.cover_sha256),
     designer: { allowed, proOnly },
     label: gates.cover_label,
+    // What a screenshot may be, so the browser can shrink one BEFORE it is sent rather than have
+    // the hub refuse it after the wait (D-60).
+    limits: { screenshotBytes: gates.max_screenshot_bytes, screenshotEdge: gates.max_screenshot_edge },
     // Everything `renderCover` wants, minus the picture - which the browser already has, because
     // it is the thing that prepared it (D-54).
     coverNodes: [...(bodies ?? []), ...(constructs ?? [])].map(coverNodeFrom),
@@ -169,6 +173,9 @@ export const actions: Actions = {
       title,
       blurb: String(form.get('blurb') ?? '').trim().slice(0, 300) || null,
       description: String(form.get('description') ?? '').trim().slice(0, 8000) || null,
+      // Which universe this is fan work of (0034, D-61). Tidied, never corrected: it is the
+      // creator's own declaration and the hub does not get to rewrite it.
+      fan_setting: cleanSetting(form.get('fanSetting')),
       tags
     }).eq('id', params.id);
     if (e) return fail(500, { message: e.message });

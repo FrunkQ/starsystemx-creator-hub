@@ -24,6 +24,11 @@ export const PUBLIC_CORS: Record<string, string> = {
   'access-control-allow-origin': '*',
   'access-control-allow-methods': 'GET, HEAD, OPTIONS',
   'access-control-allow-headers': 'content-type',
+  // A CROSS-ORIGIN READER CANNOT SEE A HEADER IT IS NOT TOLD ABOUT. By default JavaScript gets six
+  // response headers and no more, so `x-fan-work` (D-61) would be invisible to the engine and to
+  // anything else fetching a download - present on the wire, absent from `response.headers`, which
+  // is the kind of absence nobody debugs. Named here, it can be read.
+  'access-control-expose-headers': 'x-fan-work, content-disposition',
   'access-control-max-age': '86400'
 };
 
