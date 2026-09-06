@@ -719,6 +719,66 @@ prefix is set. A card used to be one anchor around everything, which cannot hold
 it is now a stretched title link (the title's `::after` covers the card) with the open control
 above it, so the whole card still clicks through and the picture can also open the app.
 
+### D-36. What the engine ships is FETCHED, not copied; and a button is not offered where it fails
+
+The owner, 2026-09-06: *"i retired the hub - its in good shape - just need to close out the
+integrations properly."* The engine's stream M had shipped both of the things the hub was waiting
+on, on beta: R-17 (`?open=`, v3.0.314) and R-13 (`shipped-content.json`, v3.0.315). This is what
+closing them out came to.
+
+**The baselines are deleted and fetched instead.** The hub has to tell app content from a creator's
+own — a calendar is only interesting if SSE did not ship it — and it did that from lists copied out
+of the engine's repo by hand. **Those lists had gone stale twice.** The first time was caught within
+an hour (one calendar where four were needed, and the facet fired on every real starmap). The second
+was found by this work: the tag-category baseline said nine, the engine ships thirteen, so a map
+carrying `frontier`, `anomaly`, `science` or `intrigue` was credited with up to four custom
+categories it did not have. A hardcoded copy is a standing promise to notice a change in another
+repository, and the promise is always eventually broken. `bundle/shipped.ts` reads the manifest;
+`server/shippedContent.ts` fetches and caches it; the rules name a list instead of carrying one.
+
+**Measured before claiming it, and the honest version is narrower:** run over the four real saves
+to hand, the manifest changes NOTHING - they carry `status`, `class` and `disposition`, all of
+which the stale nine already had, and since B112 a save omits the shipped registries anyway
+(`temporal_registry` came back empty on every one). So the second drift was LATENT: a live wrong
+answer waiting for the first map to use a category the engine added. That is still the whole
+argument. A baseline that is right today and wrong at some unknown later date, silently, is exactly
+the failure mode a fetch removes - and the first time the hub notices is otherwise a creator asking
+why their map claims four custom categories.
+
+**The rule that makes a fetch safe to depend on: unknown is not empty.** A baseline that fails to
+arrive would report every shipped calendar as custom — the exact failure the baselines exist to
+prevent, and worse than showing nothing, because a browser who learns the pills lie stops reading
+all of them. So a rule whose baseline is unknown is SKIPPED. The facet says nothing rather than
+something false, and a re-index puts it right once the manifest is reachable.
+
+**The cache is in R2, and it is also the fallback.** Not a config row: a machine-written row among
+the gates is noise the owner must learn to ignore. The last good manifest stands however old it
+gets — a manifest goes stale a calendar at a time — and a FAILED check is remembered too, for
+fifteen minutes, so an engine that is down costs one slow upload rather than every upload. Six
+hours between checks, four seconds of patience, and nothing in this path can fail an upload.
+
+**A "Try things" button on the Gates page asks the engine now** and reports the version and the
+counts, beside a panel saying what the hub currently believes and how old that belief is. Same
+idiom as the webhook and mail tests: the real thing, once, before anybody else sees it not work.
+
+**And the button that could not keep its promise.** Reading the shipped R-17 code turned up a
+branch: `?open=` classifies the file and refuses anything that is not a starmap — *"That link points
+at a single system rather than a campaign."* The hub hosts both kinds and **the single system is the
+more common upload**, so most of the library would have carried a button that opens the app and then
+explains that it will not open the map. The words are good; the moment is wrong. `openLink` now
+takes the map's kind and returns nothing for a system — and `kind` is a required argument, unknown
+included, so a future call site cannot reintroduce the dead end by forgetting. R-18 asks the engine
+for the single-system door; the day it ships, one line and one test come out.
+
+**Two documents were reconciled with the behaviour rather than left to be believed:** R-17 said the
+download is a `.sse.zip`, where it is the bundle reassembled from approved assets — a zip when the
+map carried assets, the plain `.json` when it did not. And R-17's worked example uses
+`explorers.starsystemx.com`, which **does not reach the hub**: measured 2026-09-06 it answers 404
+from Vercel (`DEPLOYMENT_NOT_FOUND`) while the workers.dev origin answers 200. `site_url` stays
+unset for that reason — `loadSite()` then builds download URLs from the origin that actually
+answers — and both the requirement and this file now say so, because the next person to read them
+will believe them.
+
 ### D-16. The takedown address is assembled at runtime, never served as text
 
 The owner's instruction was explicit: keep it off the page as scrapable text. It is stored as

@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.20.0 — 2026-09-06
+
+### What Star System Explorer ships is read from the engine, not copied out of it
+
+The hub kept hand-copied lists of the calendars and tag categories the app ships, so it could tell
+app content from a creator's own. They had gone stale twice - most recently saying nine tag
+categories where the engine ships thirteen, which would have credited a map using one of the newer
+four with custom categories it did not have (no map on the hub does yet; the four real saves to
+hand are unaffected). The engine's generated `shipped-content.json` (R-13) replaces them: fetched, cached in R2,
+and used for the app-artwork paths as well. A baseline that cannot be fetched is treated as
+unknown, and the facet that needs it says nothing rather than something false. The Gates page has
+an "Ask the engine what it ships" button and shows what the hub currently believes.
+`sse_manifest_url` is the row (migration 0027); it moves to the production host with
+`open_in_sse_url`, not before.
+
+### "Open in SSE" is not offered where the engine will refuse it
+
+The engine's `?open=` takes a campaign; a single system is refused with a message telling the
+reader to download it instead. The button is therefore hidden for a single system rather than
+opening the app to explain itself. R-18 asks for the single-system door; the button returns for
+every map the day it ships.
+
+Also: R-13 and R-17 are marked shipped in `docs/sse-requirements.md`, with the two things that
+document got wrong - the download is a `.sse.zip` only when the map carried assets, and
+`explorers.starsystemx.com` does not reach the hub (404 from Vercel, measured 2026-09-06), so
+`site_url` stays unset until it does.
+
 ## 0.19.2 — 2026-09-05
 
 The Worker keeps its own clock: Cloudflare Cron Triggers drain the outbox every fifteen minutes

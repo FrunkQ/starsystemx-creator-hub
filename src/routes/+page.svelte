@@ -40,7 +40,7 @@
 {:else}
   <div class="grid">
     {#each data.systems as system (system.slug)}
-      <SystemCard {system} best={data.best} open={openLink(data.openPrefix, data.site.url, system.slug)} />
+      <SystemCard {system} best={data.best} open={openLink(data.openPrefix, data.site.url, system.slug, system.kind)} />
     {/each}
   </div>
 {/if}

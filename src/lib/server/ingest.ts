@@ -22,6 +22,7 @@ import { tolerantWrite, tolerantWriteMany } from './tolerant';
 import { readProvenance } from '$lib/bundle/provenance';
 import { detectGmContent } from '$lib/bundle/gmContent';
 import { computeFacets, deriveTags } from '$lib/bundle/facets';
+import { shippedManifest } from './shippedContent';
 import { informationDensity, type Density } from '$lib/bundle/density';
 import { stripGmContent } from '$lib/bundle/strip';
 import { checkFreshness } from '$lib/bundle/freshness';
@@ -303,8 +304,11 @@ export async function ingest(
   // ---- rows -------------------------------------------------------------------------------------
   const shaped = normalise(doc);
   // Facets are derived from the document, so they are recomputed on every upload and can never
-  // drift from what the file actually contains.
-  const facets = computeFacets(doc);
+  // drift from what the file actually contains. What the ENGINE ships is the other half of that
+  // reading - a calendar is only custom if SSE did not ship it - and it comes from the engine's
+  // own manifest, cached (R-13, D-36). Null when it has never been reachable, and the rules that
+  // need it are then skipped rather than run against a guess.
+  const facets = computeFacets(doc, undefined, await shippedManifest(env, gates.sse_manifest_url));
   const autoTags = deriveTags(facets, { hasGmContent: gm.hasGmContent });
   // How much of it is written about (D-30), measured from the same document.
   const density = informationDensity(doc);

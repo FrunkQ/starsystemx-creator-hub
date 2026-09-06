@@ -23,6 +23,7 @@ import * as r2 from './r2';
 import { openBundle } from '$lib/bundle/open';
 import { normalise, creditSlugs } from '$lib/bundle/normalise';
 import { computeFacets, deriveTags } from '$lib/bundle/facets';
+import { shippedManifest } from './shippedContent';
 import { informationDensity } from '$lib/bundle/density';
 import { detectGmContent } from '$lib/bundle/gmContent';
 import { tolerantWrite } from './tolerant';
@@ -42,7 +43,9 @@ export async function reindexSystem(
   const doc = opened.doc;
 
   const shaped = normalise(doc);
-  const facets = computeFacets(doc);
+  // The engine's shipped-content manifest, cached (R-13, D-36). A re-index is how a map uploaded
+  // against a stale baseline gets an accurate one - which is the whole point of keeping the bytes.
+  const facets = computeFacets(doc, undefined, await shippedManifest(env, gates.sse_manifest_url));
   const autoTags = deriveTags(facets, { hasGmContent: detectGmContent(doc).hasGmContent });
   const density = informationDensity(doc);
 

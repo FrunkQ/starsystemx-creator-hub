@@ -6,14 +6,30 @@ import { loadSite } from '$lib/server/site';
 import * as audit from '$lib/server/audit';
 import { isDiscordWebhook } from '$lib/server/integrations/share';
 import { postShare } from '$lib/server/integrations/discord';
+import { readCache, shippedManifest } from '$lib/server/shippedContent';
 
 export const load: PageServerLoad = async ({ platform, locals }) => {
   const env = platform?.env;
   if (!env) throw error(500, 'not configured');
   if (locals.viewer?.role !== 'admin') throw error(404, 'Not found');
 
-  const { data } = await db(env).from('config').select('key, value, note, updated_at').order('key');
-  return { rows: data ?? [] };
+  const sb = db(env);
+  const [{ data }, gates, cache] = await Promise.all([
+    sb.from('config').select('key, value, note, updated_at').order('key'),
+    loadGates(sb),
+    readCache(env)
+  ]);
+  // What the hub currently believes SSE ships, and when it last managed to ask (D-36).
+  return {
+    rows: data ?? [],
+    shipped: {
+      url: gates.sse_manifest_url,
+      appVersion: cache?.manifest?.appVersion ?? null,
+      fetched_at: cache?.fetched_at ?? null,
+      checked_at: cache?.checked_at ?? null,
+      error: cache?.error ?? null
+    }
+  };
 };
 
 function admin(platform: App.Platform | undefined, locals: App.Locals) {
@@ -78,6 +94,32 @@ export const actions: Actions = {
     }
     await audit.record(sb, me.id, 'discord.test-share', 'config:discord_share_webhook');
     return { tested: 'A test post went to the sharing channel.' };
+  },
+
+  /**
+   * Ask the engine what it ships, now, whatever the cache says (R-13, D-36). The same fetch the
+   * upload path makes, so a failure here is the failure an upload would have had.
+   */
+  refreshShipped: async ({ platform, locals }) => {
+    const { env, me } = admin(platform, locals);
+    const sb = db(env);
+    const gates = await loadGates(sb);
+    if (!gates.sse_manifest_url) return fail(400, { message: 'Set sse_manifest_url first.' });
+
+    const manifest = await shippedManifest(env, gates.sse_manifest_url, { force: true });
+    const cache = await readCache(env);
+    if (!manifest) {
+      return fail(502, {
+        message: 'The engine did not give a manifest: ' + (cache?.error ?? 'unknown reason')
+          + '. The hub is using ' + (cache?.manifest ? 'the last one it fetched.' : 'no baselines, so the custom-content facets are skipped.')
+      });
+    }
+    await audit.record(sb, me.id, 'shipped.refresh', 'config:sse_manifest_url', undefined, { appVersion: manifest.appVersion });
+    return {
+      tested: 'Star System Explorer ' + manifest.appVersion + ' says it ships '
+        + (manifest.calendars?.length ?? 0) + ' calendars and '
+        + (manifest.tagCategories?.length ?? 0) + ' tag categories.'
+    };
   },
 
   /**

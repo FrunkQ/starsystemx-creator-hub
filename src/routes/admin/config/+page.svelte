@@ -30,8 +30,32 @@
     <form method="POST" action="?/testMail">
       <button type="submit">Send me a test email</button>
     </form>
+    <form method="POST" action="?/refreshShipped">
+      <button type="submit">Ask the engine what it ships</button>
+    </form>
   </div>
   {#if form?.tested}<p class="ok">{form.tested}</p>{/if}
+</div>
+
+<!-- What the hub believes SSE ships, and how old that belief is (D-36). -->
+<div class="panel">
+  <h3>Shipped content</h3>
+  <p class="muted">
+    The hub reads what the app ships from <code>{data.shipped.url || 'nowhere - the row is empty'}</code>
+    rather than keeping a copy, so a calendar the engine adds is not reported as somebody's custom one.
+  </p>
+  {#if data.shipped.appVersion}
+    <p>
+      Star System Explorer <strong>{data.shipped.appVersion}</strong>, fetched
+      {data.shipped.fetched_at?.slice(0, 16).replace('T', ' ')} UTC.
+      {#if data.shipped.error}<span class="bad-text">Last check failed: {data.shipped.error}</span>{/if}
+    </p>
+  {:else}
+    <p class="bad-text">
+      Never fetched{data.shipped.error ? ': ' + data.shipped.error : ''}. Until it is, the custom-calendar
+      and custom-tag-category facets are skipped rather than guessed.
+    </p>
+  {/if}
 </div>
 
 {#if form?.message}
@@ -66,6 +90,7 @@
   .tries { display: flex; gap: 8px; flex-wrap: wrap; }
   .tries form { margin: 0; }
   .ok { color: var(--accent); margin: 10px 0 0; }
+  .bad-text { color: var(--warn); }
   .inline { display: flex; gap: 6px; }
   input {
     font: inherit; background: var(--panel-2); color: var(--ink);

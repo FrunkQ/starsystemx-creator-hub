@@ -53,6 +53,12 @@ export interface Gates {
    * is appended to, e.g. `https://starsystemx.com/?open=`. Empty until the engine can receive it.
    */
   open_in_sse_url: string;
+  /**
+   * Where the engine serves its shipped-content manifest (R-13, D-36). The hub fetches this instead
+   * of keeping hand-copied lists of what SSE ships. MOVES WITH `open_in_sse_url`: both name the
+   * engine host, and they should name the same one.
+   */
+  sse_manifest_url: string;
   patreon_enabled: boolean;
   patreon_campaign_id: string;
   patreon_tier_map: Record<string, string>;
@@ -97,6 +103,9 @@ export const GATE_FALLBACKS: Gates = {
   discord_share_webhook: '',
   discord_badge_roles: {},
   open_in_sse_url: '',
+  // Beta, because that is the only build serving it: production 404s the path until the owner
+  // makes the read-tree release (measured 2026-09-06).
+  sse_manifest_url: 'https://beta.starsystemx.com/shipped-content.json',
   patreon_enabled: false,
   patreon_campaign_id: '',
   patreon_tier_map: {}

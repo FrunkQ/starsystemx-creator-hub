@@ -15,6 +15,7 @@
 // ============================================================================================
 import { nodesWithSystem } from './attribution';
 import { applyFacetRules, type FacetResult, type FacetRule } from './facetRules';
+import { isAppAsset, type ShippedManifest } from './shipped';
 import { displayRole } from './roles';
 
 export interface Facets {
@@ -57,12 +58,12 @@ const pillFor = (role: string) =>
  */
 export const ROLE_PILLS: ReadonlySet<string> = new Set(DISTINGUISHING_ROLES.map(pillFor));
 
-export function computeFacets(doc: any, rules?: FacetRule[]): Facets {
+export function computeFacets(doc: any, rules?: FacetRule[], shipped?: ShippedManifest | null): Facets {
   const f: Facets = {
     systemCount: 0, bodyCount: 0, constructCount: 0,
     roleCounts: {}, tagNamespaces: {}, signals: {},
     carriedImages: 0, carriedModels: 0, appArtwork: 0,
-    rules: applyFacetRules(doc, rules)
+    rules: applyFacetRules(doc, rules, shipped)
   };
 
   f.systemCount = Array.isArray(doc?.systems) ? doc.systems.length : 0;
@@ -92,9 +93,10 @@ export function computeFacets(doc: any, rules?: FacetRule[]): Facets {
 
     // C-06: only assets the bundle CARRIES are the hub's business. An app-shipped picture is
     // counted separately because it says something about the map without being ours to store.
+    // Which is which is the manifest's answer when there is one (R-13), a path prefix when not.
     const url = String(node?.image?.url ?? '');
     if (url.startsWith('assets/images/')) f.carriedImages++;
-    else if (url.startsWith('/images/')) f.appArtwork++;
+    else if (isAppAsset(url, shipped)) f.appArtwork++;
 
     // A GM-uploaded model has a hash; an app-shipped starter model has only a url.
     if (typeof node?.model?.hash === 'string' && node.model.hash) f.carriedModels++;
