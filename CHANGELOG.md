@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.21.2 — 2026-09-06
+
+Two claims in the hub's half of the contract corrected against what is actually true: the test
+count, and a `git show` naming a tag this repo does not have.
+
 ## 0.21.1 — 2026-09-06
 
 The hub's half of the contract records what was seen rather than what was expected: the "Open in
