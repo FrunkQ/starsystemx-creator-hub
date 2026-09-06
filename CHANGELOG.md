@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.23.1 — 2026-09-06
+
+Browse reads the vocabulary the same way the tag picker does, so an accepted custom tag is
+filterable and not only pickable. "A tag for everyone to use" has to mean both.
+
 ## 0.23.0 — 2026-09-06
 
 ### Moderators

@@ -4,7 +4,7 @@ import { tolerantSelect } from '$lib/server/tolerant';
 import { CARD_COLUMNS, CARD_OPTIONAL, type CardRow } from '$lib/server/cards';
 import { bestDensity } from '$lib/server/density';
 import { loadGates } from '$lib/server/config';
-import { vocabularyFrom } from '$lib/vocabulary';
+import { loadVocabulary } from '$lib/server/tags';
 
 /** Pills the hub DERIVES from the file, grouped - see 0007's note on why these are kept apart. */
 const FACET_GROUPS = [
@@ -65,15 +65,17 @@ export const load: PageServerLoad = async ({ platform, url, setHeaders }) => {
     return query.limit(60);
   };
 
-  const [{ data, error }, { data: vocabRow }, best, gates] = await Promise.all([
+  const [{ data, error }, vocabulary, best, gates] = await Promise.all([
     tolerantSelect<CardRow[]>(CARD_COLUMNS, CARD_OPTIONAL, build),
-    sb.from('config').select('value').eq('key', 'creator_vocabulary').maybeSingle(),
+    // The vocabulary INCLUDING accepted custom tags (D-40) - "a tag for everyone to use" has to
+    // mean filterable, or accepting one only half works.
+    loadVocabulary(sb),
     // What a 5 on the information meter means today (D-30).
     bestDensity(sb),
     // The engine prefix for "Open in SSE" on a card (D-35); empty until the engine has R-17.
     loadGates(sb)
   ]);
-  const mine = vocabularyFrom(vocabRow?.value ?? null).map((g) => ({ label: g.label, tags: g.tags }));
+  const mine = vocabulary.map((g) => ({ label: g.label, tags: g.tags }));
 
   // A FAILED QUERY MUST NOT LOOK LIKE AN EMPTY LIBRARY. Discarding `error` here made a missing
   // column (an unrun migration) render as a cheerful "no maps have been published yet" - which is
