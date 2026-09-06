@@ -238,6 +238,21 @@ function placements(doc: any): Map<any, Placement> {
  * not the point - the body is.
  */
 function snippetFor(node: any): unknown {
+  // ============================================================================================
+  // A PROMISE, NOT AN ACCIDENT (D-58). The engine reads `kind` and `roleHint` off a pasted node to
+  // decide whether a clip is a SYSTEM - and therefore whether "Paste as a new system" is offered
+  // at all. Today they survive because this is a SPREAD and nothing removes them.
+  //
+  // The engine coordinator, 2026-09-06, declining the extra field the hub offered to add: *"the
+  // useful ask isn't a new field, it's a promise: that the snippet keeps kind and roleHint. Today
+  // that's an accident of the spread. If a future snippetFor ever moved to a whitelist, 'Paste as
+  // a new system' would silently stop being offered for every hub clip - no error, just an option
+  // quietly greying out."*
+  //
+  // So: THIS IS A DENY LIST AND MUST STAY ONE. If it ever becomes a whitelist, `kind` and
+  // `roleHint` are the two names that must be on it. `tests/clip.test.ts` pins them, which is what
+  // turns the paragraph above into something a change has to argue with.
+  // ============================================================================================
   const copy = { ...node };
   delete copy.gmNotes;
 

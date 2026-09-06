@@ -784,6 +784,52 @@ does that on the hub side; the engine can honour a second parameter later if it 
 
 ---
 
+## R-14 addendum. What a clip's nodes promise — SETTLED 2026-09-06, and nothing was added
+
+**The hub offered to put extra data in a paste file so the app could tell what a clip IS. The
+engine coordinator declined it, and was right to:**
+
+> *"I read buildClip and normalise.ts. The hub's clip node is `snippetFor(node)` = `{...node}` minus
+> gmNotes and bundle-local assets — so `kind` and `roleHint` already survive intact, and those are
+> exactly what the app keys on to decide a clip is a System rather than a Planet, and therefore
+> whether it can land in empty space.*
+>
+> *So the useful ask isn't a new field, it's a promise: that the snippet keeps `kind` and
+> `roleHint`. Today that's an accident of the spread. If a future `snippetFor` ever moved to a
+> whitelist, "Paste as a new system" would silently stop being offered for every hub clip — no
+> error, just an option quietly greying out.*
+>
+> *I'd actively decline an explicit `rootKind` on the envelope: the app would still have to verify
+> it against the nodes (DATA-R4 — a claim in a file is a claim), so it'd become a second answer to
+> "what is this clip", which is the fault we keep unpicking."*
+
+**HUB-SIDE STATUS, 2026-09-06, hub 0.37.0.**
+
+- **PROMISED.** `snippetFor` (`bundle/normalise.ts`) is a DENY list and stays one; if it ever
+  becomes a whitelist, `kind` and `roleHint` are the two names that must be on it. The paragraph
+  above is quoted in the code beside it.
+- **PINNED.** `tests/clip.test.ts` asserts both survive a real node, alongside what must NOT survive
+  (`gmNotes`, bundle-local `image` and `model`). A silent loss is the worst-shaped failure there is,
+  so it is a test rather than a habit.
+- **DECLINED, agreed.** No `rootKind`, no envelope change, no `CLIP_FORMAT` bump. Two answers to
+  one question is the fault, not the fix.
+
+```
+SEAM REPORT | R-14 | hub | 0.37.0 | prod: LIVE (the hub has one environment; a push to main is the deploy)
+sets:      nothing new. The clip envelope is unchanged and CLIP_FORMAT stays 1
+must know: `kind` and `roleHint` on every clip node are now a PROMISE rather than an accident of a spread -
+           snippetFor is a deny list and tests/clip.test.ts pins both, so a future change has to argue with a
+           red test rather than silently grey out "Paste as a new system"; gmNotes and bundle-local image/model
+           are still stripped, and the physical facts a pasted body needs are still carried
+verified:  a real node through normalise: kind 'body' and roleHint 'star' present, gmNotes/image/model absent
+not done:  no rootKind on the envelope, declined by the coordinator and agreed by the hub - the app would have
+           to verify a claim against the nodes anyway (DATA-R4), and a second answer to "what is this clip" is
+           the fault both sides keep unpicking
+ready for: STREAM N N-2 (the credit chain, when there is a map with a pasted clip to upload)
+```
+
+---
+
 ## R-18. `?open=` should take a single system too, not only a campaign
 
 **Found by reading the shipped R-17 code, 2026-09-06** — `src/routes/+page.svelte`, `openHubBytes`:

@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.37.0 — 2026-09-06
+
+### A clip's `kind` and `roleHint` are a promise now, not an accident
+
+The engine reads those two off a pasted node to decide whether a clip can land in empty space. They
+survived because `snippetFor` spreads the node and deletes a few things - so a future refactor to a
+whitelist would have taken them out and "Paste as a new system" would have stopped being offered
+with no error at all.
+
+Pinned by a test, with the reason written beside the code. No new field: the coordinator declined a
+`rootKind` on the envelope because the app would have to verify it against the nodes anyway, and a
+second answer to "what is this clip" is the fault, not the fix.
+
 ## 0.36.0 — 2026-09-06
 
 ### The cover preview is drawn in your browser

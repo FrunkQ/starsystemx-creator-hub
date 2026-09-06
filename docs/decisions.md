@@ -1503,6 +1503,32 @@ bytes the browser hands over are bytes nobody has looked at. That is one ~80ms r
 one per keystroke. If it proves flaky, the answer is not to trust the upload - it is to let a
 browser-supplied cover go through the ordinary picture review like any other image.
 
+### D-58. The answer to "we might need another field" was a test
+
+The engine coordinator, through the owner, 2026-09-06, on the extra data the hub had offered to put
+in paste files: *"I don't think you need to build anything... the useful ask isn't a new field, it's
+a promise: that the snippet keeps `kind` and `roleHint`. Today that's an accident of the spread."*
+
+**"No action needed" and "nothing to do" are not the same sentence, and the difference is the whole
+entry.** The behaviour is already right; what is missing is anything holding it right. `snippetFor`
+keeps `kind` and `roleHint` because it spreads the node and deletes a few things - so a future
+refactor to a whitelist would take them out, and the engine's "Paste as a new system" would stop
+being offered **with no error at all, just an option quietly greying out.** A silent loss in another
+repository is the worst-shaped failure available.
+
+So: the promise is written beside the code that keeps it, and `tests/clip.test.ts` pins both fields
+against a real node - alongside what must NOT survive, so the test says what the snippet is FOR
+rather than only listing fields. A change now has to argue with a red test instead of passing
+quietly.
+
+**And the coordinator's refusal is worth recording as much as the request.** The hub offered a
+`rootKind` on the envelope; he declined it because the app would have to verify the claim against
+the nodes anyway (their DATA-R4 - a claim in a file is a claim), so it would become **a second
+answer to "what is this clip"**. That is the same fault this pair of repositories has unpicked
+several times over - the stamp that is not the gate (R-10), the attributions file that is not the
+verdict (`ATTRIBUTIONS.md`), the hand-copied baseline that was not the engine's list (D-36). **The
+right move when two things could answer one question is usually to keep having one.**
+
 ### D-16. The takedown address is assembled at runtime, never served as text
 
 The owner's instruction was explicit: keep it off the page as scrapable text. It is stored as
