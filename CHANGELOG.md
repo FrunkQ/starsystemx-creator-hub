@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.40.1 - 2026-09-06
+
+### No way to bin an uncredited picture, and the way out said out loud
+
+There is deliberately no "remove this asset" button: the publish gate stands, and any one of who,
+licence or where clears it. What was missing was the alternative for a picture nobody can credit,
+so the blocked-publish notice now names it - take it off the object in Star System Explorer and
+upload the new version, with a link straight there.
+
+The credits panel used to say recording it in the app was *better*, "because the credit then travels
+with the file". Since 0.40.0 it travels either way, so that sentence was false and has gone. The app
+is still worth a minute, for the reason now given: it is what makes your own next export carry it.
+
+
 ## 0.40.0 - 2026-09-06
 
 ### A credit typed on the hub now reaches the file people download

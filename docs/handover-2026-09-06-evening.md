@@ -54,7 +54,7 @@ clearing the webhook, and is checked at the ENQUEUE so nothing piles up behind i
 
 ---
 
-## 2. WHAT IS HALF-DONE, and it is the most valuable thing after the bot
+## 2. WHAT WAS HALF-DONE - finished now, and the follow-up declined
 
 **A credit typed on the manage page does not reach the downloaded file (D-55).** Today a creator can
 fix a blocked publish in place — who made the picture, the licence, the source — and it satisfies
@@ -67,11 +67,20 @@ What it needs: read the stored bundle (`r2.getBundle`), patch every node whose i
 that hash, regenerate `ATTRIBUTIONS.md`, re-zip, store. The reader is `bundle/attribution.ts`
 `collectAttributions` — patch the same fields it reads, or the two will disagree.
 
-**And "maybe have the option of binning an asset" carries a trap. Read this before building it:**
-deleting the `system_assets` row does NOT withhold the picture. `packForDownload` treats a zip
-member with no matching row as *"not a tracked asset: these always travel"* — that is how the
-document, `ATTRIBUTIONS.md` and `README.txt` get through. Unlinking would make the picture travel
-**unconditionally**. Binning has to be an explicit withholding, not an absence.
+**BOTH SETTLED, evening of 2026-09-06. Do not rebuild either.**
+
+**The write-back is DONE (D-62)** - and NOT the way the paragraph above proposes. It is applied at
+PACK TIME, in `creditDownload` (`server/pack.ts`) over the pure `bundle/credits.ts`, and the stored
+bundle is never touched: the stored bytes are the evidence the attestation was made about,
+`asset_claims` is already the truth the gate reads, patching on the way out cannot drift, and it
+costs no extra CPU because the download already unzips and re-zips.
+
+**"Bin an asset" is DECLINED (D-64).** The owner: *"forget it - let them just be forced to add the
+attributions."* The gate already forces it, and the way out for a picture nobody can credit is to
+take it off the object in the app and upload the new version - which the blocked-publish notice now
+says out loud. The trap that made binning expensive is kept in D-64 in case the question comes back:
+deleting the `system_assets` row does NOT withhold the picture, because `packForDownload` treats a
+zip member with no matching row as *"not a tracked asset: these always travel"*.
 
 ---
 
@@ -134,7 +143,7 @@ document, `ATTRIBUTIONS.md` and `README.txt` get through. Unlinking would make t
 `docs/prompt-for-sse-2026-09-06.md` is written and ready to hand over. Also R-07's surface and R-04,
 parked on the hub's pairing endpoint.
 
-**Yours:** the write-back in section 2. Then: the first upload carrying a pasted clip, end to end
+**Yours:** the write-back is done (D-62) and binning is declined (D-64) - see section 2. Then: the first upload carrying a pasted clip, end to end
 (R-14/R-16); search over descriptions when the library needs a text index.
 
 **Ready for STREAM N N-1 and N-3** — both halves are in place and neither has been walked.

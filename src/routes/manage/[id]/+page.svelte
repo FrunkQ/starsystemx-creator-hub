@@ -366,6 +366,13 @@
       <strong>Any one of them is enough</strong>, and a CC-BY licence needs a name because that is
       the whole of what CC-BY asks.
     </p>
+    <!-- NAME THE WAY OUT (D-64). The hub deliberately has no "bin this asset" button, so a creator
+         who genuinely cannot credit a picture would otherwise be stuck on this page with no visible
+         move. The move exists - it is just in the other program - so say it. -->
+    <p class="muted">
+      If you cannot credit one and would rather not use it, take that picture off the object in Star
+      System Explorer, export, and <a href="/upload?replaces={s.id}">upload the new version</a>.
+    </p>
   </div>
 {/if}
 
@@ -531,9 +538,12 @@
         </div>
       </form>
     {/each}
+    <!-- THIS USED TO SAY the app was BETTER, "because the credit then travels with the file". Since
+         D-62 it travels either way, so that sentence was false and is gone. The app is still worth
+         doing - for a different reason, which is the one now given. -->
     <p class="muted foot">
-      Recording it in Star System Explorer and uploading again works too, and is better - the credit
-      then travels with the file wherever it goes.
+      Recording it in Star System Explorer too is worth a minute: it is what makes your own next
+      export carry the credit, rather than only the copies people download from here.
     </p>
   </div>
 {/if}

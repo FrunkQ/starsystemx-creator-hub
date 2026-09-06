@@ -1420,20 +1420,22 @@ and what it is. Any one of them satisfies the gate; a CC-BY licence still needs 
 they run over one read from a file - because a credit typed here and a credit read from a save have
 to mean the same thing, and two copies of that rule would drift within a month.
 
-**WHAT IS STILL MISSING, AND IT MATTERS.** A credit typed here fixes the hub's row and the map's
-page. **It does not reach the downloaded file**: the credit lives on the NODE in the save
-(`node.image.credit`, `node.model.credit`), the download is reassembled from the stored bytes, and
-nothing writes back. So a downloader still gets a file that says nothing. The owner asked for this
-in the same breath - *"that is then written back to the file for publication"* - and it is the next
-piece of work rather than part of this one, because it means patching the stored bundle and that
-deserves care rather than the end of a long session. Until then the page says the honest thing:
-recording it in the app and uploading again is better, because the credit then travels with the file.
+**WHAT WAS STILL MISSING, AND IT MATTERED - CLOSED BY D-62.** A credit typed here fixed the hub's
+row and the map's page and **did not reach the downloaded file**: the credit lives on the NODE in
+the save (`node.image.credit`, `node.model.credit`), the download is reassembled from the stored
+bytes, and nothing wrote back, so a downloader got a file that said nothing. The owner asked for it
+in the same breath - *"that is then written back to the file for publication"* - and it was left as
+the next piece of work because it looked like it meant patching the stored bundle, which deserved
+care rather than the end of a long session.
 
-**And "maybe have the option of binning an asset" carries a trap worth writing down before anybody
-builds it.** Deleting the `system_assets` row would NOT withhold the picture - `packForDownload`
-treats a zip member with no matching row as "not a tracked asset: these always travel" (the
-document, ATTRIBUTIONS.md, README.txt), so unlinking it would make it travel unconditionally. Binning
-has to be an explicit withholding, not an absence.
+**It did not mean that.** D-62 applies it at PACK TIME instead and never touches the stored bytes.
+The sentence this decision used to end on - "recording it in the app and uploading again is better,
+because the credit then travels with the file" - **is no longer true and has been taken off the
+page**: the credit typed here travels with the file now. Recording it in the app is still worth
+doing, but for a different reason: it is what makes the creator's OWN next export carry it.
+
+**"Maybe have the option of binning an asset" was ANSWERED with "forget it" - see D-64**, which
+keeps the trap that would have made it expensive.
 
 ### D-56. A system cannot be opened, so it is copied instead
 
@@ -1726,6 +1728,36 @@ credit rides on the node but is not printed in the receiving map's `ATTRIBUTIONS
 `collectAttributions` only lists assets a bundle actually carries - *"someone else's hosting is not
 ours to credit"*. That is defensible and deliberate; it is written down here so nobody rediscovers
 it as a bug. `tests/clip.test.ts` pins all of it.
+
+### D-64. No "bin this asset". The gate stands, and the way out is named instead
+
+The owner, 2026-09-06, on the binning option he had asked for beside the write-back: *"forget it -
+let them just be forced to add the attributions."*
+
+**Nothing was built, and that is the whole decision.** The publish gate already forces it: an asset
+with nothing recorded blocks sharing (`noProvenance`), and any one of who / licence / where clears
+it. The Credits panel (D-55, D-59) is where that happens, and since D-62 what is typed there reaches
+the downloaded file as well.
+
+**WHAT THIS COSTS, said plainly, because it is a real cost.** A creator with a picture they genuinely
+cannot credit - found years ago, no memory of where - now has no move on the hub at all. Declining
+the button without naming the alternative would have left them on a page with a dead publish button
+and no visible way forward, which is the same fault D-55 was written to fix. **So the blocked-publish
+notice now says it: take the picture off the object in Star System Explorer, export, and upload the
+new version** (the link goes straight to `/upload?replaces=<id>`). The move exists; it is just in the
+other program, and the hub's job is to say so.
+
+**AND IT IS THE RIGHT DEFAULT ANYWAY.** "I cannot credit this" and "I would rather not bother" look
+identical from here, and a one-click bin makes the second one the easy answer. The whole argument of
+this hub is that crediting artists is worth a minute of somebody's time - a button that removes the
+minute would quietly remove the argument with it.
+
+**THE TRAP, KEPT IN CASE THE QUESTION COMES BACK.** Binning is not a delete of a row. Removing the
+`system_assets` row does NOT withhold the picture: `packForDownload` treats a zip member with no
+matching row as *"not a tracked asset: these always travel"* - that is how the document,
+`ATTRIBUTIONS.md` and `README.txt` get through. Unlinking would make the picture travel
+**unconditionally**, which is the exact opposite of what the button says. Binning would have to be an
+explicit withholding, with a row saying so, and the reviewer's view would need to show it.
 
 ### D-16. The takedown address is assembled at runtime, never served as text
 
