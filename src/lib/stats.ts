@@ -55,5 +55,13 @@ export const LIMITS = {
   /** R2 Free: class A (write) operations a month - here, novel assets and bundles stored. */
   r2WritesPerMonth: 1_000_000,
   /** Supabase Free: database size. */
-  supabaseDbBytes: 500 * 1024 * 1024
+  supabaseDbBytes: 500 * 1024 * 1024,
+  /**
+   * Resend Free (D-52). The owner asked whether mail is tracked "to stay in free bounds": it is
+   * now, and these are the two lines that matter. The DAILY one is the one that bites first - a
+   * hundred is not many if a queue nudge, a comment digest and a takedown report all land on the
+   * same busy afternoon.
+   */
+  mailPerDay: 100,
+  mailPerMonth: 3_000
 };

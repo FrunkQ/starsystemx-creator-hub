@@ -33,7 +33,7 @@ export async function drainOutbox(env: HubEnv, sb: Db, gates: Gates, siteName: s
         // queued while the switch is off (share.ts), so this only catches one already in flight.
         if (!gates.discord_share_enabled || !gates.discord_share_webhook) { skipped++; continue; }
         await postShare(gates.discord_share_webhook, item.payload as unknown as SharePayload, siteName);
-      } else if (item.kind === 'mail.takedown' || item.kind === 'mail.queue') {
+      } else if (item.kind.startsWith('mail.')) {
         // Mail the hub sends itself (D-49). Same rule as the Discord kinds: with no key and no
         // from-address it is WAITING, not broken, so it stays pending for the day they are set.
         if (!mailReady(env, gates)) { skipped++; continue; }

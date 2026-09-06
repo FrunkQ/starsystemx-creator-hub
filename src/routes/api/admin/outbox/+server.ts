@@ -12,6 +12,7 @@ import { loadGates } from '$lib/server/config';
 import { loadSite } from '$lib/server/site';
 import { drainOutbox } from '$lib/server/integrations/deliver';
 import { queueNotice } from '$lib/server/queueNotice';
+import { mailNewComments } from '$lib/server/commentMail';
 
 export const POST: RequestHandler = async ({ platform, locals, request, url }) => {
   const env = platform?.env;
@@ -34,7 +35,10 @@ export const POST: RequestHandler = async ({ platform, locals, request, url }) =
   // minutes for the next one (D-49). It never throws: a queue nudge that broke the drain would
   // take the Discord posts down with it.
   const notice = await queueNotice(env, sb, gates, site.url);
+  // And the creators' own: somebody said something about your map (D-52). Same pass, same rules -
+  // it never throws, because it shares a drain with the Discord posts.
+  const comments = await mailNewComments(env, sb, gates, site.url);
 
   const report = await drainOutbox(env, sb, gates, site.name);
-  return json({ ok: true, ...report, notice });
+  return json({ ok: true, ...report, notice, comments });
 };

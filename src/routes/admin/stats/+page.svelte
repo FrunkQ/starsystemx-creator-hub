@@ -181,7 +181,8 @@
   <h2>Where it starts to cost</h2>
   <p class="muted">
     The red line is the free level. Bandwidth out of Cloudflare is free and has no line; the
-    database-to-Worker traffic Supabase meters (5 GB a month) cannot be measured from here.
+    database-to-Worker traffic Supabase meters (5 GB a month) cannot be measured from here. Mail is
+    counted from the outbox - what the hub actually sent, not what it queued.
     {#if !tr}<strong>Request counting starts once migrations 0016 and 0017 have run.</strong>{/if}
   </p>
   <div class="meters">
@@ -191,6 +192,9 @@
     {@render meter('R2 reads this month', project(n(month?.reads)), LIMITS.r2ReadsPerMonth, 'assets and downloads served, projected to month end (' + fmt(month?.reads) + ' so far)', fmt)}
     {@render meter('R2 writes this month', project(n(month?.writes)), LIMITS.r2WritesPerMonth, 'assets and bundles stored, projected (' + fmt(month?.writes) + ' so far)', fmt)}
     {@render meter('Database', n(s.storage.db_bytes), LIMITS.supabaseDbBytes, 'Supabase free plan', formatBytes)}
+    <!-- Mail has a DAILY cap, which is the one that bites first (D-52). -->
+    {@render meter('Mail today', data.mail.today, LIMITS.mailPerDay, 'Resend free plan, per day - queue nudges, comment digests and takedown reports', fmt)}
+    {@render meter('Mail this month', data.mail.month, LIMITS.mailPerMonth, 'Resend free plan, per month (' + fmt(data.mail.today) + ' today)', fmt)}
   </div>
   <h2>Data transfer</h2>
   <p class="muted">

@@ -1283,6 +1283,39 @@ flight when the switch is thrown, and it SKIPS rather than fails: it is waiting,
 **The test button still posts.** It is an explicit press by an admin who wants to see the channel
 work, which is a different question from whether publishing should announce itself.
 
+### D-52. Mail is counted, and the notice that was waiting for it is sent
+
+The owner, 2026-09-06, once the first mail arrived: *"Switch stuff over. We tracking mail use to
+stay in free bounds on usage panel?"*
+
+**No, and that was the wrong answer for the one integration with a DAILY cap.** Resend's free plan
+is 100 a day and 3,000 a month, and the daily line is the one that bites: a queue nudge, a comment
+digest and a takedown report can all land on the same busy afternoon. Both are meters on the usage
+page now, beside the Workers and R2 lines. **Counted from the OUTBOX rather than a new table** -
+every mail the hub sends is queued there and stamped `sent_at` when it lands, so the record already
+existed; and counted in the Worker rather than added to `hub_stats`, because a new SQL function
+would have been a migration for two numbers. **Sent only:** a pending intent has not cost anything
+yet, and a failed one never will.
+
+**And the switch-over: comment notices by mail**, which D-33 built the honest version of while the
+hub could not send - *"when SMTP exists, mail can follow the same query"*. It follows the same
+query, because a second definition of "a new comment" is a second thing to get wrong.
+
+**The part that needed thinking about was the CLOCK, not the query.** `comments_seen_at` is moved
+by LOOKING at the account page, and a mail is not a look: if sending moved it, a creator who read
+the mail and then opened the page would find the list empty and wonder what they had missed. So
+mail keeps its own mark (`comments_mailed_at`, migration 0032) and the two answer different
+questions - what have I not READ, and what have I not been TOLD about. The digest asks for both, so
+somebody who reads the page first is not mailed about what they have already seen, and somebody who
+never opens it is still told once per comment.
+
+**One a day per creator, through the outbox's dedupe key.** Comments arrive in ones and twos; a map
+with a conversation on it would otherwise mail its creator hourly, out of a hundred a day.
+
+**The mark moves on QUEUEING, not on delivery.** A retry loop that re-derived the same digest every
+fifteen minutes would be worse than a digest that occasionally goes missing - and the outbox retries
+the queued message anyway, so the failure this trades away is the smaller one.
+
 ### D-16. The takedown address is assembled at runtime, never served as text
 
 The owner's instruction was explicit: keep it off the page as scrapable text. It is stored as

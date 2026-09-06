@@ -58,6 +58,8 @@ export type CreatorRow = {
   state_note: string | null;
   // 0024: when they last looked at the comments on their maps. Null = never; everything is new.
   comments_seen_at: string | null;
+  /** 0032: when a comment DIGEST was last sent, which is not the same as when they last looked. */
+  comments_mailed_at?: string | null;
   account_tier: AccountTier;
   created_at: string;
 }

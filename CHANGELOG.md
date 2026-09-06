@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.31.0 — 2026-09-06
+
+### Mail is counted against the free plan
+
+Two meters on the usage page: mail today against Resend's 100 a day, and this month against 3,000.
+The daily line is the one that bites - a queue nudge, a comment digest and a takedown report can
+land on the same afternoon. Counted from the outbox, so it is what was actually sent rather than
+what was queued.
+
+### Comment notices by mail
+
+The account page has listed new comments since D-33; they now arrive by mail too, from the same
+query. Mail keeps its own clock (migration 0032) because reading the page and being told about it
+are different things: somebody who reads the page first is not mailed about what they have seen,
+and somebody who never opens it is still told. At most one a day per creator.
+
 ## 0.30.1 — 2026-09-06
 
 The hub writes as `keeper@starsystemx.com` - the owner's choice, and the site's own word for the

@@ -85,6 +85,36 @@ export async function adminAddresses(sb: Db, gates: Gates): Promise<string[]> {
 export const looksLikeEmail = (v: unknown): v is string =>
   typeof v === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.trim()) && v.trim().length <= 254;
 
+/**
+ * HOW MUCH MAIL HAS GONE, so the usage panel can draw the free line (D-52). The owner asked, and
+ * the answer was no - which is the wrong answer for the one integration that has a DAILY cap.
+ *
+ * Counted from the outbox rather than a new table: every mail the hub sends is queued there and
+ * stamped `sent_at` when it lands, so the record already existed. Sent only - a pending intent has
+ * not cost anything yet, and a failed one never will.
+ */
+export async function mailSent(sb: Db): Promise<{ today: number; month: number }> {
+  const now = new Date();
+  const startOfDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).toISOString();
+  const startOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
+  const [today, month] = await Promise.all([since(sb, startOfDay), since(sb, startOfMonth)]);
+  return { today, month };
+}
+
+async function since(sb: Db, from: string): Promise<number> {
+  try {
+    const { count, error } = await (sb as any)
+      .from('integration_outbox')
+      .select('id', { count: 'exact', head: true })
+      .like('kind', 'mail.%')
+      .eq('state', 'sent')
+      .gte('sent_at', from);
+    return error || typeof count !== 'number' ? 0 : count;
+  } catch {
+    return 0;
+  }
+}
+
 const ENDPOINT = 'https://api.resend.com/emails';
 const TIMEOUT_MS = 8000;
 

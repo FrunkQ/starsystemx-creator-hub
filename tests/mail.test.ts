@@ -9,6 +9,7 @@ import { mailReady, looksLikeEmail, sendMail } from '../src/lib/server/mail';
 import { noticeText, bucketOf } from '../src/lib/server/queueNotice';
 import { GATE_FALLBACKS } from '../src/lib/server/config';
 import { queueShare } from '../src/lib/server/integrations/share';
+import { digestText } from '../src/lib/server/commentMail';
 
 const configured = { ...GATE_FALLBACKS, mail_from: 'hub@example.test', mail_admin: 'me@example.test' };
 const key = { RESEND_API_KEY: 'test-key' };
@@ -86,5 +87,43 @@ describe('the Discord switch', () => {
 
   it('is on unless somebody turns it off', () => {
     expect(GATE_FALLBACKS.discord_share_enabled).toBe(true);
+  });
+});
+
+describe('the comment digest', () => {
+  const one = [{ by: 'ada', body: 'Lovely belt.', map: { slug: 'sol', title: 'Sol' } }];
+  const many = [
+    ...one,
+    { by: 'grace', body: 'How did you do the rings?', map: { slug: 'sol', title: 'Sol' } },
+    { by: 'ada', body: 'Stealing this.', map: { slug: 'reach', title: 'The Reach' } }
+  ];
+
+  it('names the person and the map when there is one', () => {
+    expect(digestText(one, 'https://hub.test').subject).toBe('ada commented on "Sol"');
+  });
+
+  it('counts when there are several, and names the map only when they share one', () => {
+    expect(digestText(many, 'https://hub.test').subject).toBe('3 new comments on 2 of your maps');
+    expect(digestText(many.slice(0, 2), 'https://hub.test').subject).toBe('2 new comments on "Sol"');
+  });
+
+  it('links each comment to the map it is on, not to a notification page', () => {
+    const { text } = digestText(many, 'https://hub.test');
+    expect(text).toContain('https://hub.test/s/sol#comments');
+    expect(text).toContain('https://hub.test/s/reach#comments');
+  });
+
+  it('quotes without letting one comment become the whole email', () => {
+    const long = [{ by: 'ada', body: 'x'.repeat(500), map: { slug: 'sol', title: 'Sol' } }];
+    expect(digestText(long, 'https://hub.test').text).toContain('x'.repeat(200) + '...');
+  });
+
+  it('stops listing after five and says how many more', () => {
+    const eight = Array.from({ length: 8 }, (_, i) => ({
+      by: 'p' + i, body: 'hello', map: { slug: 'sol', title: 'Sol' }
+    }));
+    const { text } = digestText(eight, 'https://hub.test');
+    expect(text).toContain('...and 3 more.');
+    expect(text).not.toContain('p6');
   });
 });

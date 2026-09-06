@@ -1,0 +1,13 @@
+-- A second clock for comment notices (D-52). Run after 0031. Safe to run twice.
+--
+-- `comments_seen_at` (0024) is moved by LOOKING at the account page. A mail is not a look: if
+-- sending moved that clock, a creator who read the mail and then opened the page would find the
+-- list empty and wonder what they had missed.
+--
+-- So the two answer different questions:
+--   comments_seen_at    what have I not READ            moved by opening the page
+--   comments_mailed_at  what have I not been TOLD about moved by sending
+--
+-- The digest asks for both, so nobody is told twice and nobody who never opens the page is told
+-- nothing.
+alter table creators add column if not exists comments_mailed_at timestamptz;

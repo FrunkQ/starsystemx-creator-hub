@@ -18,7 +18,8 @@ export type OutboxKind =
   // The hub's own mail (D-49). It rides the outbox for the same reason the Discord posts do:
   // somebody else's service, inside a request that is about to return a page.
   | 'mail.takedown'
-  | 'mail.queue';
+  | 'mail.queue'
+  | 'mail.comments';
 
 export interface Intent {
   kind: OutboxKind;
