@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.40.2 - 2026-09-06
+
+### A row that does not exist can no longer be saved successfully
+
+Setting a config key with no row reported success. It said it had saved, wrote a `config.set` entry
+to the audit log saying so, and changed nothing - because an UPDATE that matches no rows is not an
+error in Postgres. The admin walks away believing the thing is set, and finds out when the feature
+does not behave. Saving now checks what it changed and refuses when there was nothing to change,
+naming the key and pointing at the migration that would create it.
+
+Both places that wrote a config row had their own copy of that update; they now share one, and the
+dead helper that had a third copy is gone.
+
+### The three address rows no longer describe themselves backwards
+
+Migration 0035. `open_in_sse_url`, `sse_manifest_url` and `mail_from` were each seeded with a note
+saying that leaving them empty turns the feature off. That stopped being true when an empty address
+row came to mean "nobody has said otherwise", so the code default stands - which is why all three
+are empty today and everything works. The notes now say what empty really does, where the default
+points, and how to actually turn one off: set it to something that is not a URL, such as "off".
+
 ## 0.40.1 - 2026-09-06
 
 ### No way to bin an uncredited picture, and the way out said out loud

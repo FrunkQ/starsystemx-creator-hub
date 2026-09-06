@@ -183,11 +183,29 @@ export async function loadGates(sb: Db): Promise<Gates> {
   return out as unknown as Gates;
 }
 
-export async function setGate(
-  sb: Db, key: keyof Gates, value: unknown, adminId: string
-): Promise<void> {
-  const { error } = await sb.from('config')
+/**
+ * WRITE ONE CONFIG ROW. Returns null when it worked, or the sentence to show the admin.
+ *
+ * THE ONE THING THIS EXISTS TO PREVENT: an UPDATE that matches no rows is not an error in
+ * Postgres. Written the obvious way, setting a key that has no row returned success, told the
+ * admin it had worked, and wrote a `config.set` audit entry saying so - while nothing was written
+ * anywhere. A page that lies about having saved is worse than one that refuses, because the admin
+ * goes away believing the thing is set and only finds out when the feature does not behave.
+ *
+ * So the update SELECTS what it changed and an empty result is an error. Rows are created by
+ * migrations, deliberately: this is not an upsert, because inventing a row here would also invent
+ * an empty `note`, and the note is the only explanation the admin ever reads (see 0035).
+ */
+export async function setConfigRow(
+  sb: Db, key: string, value: unknown, adminId: string
+): Promise<string | null> {
+  const { data, error } = await sb.from('config')
     .update({ value, updated_by: adminId, updated_at: new Date().toISOString() })
-    .eq('key', key);
-  if (error) throw new Error(`could not set ${key}: ${error.message}`);
+    .eq('key', key)
+    .select('key');
+  if (error) return error.message;
+  if (!data || data.length === 0) {
+    return `There is no config row called "${key}", so nothing was saved. Rows are created by a migration - check db/migrations for one that adds it, and run it.`;
+  }
+  return null;
 }

@@ -1,7 +1,7 @@
 import type { PageServerLoad, Actions } from './$types';
 import { error, fail } from '@sveltejs/kit';
 import { db, authClient } from '$lib/server/db';
-import { loadGates } from '$lib/server/config';
+import { loadGates, setConfigRow } from '$lib/server/config';
 import { loadSite } from '$lib/server/site';
 import * as audit from '$lib/server/audit';
 import { isDiscordWebhook } from '$lib/server/integrations/share';
@@ -91,10 +91,8 @@ export const actions: Actions = {
     }
 
     const sb = db(env);
-    const { error: e } = await sb.from('config')
-      .update({ value, updated_by: me.id, updated_at: new Date().toISOString() })
-      .eq('key', key);
-    if (e) return fail(500, { key, message: e.message });
+    const problem = await setConfigRow(sb, key, value, me.id);
+    if (problem) return fail(400, { key, message: problem });
 
     await audit.record(sb, me.id, 'config.set', key, undefined, { value });
     return { ok: true, key };
@@ -160,10 +158,8 @@ export const actions: Actions = {
     if (!to.length) return fail(400, { message: 'There is no address to pin: no admin sign-in carries one.' });
 
     const value = to.join(', ');
-    const { error: e } = await sb.from('config')
-      .update({ value, updated_by: me.id, updated_at: new Date().toISOString() })
-      .eq('key', 'mail_admin');
-    if (e) return fail(500, { message: e.message });
+    const problem = await setConfigRow(sb, 'mail_admin', value, me.id);
+    if (problem) return fail(400, { message: problem });
     await audit.record(sb, me.id, 'config.set', 'mail_admin', 'pinned from the admin sign-ins', { value });
     return { tested: 'mail_admin is now ' + value + '. Edit the row to send somewhere else.' };
   },
