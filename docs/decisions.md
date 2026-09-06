@@ -1654,6 +1654,79 @@ is the only reason a stored attestation is worth anything.
 **Tone matters here.** The pill and the notice are grey, not red. Fan work is welcome; a warning
 colour would read as "something is wrong with this map" and put people off making it.
 
+### D-62. A credit typed on the hub goes into the file, and it is applied on the way out
+
+The owner, 2026-09-06, asked for it when the Credits panel was built - *"that is then written back
+to the file for publication as this is the first time the user is challenged"* - and then, when
+asked what to do next: *"do the credit write-back - that is critical to this."*
+
+**D-55 gave a creator the fields and did not close the loop.** The credit lived in `asset_claims`,
+the download was reassembled from the stored bytes, and the person who downloaded the map got a
+picture with nobody's name on it while the map's own page said who made it. **The hub was saying
+something true on a web page and shipping a file that did not agree.** For a hub whose whole
+argument is "credit the artists whose work you use", that is the wrong way round.
+
+**THE DECISION THAT MATTERS IS WHERE IT IS APPLIED.** The obvious plan - read the stored bundle,
+patch it, re-zip, store - is worse in four ways:
+
+1. **The stored bytes are evidence.** They are what was uploaded and what the attestation was made
+   about. Rewriting them means the hub no longer holds the thing the creator swore to, and a
+   moderator looking at a map cannot tell which parts a machine changed.
+2. **The claims are already the truth.** `asset_claims` is what the publish gate reads, what the map
+   page prints and what the review tool shows. Copying that into a second place creates a second
+   answer to one question - **the exact fault the coordinator refused on the clip envelope (D-58)**.
+3. **It cannot drift.** Patch at pack time and the download is current by construction: edit a
+   credit and the very next download has it, with nothing to re-run and no background job to fail
+   silently.
+4. **It costs no extra CPU.** `packForDownload` already unzips and re-zips, so this adds a JSON
+   parse and stringify to work already being done rather than a second re-zip elsewhere - and a
+   Worker has 10ms (D-53 is what happens when that is forgotten).
+
+**KEYED ON THE BUNDLE PATH, NEVER ON A HASH.** A model's path is `assets/models/<hash>.glb` where
+the hash is the ENGINE'S, and the hub hashes bytes itself precisely because a hash supplied by a
+path is a claim from a stranger's zip. Matching on the path matches what `collectAttributions`
+actually reads, so **the patch and the gate can never disagree about which asset is which.** Every
+node using the asset is credited, not just the first - one hull on two ships is one attributions
+entry and two nodes.
+
+**AN EMPTY BOX NEVER BLANKS A CREDIT THE APP ALREADY RECORDED.** This is the dangerous direction: a
+patch that deleted provenance while claiming to improve it would be worse than never running. An
+empty field is "not answered"; the form already refuses a claim that is empty in all four fields.
+The test was verified by breaking `applyTo` and watching it fail.
+
+**ATTRIBUTIONS.md is regenerated** to match the patched doc - leaving it alone would ship a save
+whose own attributions file contradicted its own nodes. It is a working document and never a gate
+(the header of `attribution.ts` is emphatic about why), so nothing reads it back and getting the
+format slightly wrong costs nothing. **One line is added to the engine's shape**: the engine's own
+text says the file was "written automatically on export", and letting that stand over credits typed
+on a web page is a small lie that costs somebody an hour later.
+
+### D-63. Yes, a clip carries its attributions - by exclusion at one end and by carrying at the other
+
+The owner asked directly, 2026-09-06: *"does every copy/paste carry its attributions to copy into
+other maps?"* The answer has two halves and they meet exactly, which is why nothing is orphaned:
+
+- **An asset the BUNDLE carries** (`assets/...`, a `model.hash`) is the only kind
+  `collectAttributions` lists - and it is precisely the kind `snippetFor` removes, because it would
+  paste a broken link into somebody else's save. **The whole `image` or `model` object goes, credit
+  and all**, so a clip can never contain a picture without its provenance or a credit for a picture
+  that is not there.
+- **An asset that is a real url** - somebody else's hosting, or an app-shipped starter like
+  `/models/nasa/iss.glb` - survives the clip **and keeps its credit fields**, because the snippet is
+  a spread and a deny list (D-58). The ISS is still the ISS when it lands somewhere else, and it is
+  still credited to NASA.
+
+**The map-level half travels on the envelope**: `source.creator`, `source.title`, the deep link to
+the object, and `source.chain` when the copied thing was itself pasted from somewhere. The engine
+records that as a content credit on paste (R-16), which is what makes the receiving map say
+"Includes work from X by Y" and the original's page say "Used in".
+
+**The one thing that does NOT happen, and it is the engine's call not the hub's:** a remote image's
+credit rides on the node but is not printed in the receiving map's `ATTRIBUTIONS.md`, because
+`collectAttributions` only lists assets a bundle actually carries - *"someone else's hosting is not
+ours to credit"*. That is defensible and deliberate; it is written down here so nobody rediscovers
+it as a bug. `tests/clip.test.ts` pins all of it.
+
 ### D-16. The takedown address is assembled at runtime, never served as text
 
 The owner's instruction was explicit: keep it off the page as scrapable text. It is stored as
