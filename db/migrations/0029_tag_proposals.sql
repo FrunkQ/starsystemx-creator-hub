@@ -31,3 +31,19 @@ create table if not exists tag_proposals (
 
 -- The queue reads pending-first, oldest-first: a creator waiting on a word should not be overtaken.
 create index if not exists tag_proposals_state_idx on tag_proposals (state, created_at);
+
+-- ROW LEVEL SECURITY, AND NO POLICIES AT ALL.
+--
+-- Added 2026-09-06 after the owner ran this and Supabase asked the question. It was an OVERSIGHT,
+-- not a decision: 0003 states the rule and every table-creating migration since has followed it -
+-- the Worker talks to Postgres with the SERVICE ROLE and bypasses RLS entirely, but the same
+-- database also carries an ANON key, and a table with RLS off is readable by anyone holding it.
+--
+-- No policies, deliberately, which is stricter than most tables here get: a PENDING proposal is
+-- un-moderated text with a person's id and one of their maps attached - the same shape as an
+-- unreviewed asset row, which 0003 singles out as the thing no anon policy may expose. Nothing but
+-- the Worker ever reads this table; the accepted tags reach a browser already rendered into a page.
+--
+-- Both statements are idempotent, so re-running this file fixes a table that was created without
+-- them - which is the fix if "Run without RLS" was chosen.
+alter table tag_proposals enable row level security;

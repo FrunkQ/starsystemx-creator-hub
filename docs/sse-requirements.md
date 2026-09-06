@@ -684,10 +684,16 @@ ready for: STREAM N N-1
 - **CONSUMED.** `src/lib/openInSse.ts` builds `prefix + encodeURIComponent(siteUrl + '/api/download/' + slug)`,
   used by the map page, the cover link and every card.
 - **The download URL's host** is `site.url`: the `site_url` config row, and with it unset
-  `HUB_ORIGIN` = `https://starsystemx-creator-hub.orange-tree-847c.workers.dev` (0.21.0; it used to
-  be the request's own origin, which was right for a page and wrong for a link that outlives it).
-  **`explorers.starsystemx.com` is NOT used anywhere** - it 404s from Vercel, confirmed on both
-  sides, and moving to it is one constant or one row on the day the DNS moves.
+  `HUB_ORIGIN` (0.21.0; it used to be the request's own origin, which was right for a page and
+  wrong for a link that outlives it).
+- **THE DNS HAS MOVED, AND THE HUB NOW SENDS `explorers.starsystemx.com` (hub 0.24.0,
+  2026-09-06).** The owner: *"all dns setup right - https://explorers.starsystemx.com/ works for
+  you now."* Measured before the change: `https://explorers.starsystemx.com/` answers 200 with
+  `x-hub-version: 0.23.1`, and `/api/download/local-neighbourhood` answers 200 with
+  `access-control-allow-origin: *`. **Nothing was needed from the engine, exactly as its status
+  report predicted** - both hosts were already on `TRUSTED_OPEN_HOSTS`. The workers.dev origin
+  still answers and is still trusted, so links already posted to a Discord keep working. **The
+  earlier trap in this section is now history and is marked as such below.**
 - **ONE THING THE HUB DOES THAT THE BLOCK DOES NOT COVER:** the control is hidden for a map whose
   `kind` is not `starmap`, because `openHubBytes` refuses a single system. See R-18 - that is the
   hub's SEAM REPORT going back the other way.
@@ -714,7 +720,13 @@ ready for: STREAM N N-1
 > workers.dev name, `explorers.starsystemx.com` and `*.pages.dev`, so the DNS cutover needs no
 > engine release.
 >
-> **THE TRAP, MEASURED 2026-09-06: `explorers.starsystemx.com` DOES NOT REACH THE HUB.**
+> **~~THE TRAP~~ - RESOLVED THE SAME DAY. The DNS moved on 2026-09-06 and
+> `explorers.starsystemx.com` now serves the hub (200, `x-hub-version` present, CORS `*`). The hub
+> sends that host from 0.24.0. Everything in the paragraph below WAS true for about a day and is
+> kept because the reasoning still is: an address the hub embeds outlives the request, and R-17's
+> worked example named a host that did not answer. Check before believing either way.**
+>
+> **THE TRAP, MEASURED 2026-09-06 (no longer true): `explorers.starsystemx.com` DOES NOT REACH THE HUB.**
 > `GET https://explorers.starsystemx.com/api/download/local-neighbourhood` answers 404 from Vercel
 > (`X-Vercel-Error: DEPLOYMENT_NOT_FOUND`); the workers.dev origin answers 200. The worked example
 > below uses the `explorers` host and **a button built from it would fail for every visitor today**.
@@ -806,7 +818,22 @@ question. Only the classification branch.
 the `kind !== 'starmap'` line comes out of `src/lib/openInSse.ts` with its test.
 
 **The block going the other way** (SEAM PROTOCOL rule 2, side `hub`; for the coordinator to paste
-into the engine's G57 row):
+into the engine's G57 row). Two: R-18 itself, and the DNS cutover, which changes what the hub sends
+even though it needs nothing from the engine.
+
+```
+SEAM REPORT | R-17 | hub | 0.24.0 | prod: LIVE (the hub has one environment; a push to main is the deploy)
+sets:      the hub now sends https://explorers.starsystemx.com/api/download/<slug> in every "Open in SSE" link
+must know: the DNS cutover happened 2026-09-06 and NOTHING WAS NEEDED FROM THE ENGINE - both hosts were already on
+           TRUSTED_OPEN_HOSTS, which is exactly what listing the name ahead of the cutover bought; the workers.dev
+           origin still answers and is still trusted, so links already posted to a Discord keep working; the trap in
+           R-17's own text (explorers answering 404 from Vercel) is now history and is marked as such in the hub's half
+verified:  measured before the change - https://explorers.starsystemx.com/ answers 200 with x-hub-version 0.23.1, and
+           /api/download/local-neighbourhood answers 200 with access-control-allow-origin: *
+not done:  the round trip has not been re-walked from the new hostname; that is N-1's, and its criterion 3 (curl the
+           explorers host) now PASSES rather than reporting a dead name
+ready for: STREAM N N-1
+```
 
 ```
 SEAM REPORT | R-18 | hub | 0.21.0 | prod: LIVE (the hub has one environment; a push to main is the deploy)

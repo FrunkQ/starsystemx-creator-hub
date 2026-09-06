@@ -17,18 +17,27 @@
 // hosts it has been told about. A named default is a thing you can check; an origin is whatever the
 // visitor typed.
 //
-// THE TRAP THIS FILE EXISTS TO KEEP OUT OF THE CODE, measured 2026-09-06 and confirmed by the
-// engine's own status report: `explorers.starsystemx.com` DOES NOT REACH THE HUB. It answers 404
-// from Vercel (`X-Vercel-Error: DEPLOYMENT_NOT_FOUND`) while the workers.dev origin answers 200.
-// It is the agreed final name and it is already on the engine's allow-list, so the day the DNS
-// moves, this constant changes (or the `site_url` row is set) and nothing else does.
+// THE DNS MOVED, 2026-09-06 (owner: "all dns setup right - https://explorers.starsystemx.com/
+// works for you now"), AND THIS IS WHY THE FILE EXISTS. For a day this was a trap written in
+// capitals here: `explorers.starsystemx.com` answered 404 from Vercel while the workers.dev origin
+// served the hub, so anything built from the agreed name would have failed for every visitor. The
+// cutover cost ONE LINE - the constant below - because no other file in the hub holds an address.
+//
+// Measured after the change: `explorers.starsystemx.com` answers 200 with `x-hub-version: 0.23.1`,
+// and `/api/download/<slug>` answers 200 with `access-control-allow-origin: *`. The workers.dev
+// origin still answers and is still on the engine's allow-list, so links already posted to a
+// Discord keep working; nothing has to be rewritten and no engine release was needed.
 // ============================================================================================
 
-/** Where the hub actually answers. Overridden by the `site_url` config row. */
-export const HUB_ORIGIN = 'https://starsystemx-creator-hub.orange-tree-847c.workers.dev';
+/**
+ * Where the hub answers, and the name it puts in every link it embeds. Overridden by the `site_url`
+ * config row. The workers.dev origin below still serves the hub and is kept only as evidence of
+ * that - point nothing at it.
+ */
+export const HUB_ORIGIN = 'https://explorers.starsystemx.com';
 
-/** The agreed final name. NOT yet serving the hub - do not point anything at it until it does. */
-export const HUB_FINAL_ORIGIN = 'https://explorers.starsystemx.com';
+/** The origin the hub was born on. Still answering; no longer the address it gives out. */
+export const HUB_WORKERS_ORIGIN = 'https://starsystemx-creator-hub.orange-tree-847c.workers.dev';
 
 /**
  * The engine, beta and production.

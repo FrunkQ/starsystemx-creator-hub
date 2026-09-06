@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.24.0 — 2026-09-06
+
+### The hub answers to its own name
+
+`explorers.starsystemx.com` serves the hub, so that is the address it gives out: Open Graph tags,
+the QR code on a generated cover, every "Open in SSE" download URL, the sitemap and the feed. The
+cutover was one constant in `src/lib/addresses.ts` - the return on keeping every address in one
+file - and needed nothing from the engine, because both hosts were already on its allow-list. The
+workers.dev origin still answers and is still trusted, so links already posted keep working.
+`cover_label` has printed this domain since migration 0015 and is now true.
+
+Owed, and both in other people's dashboards: the Discord OAuth redirect for the new hostname
+(`/api/link/discord/callback` is built from the request origin, so it is per hostname), and
+Supabase Auth's redirect allow-list for `/login`. Sign-in is email and password through the API
+and is unaffected.
+
+### Row level security on tag_proposals
+
+An oversight, caught by the owner when Supabase asked at migration time: 0003 states the rule and
+every table-creating migration since has followed it. The Worker uses the service role and bypasses
+RLS, but the same database carries an anon key. Enabled with no policies at all - a pending
+proposal is un-moderated text with a person and a map attached, and nothing but the Worker ever
+reads it. Both statements are idempotent: re-run 0029.
+
 ## 0.23.1 — 2026-09-06
 
 Browse reads the vocabulary the same way the tag picker does, so an accepted custom tag is

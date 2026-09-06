@@ -812,6 +812,11 @@ its half of a check is in place, and stops there.
 owner's word - was already followed and was written in nobody's file, so it is now stated at the
 top of the hub's half and in `src/lib/addresses.ts`.
 
+**SUPERSEDED IN PART, the same evening (see D-41):** the DNS moved and
+`explorers.starsystemx.com` now serves the hub, so the trap below - that it answered 404 from
+Vercel - is history. It is left standing because the reasoning it taught is not: an address the hub
+EMBEDS outlives the request that made it, so it is measured before it is believed.
+
 **And that file is the other half of this decision, from the owner (2026-09-06):** *"URL is actually
 https://starsystemx-creator-hub.orange-tree-847c.workers.dev/ at the moment - have it a base config
 item - so its easy to change later - work off a variable just now so we can test."* `src/lib/addresses.ts`
@@ -949,6 +954,38 @@ error once. **One trap, found by a test rather than by thinking: a console log's
 often `[holo] scene ready`, and the old code called any leading `[` JSON.** A leading bracket now
 has to parse before it counts as JSON; a leading `{` still means a save, because reporting on
 broken saves is what the page is for.
+
+### D-41. The hub answers to its own name, and the cutover cost one line
+
+The owner, 2026-09-06: *"all dns setup right - https://explorers.starsystemx.com/ works for you now
+- so can update everything accordingly."*
+
+**Measured before changing anything, because that is what this whole file has been about all day:**
+`https://explorers.starsystemx.com/` answers 200 with `x-hub-version: 0.23.1`, and
+`/api/download/local-neighbourhood` answers 200 with `access-control-allow-origin: *`. The
+workers.dev origin still answers.
+
+**The change was `HUB_ORIGIN` in `src/lib/addresses.ts`, and nothing else** - which is the return on
+D-37's "one file holds every address", collected within a day of paying for it. Every Open Graph
+tag, every cover's QR code, every "Open in SSE" download URL and the sitemap and feed moved together
+because they all read the same constant.
+
+**Nothing was needed from the engine, exactly as its status report predicted.** Both hosts were
+already on `TRUSTED_OPEN_HOSTS`; listing the agreed name ahead of the cutover is what made the day
+an edit rather than a release. The workers.dev origin stays trusted, so every link already posted to
+a Discord keeps working.
+
+**Two per-hostname registrations are now owed, and both are the owner's** (they live in other
+people's dashboards, not in this repo): the Discord OAuth redirect
+`https://explorers.starsystemx.com/api/link/discord/callback` - the hub sends
+`url.origin + '/api/link/discord/callback'`, so linking a Discord account from the new hostname
+fails until it is registered - and Supabase Auth's redirect allow-list, which needs
+`https://explorers.starsystemx.com/login` for the password-reset link to come back to the right
+place. Sign-in itself is email and password through the API and is unaffected by either.
+
+**And `cover_label` is now true.** It has printed `explorers.starsystemx.com` on every generated
+cover card since migration 0015, which was a promise about a domain that did not answer; it is a
+fact now, and nothing had to change to make it one.
 
 ### D-16. The takedown address is assembled at runtime, never served as text
 
