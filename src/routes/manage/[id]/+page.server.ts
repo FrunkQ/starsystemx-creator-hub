@@ -140,7 +140,6 @@ export const actions: Actions = {
     return { ok: true };
   },
 
-  /** Use one of the map's own screenshots as the cover. */
   /**
    * THE "+": a creator asks for a tag their map needs and the list does not have (D-40).
    *
@@ -297,7 +296,8 @@ export const actions: Actions = {
             : false;
           const event = (count ?? 0) > 1 ? 'updated' : 'published';
           await queueShare(sb, locals.viewer.id, full.id,
-            buildShare(full, creator?.display_name ?? creator?.handle ?? null, site.url, servable, event));
+            buildShare(full, creator?.display_name ?? creator?.handle ?? null, site.url, servable, event),
+            gates.discord_share_enabled);
           platform?.context?.waitUntil(
             drainOutbox(env, sb, gates, site.name).catch((e) => console.warn('outbox drain failed', e))
           );

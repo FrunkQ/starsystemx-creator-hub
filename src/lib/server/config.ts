@@ -47,6 +47,12 @@ export interface Gates {
   discord_role_pro: string;
   /** Incoming-webhook URL of the sharing channel (D-32). Empty = no cross-posting. */
   discord_share_webhook: string;
+  /**
+   * The switch (D-51, migration 0031). False stops the posting WITHOUT clearing the webhook - the
+   * webhook is a secret, and a switch you have to find a secret to reverse is one nobody uses.
+   * Nothing is queued while it is off, so turning it back on does not release a backlog.
+   */
+  discord_share_enabled: boolean;
   /** Hub badge id -> Discord role id (D-34). Given and taken with the badge, through the bot. */
   discord_badge_roles: Record<string, string>;
   /**
@@ -117,6 +123,7 @@ export const GATE_FALLBACKS: Gates = {
   discord_role_creator: '',
   discord_role_pro: '',
   discord_share_webhook: '',
+  discord_share_enabled: true,
   discord_badge_roles: {},
   // BOTH DEFAULT TO BETA, from `$lib/addresses` - the one file that holds an address. Beta because
   // that is the only build carrying R-13 and R-17: production 404s `/shipped-content.json` and has

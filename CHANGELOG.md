@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.30.0 — 2026-09-06
+
+### A switch for the Discord posts
+
+`discord_share_enabled` (migration 0031, default true). Off while testing: the webhook stays where
+it is - clearing it works too, but it is a secret, and a switch you need a secret to reverse is one
+nobody uses.
+
+Checked when a post is queued rather than only when it is delivered, so turning it back on does not
+release a week of test publishes into a live channel at once. The test button still posts, because
+that is an explicit press.
+
 ## 0.29.1 — 2026-09-06
 
 ### The hub knows who you are

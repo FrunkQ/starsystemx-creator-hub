@@ -29,7 +29,9 @@ export async function drainOutbox(env: HubEnv, sb: Db, gates: Gates, siteName: s
         if (!p.discordUserId || !p.roleId) throw new Error('incomplete payload');
         await applyRole(secrets, settings, item.kind === 'discord.role.add' ? 'add' : 'remove', p.discordUserId, p.roleId);
       } else if (item.kind === 'discord.share') {
-        if (!gates.discord_share_webhook) { skipped++; continue; }
+        // Off, or no webhook: WAITING, not broken - the same rule the role kinds follow. Nothing is
+        // queued while the switch is off (share.ts), so this only catches one already in flight.
+        if (!gates.discord_share_enabled || !gates.discord_share_webhook) { skipped++; continue; }
         await postShare(gates.discord_share_webhook, item.payload as unknown as SharePayload, siteName);
       } else if (item.kind === 'mail.takedown' || item.kind === 'mail.queue') {
         // Mail the hub sends itself (D-49). Same rule as the Discord kinds: with no key and no

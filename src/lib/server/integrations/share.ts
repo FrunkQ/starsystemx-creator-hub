@@ -56,7 +56,17 @@ export function buildShare(
   };
 }
 
-export async function queueShare(sb: Db, creatorId: string, systemId: string, payload: SharePayload): Promise<void> {
+/**
+ * Queue a post - unless the switch is off (D-51).
+ *
+ * CHECKED HERE, AT THE ENQUEUE, not only at delivery. Skipping at delivery would leave the intents
+ * piling up, and turning the switch back on would fire a week of test publishes into a live channel
+ * at once. Nothing queued is nothing to release.
+ */
+export async function queueShare(
+  sb: Db, creatorId: string, systemId: string, payload: SharePayload, enabled = true
+): Promise<void> {
+  if (!enabled) return;
   await outbox.enqueue(sb, {
     kind: 'discord.share',
     creatorId,

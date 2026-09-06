@@ -8,6 +8,7 @@ import { describe, it, expect } from 'vitest';
 import { mailReady, looksLikeEmail, sendMail } from '../src/lib/server/mail';
 import { noticeText, bucketOf } from '../src/lib/server/queueNotice';
 import { GATE_FALLBACKS } from '../src/lib/server/config';
+import { queueShare } from '../src/lib/server/integrations/share';
 
 const configured = { ...GATE_FALLBACKS, mail_from: 'hub@example.test', mail_admin: 'me@example.test' };
 const key = { RESEND_API_KEY: 'test-key' };
@@ -65,5 +66,25 @@ describe('the review nudge', () => {
     expect(at('2026-09-06T00:00:00Z')).toBe(at('2026-09-06T05:59:00Z'));
     expect(at('2026-09-06T00:00:00Z')).not.toBe(at('2026-09-06T06:00:00Z'));
     expect(at('2026-09-06T23:00:00Z')).not.toBe(at('2026-09-07T00:00:00Z'));
+  });
+});
+
+describe('the Discord switch', () => {
+  it('queues nothing while it is off, so switching back on releases no backlog', async () => {
+    // The whole reason the check is at the ENQUEUE and not only at delivery (D-51): a week of test
+    // publishes waiting in the outbox would all land in a live channel the moment it came back on.
+    const enqueued: unknown[] = [];
+    const sb = { from: () => ({ upsert: async (row: unknown) => { enqueued.push(row); return { error: null }; } }) } as never;
+    const payload = { event: 'published', slug: 'x' } as never;
+
+    await queueShare(sb, 'creator', 'system', payload, false);
+    expect(enqueued).toHaveLength(0);
+
+    await queueShare(sb, 'creator', 'system', payload, true);
+    expect(enqueued).toHaveLength(1);
+  });
+
+  it('is on unless somebody turns it off', () => {
+    expect(GATE_FALLBACKS.discord_share_enabled).toBe(true);
   });
 });

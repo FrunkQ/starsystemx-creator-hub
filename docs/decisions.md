@@ -1261,6 +1261,26 @@ explicit, editable, and stable if the sign-in behind it ever moves. The general 
 second instance of (after `open_in_sse_url`): **a default the page states out loud is a
 convenience; the same default kept quiet is a surprise waiting for whoever inherits it.**
 
+### D-51. A switch for the Discord posts, checked where nothing can pile up behind it
+
+The owner, 2026-09-06: *"in testing can i have a switch under config to disable posts to the
+discord."*
+
+**Clearing `discord_share_webhook` already stops the posting - and that is exactly why a switch was
+needed.** The webhook is a SECRET. A switch you have to go and find a secret to reverse is a switch
+nobody uses, so the testing goes out to the live channel instead, which is the thing it exists to
+prevent. `discord_share_enabled` (migration 0031, default true) turns the posting off and leaves
+the webhook where it is.
+
+**Checked at the ENQUEUE, not only at delivery, and that is the whole design.** Skipping at
+delivery is what the webhook check does, and it leaves the intents sitting in the outbox - so a
+week of test publishes would all land in a live channel the moment the switch came back on. Nothing
+queued is nothing to release. The delivery check stays as well, for the one intent that might be in
+flight when the switch is thrown, and it SKIPS rather than fails: it is waiting, not broken.
+
+**The test button still posts.** It is an explicit press by an admin who wants to see the channel
+work, which is a different question from whether publishing should announce itself.
+
 ### D-16. The takedown address is assembled at runtime, never served as text
 
 The owner's instruction was explicit: keep it off the page as scrapable text. It is stored as
