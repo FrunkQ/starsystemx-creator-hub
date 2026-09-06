@@ -691,10 +691,18 @@ ready for: STREAM N N-1
 - **ONE THING THE HUB DOES THAT THE BLOCK DOES NOT COVER:** the control is hidden for a map whose
   `kind` is not `starmap`, because `openHubBytes` refuses a single system. See R-18 - that is the
   hub's SEAM REPORT going back the other way.
-- **VERIFIED.** Unit tests only, hub-side: the built URL, the `"off"` row, whitespace, the
-  single-system and unknown-kind refusals. **Not verified: the round trip in a browser** - a link
-  clicked, the engine's picker, the refusal, the stripped parameter. That is N-1's, and both halves
-  are now in place.
+- **VERIFIED, live at hub 0.21.0 against engine beta, 2026-09-06.** The map page and the browse
+  card both carry the control, and both hrefs are
+  `https://beta.starsystemx.com/?open=https%3A%2F%2Fstarsystemx-creator-hub.orange-tree-847c.workers.dev%2Fapi%2Fdownload%2Flocal-neighbourhood`
+  - the parameter on the query string, the download URL on the workers.dev origin, nothing naming
+  `explorers`. Following it: the engine fetched the hub cross-origin, read the bundle (it named the
+  map and said which build wrote it), and **asked before replacing the campaign that browser held**,
+  in its own words with the single step back offered. Declining left the campaign alone and **the
+  `open` parameter was off the address bar**. Unit tests cover the built URL, the `"off"` row,
+  whitespace, and the single-system and unknown-kind refusals.
+- **NOT verified, and it is N-1's:** the no-campaign path, a refused host showing a plain message
+  with no request made, and the opened map's provenance and attributions - the import was declined
+  rather than completed, so nothing was seen past the offer.
 
 > **SHIPPED, and the answer to the question this asked: the parameter is `open`, on the QUERY
 > STRING.** So the prefix for the hub's `open_in_sse_url` row is `https://beta.starsystemx.com/?open=`

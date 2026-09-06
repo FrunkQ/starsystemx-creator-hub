@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.21.1 — 2026-09-06
+
+The hub's half of the contract records what was seen rather than what was expected: the "Open in
+Star System Explorer" round trip walked live at 0.21.0 against engine beta - the link on the map
+page and the card, the engine's cross-origin fetch, the question before a campaign is replaced,
+and the parameter off the address bar afterwards. What was not seen is named too, and is Stream
+N's: the no-campaign path, a refused host, and the opened map's provenance.
+
 ## 0.21.0 — 2026-09-06
 
 ### Every address in one file, and the open button turns on
