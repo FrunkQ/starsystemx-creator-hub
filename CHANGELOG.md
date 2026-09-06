@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.34.0 — 2026-09-06
+
+### Credit a picture from the manage page, and be told why Publish is asleep
+
+The Publish button was disabled and the reason sat at the top of a long page, which is nowhere at
+all once you have scrolled past it. It now says why where it is, and links to the fix.
+
+And the fix is on the same page: each blocked picture is shown with fields for who made it, the
+licence, where it came from and what it is. Any one is enough; a CC-BY licence still needs a name.
+The gate has not moved and the rules are the parser's own - a credit typed here and a credit read
+from a save mean the same thing.
+
+**Still missing:** a credit typed here does not yet reach the downloaded file, because that lives on
+the node in the save. Recording it in Star System Explorer and uploading again is still better, and
+the page says so. Writing back is next.
+
 ## 0.33.1 — 2026-09-06
 
 The kind badge on a card is a matched pair: the same surround for both, and only the colour

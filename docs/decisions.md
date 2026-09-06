@@ -1396,6 +1396,45 @@ down, a wide one side to side - so the page works out which and offers that one.
 be a control that does nothing half the time, and **a test I wrote for this got the axis wrong first
 time and failed**, which is exactly the confusion a second slider would hand to every creator.
 
+### D-55. A button that will not do the thing says so where it is, and the fix is on the same page
+
+The owner, 2026-09-06: *"When I hit publish it fails as it says '1 asset needs a source before you
+can share this' at the top. If you click a button and it wont do the thing you expect it should
+tell you there... In addition it would be useful to let the user know HOW to do that - or even
+better let them paste in the missing details and set licence from this page."*
+
+**Two faults, and the first is the cheaper lesson.** The Publish button was DISABLED, and the reason
+was in a notice at the top of a long page - which is nowhere at all once you have scrolled past it.
+The button now says why, in its own words, with a link to the thing that fixes it: *"Not yet: 1
+picture needs a source."* **A disabled control owes an explanation at the point of disappointment,
+not at the top of the document.**
+
+**The second is bigger: the only way to satisfy the gate was to leave.** "Record it in Star System
+Explorer and upload the save again" - four steps and a different program, to type a name. And this
+is the FIRST time anybody is asked the question, so it is the right place to answer it. The notice
+now lists each blocked picture, shows it, and takes who made it, the licence, where it came from
+and what it is. Any one of them satisfies the gate; a CC-BY licence still needs a name.
+
+**THE GATE ITSELF DOES NOT MOVE, and the rules are not re-implemented.** `noProvenance` and
+`breachesCcBy` are imported from `bundle/attribution.ts` and run over the typed entry exactly as
+they run over one read from a file - because a credit typed here and a credit read from a save have
+to mean the same thing, and two copies of that rule would drift within a month.
+
+**WHAT IS STILL MISSING, AND IT MATTERS.** A credit typed here fixes the hub's row and the map's
+page. **It does not reach the downloaded file**: the credit lives on the NODE in the save
+(`node.image.credit`, `node.model.credit`), the download is reassembled from the stored bytes, and
+nothing writes back. So a downloader still gets a file that says nothing. The owner asked for this
+in the same breath - *"that is then written back to the file for publication"* - and it is the next
+piece of work rather than part of this one, because it means patching the stored bundle and that
+deserves care rather than the end of a long session. Until then the page says the honest thing:
+recording it in the app and uploading again is better, because the credit then travels with the file.
+
+**And "maybe have the option of binning an asset" carries a trap worth writing down before anybody
+builds it.** Deleting the `system_assets` row would NOT withhold the picture - `packForDownload`
+treats a zip member with no matching row as "not a tracked asset: these always travel" (the
+document, ATTRIBUTIONS.md, README.txt), so unlinking it would make it travel unconditionally. Binning
+has to be an explicit withholding, not an absence.
+
 ### D-16. The takedown address is assembled at runtime, never served as text
 
 The owner's instruction was explicit: keep it off the page as scrapable text. It is stored as

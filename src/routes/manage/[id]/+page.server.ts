@@ -20,6 +20,7 @@ import { tolerantWrite } from '$lib/server/tolerant';
 import { bestDensity } from '$lib/server/density';
 import type { SystemRow } from '$lib/server/database.types';
 import * as ledger from '$lib/server/ledger';
+import { noProvenance, breachesCcBy } from '$lib/bundle/attribution';
 import * as accounts from '$lib/server/accounts';
 import * as badges from '$lib/server/integrations/badges';
 import { buildShare, queueShare } from '$lib/server/integrations/share';
@@ -45,7 +46,7 @@ export const load: PageServerLoad = async ({ params, platform, locals }) => {
 
   const [{ data: shots }, { data: claims }, gates, { data: me }] = await Promise.all([
     sb.from('system_screenshots').select('sha256, ordinal, caption').eq('system_id', system.id).order('ordinal'),
-    sb.from('asset_claims').select('sha256, no_provenance, cc_by_breach, title, credit, license')
+    sb.from('asset_claims').select('sha256, no_provenance, cc_by_breach, title, credit, license, source_url')
       .eq('system_id', system.id),
     loadGates(sb),
     sb.from('creators').select('account_tier').eq('id', locals.viewer.id).maybeSingle()
@@ -182,6 +183,72 @@ export const actions: Actions = {
       case 'no': return { proposed: 'That word has been looked at before and turned down.' };
       default: return { proposed: 'Asked for. A reviewer will look, and it appears on your map if it is kept.' };
     }
+  },
+
+  /**
+   * CREDIT AN ASSET FROM HERE, rather than from the save (D-55).
+   *
+   * The owner, 2026-09-06: *"if you click a button and it wont do the thing you expect it should
+   * tell you there... it would be useful to let the user know HOW to do that - or even better let
+   * them paste in the missing details and set licence from this page."*
+   *
+   * The gate itself does not change: an asset with nothing recorded still blocks publishing, and
+   * CC-BY without a name is still wrong (`bundle/attribution.ts`). What changes is that the only
+   * way to satisfy it used to be "go back to Star System Explorer, fill it in, export, upload
+   * again" - four steps and a different program, to type a name.
+   *
+   * THE RULES ARE MIRRORED FROM THE PARSER, not re-invented: `noProvenance` is nothing at all
+   * recorded, `breachesCcBy` is a CC-BY licence with no name. Reading them from one place is what
+   * keeps a claim typed here and a claim read from a file meaning the same thing.
+   */
+  credits: async ({ request, params, platform, locals }) => {
+    const env = platform?.env;
+    if (!env || !locals.viewer) throw error(401, 'Sign in first.');
+    const sb = db(env);
+    await ownedSystem(sb, params.id, locals.viewer.id);
+
+    const form = await request.formData();
+    const sha256 = String(form.get('sha256') ?? '');
+    if (!/^[0-9a-f]{64}$/.test(sha256)) return fail(400, { message: 'Which picture?' });
+
+    // Undefined rather than null: the parser's entries use undefined for "not recorded", and the
+    // two predicates below are its own.
+    const text = (k: string, max: number) => String(form.get(k) ?? '').trim().slice(0, max) || undefined;
+    const entry = {
+      title: text('title', 200),
+      credit: text('credit', 200),
+      license: text('license', 120),
+      sourceUrl: text('source_url', 500),
+      capturedInApp: false,
+      // The parser's shape, so the two predicates below are the SAME functions the upload path
+      // runs. These three describe where the asset sits in a bundle and no rule reads them.
+      path: sha256,
+      kind: 'image' as const,
+      usedBy: []
+    };
+
+    if (breachesCcBy(entry)) {
+      return fail(400, {
+        message: 'A CC-BY licence needs the name of whoever made it - that is the whole of what CC-BY asks.'
+      });
+    }
+    if (noProvenance(entry)) {
+      return fail(400, {
+        message: 'Give at least one of these: who made it, the licence, or where it came from.'
+      });
+    }
+
+    const { error: e } = await sb.from('asset_claims').update({
+      title: entry.title ?? null,
+      credit: entry.credit ?? null,
+      license: entry.license ?? null,
+      source_url: entry.sourceUrl ?? null,
+      no_provenance: false,
+      cc_by_breach: false
+    }).eq('system_id', params.id).eq('sha256', sha256);
+    if (e) return fail(500, { message: e.message });
+
+    return { credited: 'Credited. ' + (entry.credit ?? entry.license ?? entry.sourceUrl) };
   },
 
   /**

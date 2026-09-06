@@ -204,12 +204,37 @@
   <div class="panel notice bad"><p>{form.message}</p></div>
 {/if}
 
+<!-- FIX IT HERE (D-55). The notice used to say "go back to Star System Explorer, record it, export,
+     upload again" - four steps and another program, to type a name. This is the first time anybody
+     is asked the question, so it is the right place to answer it. -->
 {#if !data.mayPublish}
-  <div class="panel notice">
-    <h3>{data.blocking.length} {data.blocking.length === 1 ? 'asset needs' : 'assets need'} a source before you can share this</h3>
+  <div class="panel notice" id="credits">
+    <h3>{data.blocking.length} {data.blocking.length === 1 ? 'picture needs' : 'pictures need'} a source before you can share this</h3>
     <p>
-      Record who made each picture and model, and under what licence, in Star System Explorer -
-      then upload the save again. It is how the artists whose work we all use get credited.
+      It is how the artists whose work we all use get credited. Fill in whatever you know - who made
+      it, the licence, or where it came from. <strong>Any one of them is enough</strong>, and a
+      CC-BY licence needs a name because that is the whole of what CC-BY asks.
+    </p>
+    {#if form?.credited}<p class="ok">{form.credited}</p>{/if}
+    {#each data.blocking as b (b.sha256)}
+      <form class="credit" method="POST" action="?/credits">
+        <input type="hidden" name="sha256" value={b.sha256} />
+        <img src="/private/asset/{b.sha256}" alt="" />
+        <div class="fields">
+          {#if b.cc_by_breach}
+            <p class="bad">This is CC-BY with nobody named. Add the name.</p>
+          {/if}
+          <label>Who made it <input name="credit" value={b.credit ?? ''} maxlength="200" placeholder="A name, or a studio" /></label>
+          <label>Licence <input name="license" value={b.license ?? ''} maxlength="120" placeholder="CC-BY 4.0, CC0, my own work..." /></label>
+          <label>Where it came from <input name="source_url" value={b.source_url ?? ''} maxlength="500" placeholder="https://..." /></label>
+          <label>What it is <input name="title" value={b.title ?? ''} maxlength="200" placeholder="Optional" /></label>
+          <button class="primary" type="submit">Save this credit</button>
+        </div>
+      </form>
+    {/each}
+    <p class="muted">
+      Recording it in Star System Explorer and uploading again works too, and is better - the credit
+      then travels with the file wherever it goes.
     </p>
   </div>
 {/if}
@@ -426,6 +451,18 @@
   <button class="primary" type="submit" disabled={s.state === 'removed' || (s.state !== 'public' && !data.mayPublish)}>
     {s.state === 'public' ? 'Take it down' : 'Publish'}
   </button>
+  <!-- SAY WHY WHERE THE BUTTON IS (owner, 2026-09-06: "if you click a button and it wont do the
+       thing you expect it should tell you there"). The reason was at the top of a long page, which
+       is nowhere at all if you have scrolled past it. -->
+  {#if s.state !== 'public' && s.state !== 'removed' && !data.mayPublish}
+    <p class="why">
+      Not yet: {data.blocking.length}
+      {data.blocking.length === 1 ? 'picture needs' : 'pictures need'} a source.
+      <a href="#credits">Fill that in at the top of this page</a> and this button comes alive.
+    </p>
+  {:else if s.state === 'removed'}
+    <p class="why">This map was taken down by the hub. {s.state_note ?? ''}</p>
+  {/if}
 </form>
 
 <!-- 5. Yours to upload, yours to take away (D-45). Unpublishing hides a map; this removes it. -->
@@ -504,6 +541,18 @@
   .waiting { color: var(--warn); font-size: 0.82rem; margin: 4px 0; }
   .bad { color: var(--bad); font-size: 0.85rem; margin: 8px 0 0; }
   .slide { display: block; margin: 10px 0 0; color: var(--ink-dim); font-size: 0.9rem; }
+  .why { margin: 10px 0 0; color: var(--warn); font-size: 0.9rem; }
+  .ok { color: var(--accent); }
+  /* One picture, its fields beside it: you cannot credit a thing you cannot see. */
+  .credit { display: grid; grid-template-columns: 140px minmax(0, 1fr); gap: 14px; margin: 14px 0 0; align-items: start; }
+  .credit img { width: 100%; border-radius: 8px; border: 1px solid var(--edge); display: block; }
+  .credit label { display: block; margin: 0 0 8px; color: var(--ink-dim); font-size: 0.9rem; }
+  .credit input {
+    display: block; width: 100%; margin-top: 3px; font: inherit;
+    background: var(--panel-2); color: var(--ink); border: 1px solid var(--edge);
+    border-radius: 6px; padding: 6px 8px;
+  }
+  @media (max-width: 640px) { .credit { grid-template-columns: 1fr; } }
   .slide input { display: block; width: 100%; margin-top: 4px; }
   .designer { display: grid; grid-template-columns: minmax(0, 1fr) 250px; gap: 16px; align-items: start; }
   @media (max-width: 720px) { .designer { grid-template-columns: 1fr; } }
