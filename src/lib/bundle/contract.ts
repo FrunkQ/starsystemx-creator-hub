@@ -26,6 +26,29 @@ export const PLAYER_IMAGES_DIR = 'assets/images/player/';
 export const DOC_NAME = { starmap: 'starmap.json', system: 'system.json' } as const;
 export type BundleKind = keyof typeof DOC_NAME;
 
+/**
+ * IS THIS A CAMPAIGN OR ONE SYSTEM? Read from the DOCUMENT, never from the filename.
+ *
+ * The owner, 2026-09-06: *"i uploaded a system map - it is still labelled a starmap."* It was, and
+ * every plain `.json` upload before it was too: `openBundle` has no filename to read when the
+ * upload is not a zip, and it filled the gap with `starmap.json` - a guess, made once, that then
+ * became the map's kind, its tree depth, its card label, and whether it was offered a button the
+ * engine refuses for a system (R-18).
+ *
+ * THE DOCUMENT IS UNAMBIGUOUS and always was: a campaign has `systems`, a single system has
+ * `nodes`. The same rule the inspector (`bundle/inspect.ts`) and the facets (`systemCount`) have
+ * always used - it simply was not the one the kind was taken from.
+ *
+ * The filename is kept as the tie-breaker for a zip whose document says nothing either way, which
+ * is the only case where it is evidence rather than a default.
+ */
+export function detectKind(doc: unknown, docPath?: string | null): BundleKind {
+  const d = (doc && typeof doc === 'object' ? doc : {}) as Record<string, unknown>;
+  if (Array.isArray(d.systems)) return 'starmap';
+  if (Array.isArray(d.nodes)) return 'system';
+  return docPath && docPath.endsWith(DOC_NAME.system) ? 'system' : 'starmap';
+}
+
 export const ATTRIBUTIONS_NAME = 'ATTRIBUTIONS.md';
 export const README_NAME = 'README.txt';
 

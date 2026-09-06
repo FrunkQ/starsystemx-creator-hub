@@ -1154,6 +1154,39 @@ pressable, so SMTP is still entirely unproven - the URL configuration is set, an
 would test it was broken. And any config row the owner has ever set was set in SQL, because the
 page could not do it.
 
+### D-48. What a save IS comes from the save, not from a filename that was never there
+
+The owner, 2026-09-06: *"i uploaded a system map - it is still labelled a starmap and has 'open in
+SSE' as an option (that we know will not work)."*
+
+**One assumption, made once, in a place nobody would look for it.** `openBundle` reads the kind
+from the document's filename inside a zip - real evidence. For a PLAIN `.json` upload there is no
+filename, and the line that filled the gap was:
+
+```ts
+docPath = DOC_NAME.starmap;
+```
+
+A guess. And Star System Explorer exports a single system as `<Name>-System.json`, a bare file - so
+**every plain upload the hub has ever taken was labelled a campaign.** From there the wrong kind
+set the card's label, the tree's opening depth, and - since D-43 - whether the map was offered an
+"Open in SSE" button the engine refuses for a system. One default, three visible symptoms, none of
+which pointed at it.
+
+**The document was never ambiguous.** A campaign has `systems`, a single system has `nodes` - the
+rule the inspector and the facet counter have both used all along. `detectKind` is now that rule,
+in `bundle/contract.ts`, and the filename survives only as the tie-breaker for a document that says
+nothing either way, which is the one case where it is evidence rather than a default.
+
+**It also fixes something quieter.** A save the creator asks the hub to strip is rebuilt as a zip
+under `docPath` - so a stripped single system was being written into `starmap.json`, a bundle
+lying about itself to whatever read it next. A bare `.json` is now named after what it turns out
+to be.
+
+**And the maps already stored wrong come right without anybody re-uploading**, which is the
+standing rule (D-26): the re-index re-reads the kind from the stored bytes. It is on the manage
+page as a button, so the owner's map is one press from being a system again.
+
 ### D-16. The takedown address is assembled at runtime, never served as text
 
 The owner's instruction was explicit: keep it off the page as scrapable text. It is stored as

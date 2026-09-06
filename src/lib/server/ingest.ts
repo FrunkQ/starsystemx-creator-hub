@@ -34,7 +34,7 @@ import { coverOptionsFrom, type CoverOptions } from '$lib/cover/generate';
 import { sha256Hex, claimedHashFromModelPath } from '$lib/bundle/hash';
 import {
   DOC_NAME, IMAGES_DIR, MODELS_DIR, PLAYER_IMAGES_DIR, ATTRIBUTIONS_NAME,
-  MIME_BY_EXT, ALLOWED_IMAGE_EXT, extOf, isZip
+  MIME_BY_EXT, ALLOWED_IMAGE_EXT, extOf, isZip, detectKind
 } from '$lib/bundle/contract';
 import type { Gates } from './config';
 import type { Viewer } from './auth';
@@ -133,7 +133,9 @@ export async function ingest(
   });
   if (!format.ok) return { ok: false, code: format.code, message: format.message };
 
-  const kind: 'starmap' | 'system' = docPath.endsWith(DOC_NAME.starmap) ? 'starmap' : 'system';
+  // From the document, not the filename: a plain `.json` upload has no filename to read, and the
+  // guess that filled the gap labelled every one of them a starmap (D-48).
+  const kind = detectKind(doc, docPath);
 
   // The CAPABILITY MARKER, kept separate from the contract number - which build made this map.
   // Never a parse gate; a future SSE loads an older map fine (bundle/provenance.ts).

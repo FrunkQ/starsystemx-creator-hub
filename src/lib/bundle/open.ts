@@ -4,7 +4,7 @@
 // holds), so the two can never read a file differently. Everything here is container handling;
 // the format gate, GM detection and the rest happen on the document afterwards.
 import { readZip, BundleReadError } from './read';
-import { DOC_NAME, isZip } from './contract';
+import { DOC_NAME, detectKind, isZip } from './contract';
 
 export type Opened =
   | { ok: true; zipped: boolean; members: Record<string, Uint8Array>; docPath: string; doc: any }
@@ -35,7 +35,10 @@ export function openBundle(bytes: Uint8Array): Opened {
     docPath = found;
     docText = new TextDecoder().decode(members[found]);
   } else {
-    docPath = DOC_NAME.starmap;
+    // A bare .json carries no filename to read, so the name is decided AFTER the parse, from what
+    // the document turns out to be. It used to be assumed to be `starmap.json` - which is where
+    // every plain upload got its kind, and why every one of them was called a campaign (D-48).
+    docPath = '';
     docText = new TextDecoder().decode(bytes);
   }
 
@@ -45,5 +48,8 @@ export function openBundle(bytes: Uint8Array): Opened {
   } catch {
     return { ok: false, code: 'bad-json', message: 'The save data inside that file is not valid JSON.' };
   }
+  // The name matters beyond the kind: a stripped save is rebuilt as a zip under this path, and a
+  // single system written into `starmap.json` is a bundle that lies about itself.
+  if (!docPath) docPath = DOC_NAME[detectKind(doc)];
   return { ok: true, zipped, members, docPath, doc };
 }

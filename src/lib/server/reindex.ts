@@ -21,6 +21,7 @@ import type { Gates } from './config';
 import type { Site } from './site';
 import * as r2 from './r2';
 import { openBundle } from '$lib/bundle/open';
+import { detectKind } from '$lib/bundle/contract';
 import { normalise, creditSlugs } from '$lib/bundle/normalise';
 import { computeFacets, deriveTags } from '$lib/bundle/facets';
 import { shippedManifest } from './shippedContent';
@@ -58,6 +59,10 @@ export async function reindexSystem(
   await writeNodeRows(sb, systemId, shaped, byPath);
 
   const { error } = await tolerantWrite({
+    // THE KIND IS RE-READ, not left as uploaded (D-48). Every plain `.json` upload before 0.28.0
+    // was labelled a starmap by a guess, and this is how those rows come right without asking
+    // anybody to upload the file again (D-26).
+    kind: detectKind(doc, opened.docPath),
     system_count: facets.systemCount,
     body_count: facets.bodyCount,
     construct_count: facets.constructCount,

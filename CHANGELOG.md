@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.28.0 — 2026-09-06
+
+### A single system is no longer called a campaign
+
+Every plain `.json` upload was labelled a starmap. Star System Explorer exports one system as a
+bare `.json`, and the reader takes the kind from the document's filename inside a zip - so with no
+filename to read, it assumed `starmap.json`. That one default set the card's label, the tree's
+opening depth, and whether the map was offered the "Open in SSE" button the engine refuses for a
+single system.
+
+The kind now comes from the document, which was never ambiguous: a campaign has `systems`, a
+system has `nodes`. A stripped save is also written under the right name now, instead of a single
+system being rebuilt into a `starmap.json`.
+
+**A map already stored wrong comes right with Re-index on its manage page** - no re-upload.
+
 ## 0.27.1 — 2026-09-06
 
 ### Every button on the Gates page works again
