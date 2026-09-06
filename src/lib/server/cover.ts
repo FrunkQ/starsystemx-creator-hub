@@ -16,7 +16,7 @@ import {
   renderCover, coverOptionsFrom, DEFAULT_COVER_OPTIONS, COVER_W, COVER_H,
   type CoverFacts, type CoverNode, type CoverOptions
 } from '$lib/cover/generate';
-import { decodeImage, coverFit, type DecodedImage } from '$lib/cover/image';
+import { decodeImage, coverFit, withinDecodeBudget, type DecodedImage } from '$lib/cover/image';
 
 export const GENERATED_COVER_PATH = 'hub/generated-cover.png';
 
@@ -72,10 +72,58 @@ export async function loadBaseImage(env: HubEnv, sb: Db, systemId: string, sha25
   const { data: mine } = await sb.from('system_screenshots')
     .select('sha256').eq('system_id', systemId).eq('sha256', sha256).maybeSingle();
   if (!mine || !(await ledger.isServable(sb, sha256))) return null;
+
+  // THE FITTED COPY, IF ONE EXISTS. Decoding a screenshot is by far the most expensive thing this
+  // Worker does - measured at 168ms for a 4.9 megapixel PNG, against a free plan's 10ms of CPU -
+  // and the cover preview re-renders on EVERY change a creator makes to the design. So the fit is
+  // done once and the raw pixels are kept: a fetch and no decode at all thereafter (D-53).
+  const fitted = await readFit(env, sha256);
+  if (fitted) return fitted;
+
   const obj = await r2.getAsset(env, sha256);
   if (!obj) return null;
-  const decoded = decodeImage(new Uint8Array(await obj.arrayBuffer()));
-  return decoded ? coverFit(decoded, COVER_W, COVER_H) : null;
+  const bytes = new Uint8Array(await obj.arrayBuffer());
+  // A source too big to decode inside a request's budget is refused rather than attempted: an
+  // attempt does not fail politely, it takes the whole Worker down with a 1102 (D-53).
+  if (!withinDecodeBudget(bytes)) return null;
+
+  const decoded = decodeImage(bytes);
+  if (!decoded) return null;
+  const image = coverFit(decoded, COVER_W, COVER_H);
+  await writeFit(env, sha256, image);
+  return image;
+}
+
+/**
+ * THE FITTED PIXELS, cached in R2 as raw RGB.
+ *
+ * Raw rather than a PNG on purpose: a PNG would have to be DECODED again on every use, which is
+ * the cost this exists to remove. 1200 x 630 x 3 is 2.27 MB - a rounding error in R2, and free of
+ * CPU at the far end.
+ */
+const fitKey = (sha256: string) => `cache/fit/${sha256}-${COVER_W}x${COVER_H}.rgb`;
+
+async function readFit(env: HubEnv, sha256: string): Promise<DecodedImage | null> {
+  try {
+    const obj = await env.HUB_BUNDLES.get(fitKey(sha256));
+    if (!obj) return null;
+    const rgb = new Uint8Array(await obj.arrayBuffer());
+    if (rgb.length !== COVER_W * COVER_H * 3) return null;
+    return { width: COVER_W, height: COVER_H, rgb };
+  } catch {
+    return null;
+  }
+}
+
+async function writeFit(env: HubEnv, sha256: string, image: DecodedImage): Promise<void> {
+  try {
+    await env.HUB_BUNDLES.put(fitKey(sha256), image.rgb as unknown as ArrayBuffer, {
+      // Safe because the key carries the content hash AND the size: these bytes cannot change.
+      httpMetadata: { contentType: 'application/octet-stream', cacheControl: 'public, max-age=31536000, immutable' }
+    });
+  } catch {
+    // A cache that cannot be written is a slower page, not a broken one.
+  }
 }
 
 /** Everything the card needs for one map, from the rows, with the picture loaded if chosen. */

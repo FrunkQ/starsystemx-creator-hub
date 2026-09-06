@@ -1316,6 +1316,48 @@ with a conversation on it would otherwise mail its creator hourly, out of a hund
 fifteen minutes would be worse than a digest that occasionally goes missing - and the outbox retries
 the queued message anyway, so the failure this trades away is the smaller one.
 
+### D-53. Decoding a screenshot is the most expensive thing this Worker does, and it was being done every keystroke
+
+The owner, 2026-09-06: *"when using an uploaded pic as a background... it failed to display then we
+have a cloudflare error: Error 1102 - Worker exceeded resource limits."*
+
+**MEASURED BEFORE CHANGING ANYTHING, and the guesses were an order of magnitude out.** On the real
+files:
+
+| picture | decode | fit |
+|---|---|---|
+| 3795x1302 PNG, 4.0 MB (4.9 MP) | **168 ms** | 25 ms |
+| 2284x1833 PNG, 3.3 MB (4.2 MP) | 125 ms | 23 ms |
+| 1708x1177 PNG, 2.6 MB (2.0 MP) | 74 ms | 19 ms |
+
+**The Workers free plan allows 10 ms of CPU per request.** The old guard refused above FORTY
+megapixels, which is a limit for a machine that does not exist here. And going over does not fail
+politely: Cloudflare kills the request with a 1102, which is exactly what he saw.
+
+**And the cover preview re-renders on every change to the design** - every palette, every tick box,
+every font. So the most expensive operation in the codebase was being repeated on each keystroke.
+
+**Three changes, in order of how much they matter.**
+
+1. **The fitted pixels are cached.** The decode happens once per picture and the 1200x630 result is
+   kept in R2 as RAW RGB - raw rather than a PNG on purpose, because a PNG would have to be decoded
+   again on every use, which is the cost being removed. 2.27 MB in a bucket, and free of CPU at the
+   far end.
+2. **A source too big is refused BEFORE it is decoded**, from the header - PNG's IHDR, a JPEG's
+   first frame marker. Twelve megapixels and twelve megabytes. Refusing after decoding would be a
+   refusal that costs exactly what it was avoiding.
+3. **The picker says so in advance.** A screenshot too big to draw over is greyed with "Too big to
+   draw over" beside the two reasons that were already there (D-44) - the manage page knows the byte
+   size from the row, which is the cheap half of the same ceiling.
+
+**WHAT THIS DOES NOT FIX, AND THE OWNER HAS TO DECIDE IT.** If the hub is on the Workers FREE plan,
+the FIRST decode of any picture still exceeds 10 ms - 74 ms for the smallest file measured - so
+choosing a screenshot as a background will still 1102 the first time, and then work for ever after
+if the write landed. Two honest ways out: **Workers Paid** ($5/month, 30 s of CPU) makes this
+disappear and removes a whole class of future limits; or the FITTING MOVES TO THE BROWSER, which
+can resize an image for nothing, and the Worker is handed pixels it never has to decode. The second
+is real work and only worth doing if the plan is to stay free.
+
 ### D-16. The takedown address is assembled at runtime, never served as text
 
 The owner's instruction was explicit: keep it off the page as scrapable text. It is stored as

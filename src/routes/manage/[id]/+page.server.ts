@@ -15,6 +15,7 @@ import {
 } from '$lib/server/cover';
 import { reindexSystem } from '$lib/server/reindex';
 import { coverOptionsFrom } from '$lib/cover/generate';
+import { MAX_DECODE_BYTES } from '$lib/cover/image';
 import { tolerantWrite } from '$lib/server/tolerant';
 import { bestDensity } from '$lib/server/density';
 import type { SystemRow } from '$lib/server/database.types';
@@ -55,10 +56,11 @@ export const load: PageServerLoad = async ({ params, platform, locals }) => {
   const [approved, { data: shotAssets }] = await Promise.all([
     ledger.approvedOnly(sb, [...hashes, ...shotHashes]),
     shotHashes.length
-      ? sb.from('assets').select('sha256, mime').in('sha256', shotHashes)
-      : Promise.resolve({ data: [] as { sha256: string; mime: string }[] })
+      ? sb.from('assets').select('sha256, mime, byte_size').in('sha256', shotHashes)
+      : Promise.resolve({ data: [] as { sha256: string; mime: string; byte_size: number }[] })
   ]);
   const mimeOf = new Map((shotAssets ?? []).map((a) => [a.sha256, a.mime]));
+  const bytesOf = new Map((shotAssets ?? []).map((a) => [a.sha256, a.byte_size ?? 0]));
 
   // WHY PUBLISHING IS BLOCKED, IN THE CREATOR'S OWN TERMS. A gate that just says "no" is a gate
   // people complain about; one that names the three pictures needing a credit is a gate they clear.
@@ -86,14 +88,24 @@ export const load: PageServerLoad = async ({ params, platform, locals }) => {
     screenshots: (shots ?? []).map((s) => {
       const isApproved = approved.has(s.sha256);
       // Usable as the base of a designed card: approved, and a format the Worker can decode.
-      const drawable = isApproved && DRAWABLE.has(mimeOf.get(s.sha256) ?? '');
+      // TOO BIG TO DRAW OVER is a third reason, and it is said here rather than discovered by a
+      // Worker dying mid-render (D-53). Only the byte size is known from the row - the pixel count
+      // needs the file - so this is the cheap half of the same ceiling.
+      const tooBig = (bytesOf.get(s.sha256) ?? 0) > MAX_DECODE_BYTES;
+      const drawable = isApproved && !tooBig && DRAWABLE.has(mimeOf.get(s.sha256) ?? '');
       return {
         ...s,
         approved: isApproved,
         drawable,
         // WHY NOT, when it cannot be used - the cover picker greys it and says this rather than
         // leaving a creator to wonder which of their pictures the hub dislikes (D-44).
-        why: drawable ? null : !isApproved ? 'Waiting to be reviewed' : 'PNG or JPEG only'
+        why: drawable
+          ? null
+          : !isApproved
+            ? 'Waiting to be reviewed'
+            : tooBig
+              ? 'Too big to draw over - under ' + Math.round(MAX_DECODE_BYTES / 1024 / 1024) + ' MB, please'
+              : 'PNG or JPEG only'
       };
     }),
     blocking,

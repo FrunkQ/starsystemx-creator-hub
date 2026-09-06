@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.32.0 — 2026-09-06
+
+### Using a screenshot as a cover background no longer kills the Worker
+
+Decoding a picture is by far the most expensive thing the hub does - measured at 168ms for a 4.9
+megapixel PNG, against a free plan's 10ms of CPU - and the cover preview was doing it on every
+change to the design. Cloudflare's answer to that is a 1102, not an error page.
+
+The fitted pixels are now cached in R2 as raw RGB, so the decode happens once per picture rather
+than once per keystroke. A file too big is refused from its header before anything is decoded, and
+the picker greys it with "Too big to draw over" rather than letting a creator find out by taking the
+Worker down. The old guard allowed forty megapixels, which was a limit for a machine that does not
+exist here.
+
+**On the free plan the FIRST decode can still exceed the CPU limit** - see D-53 for the two ways
+out, one of which is a plan.
+
 ## 0.31.0 — 2026-09-06
 
 ### Mail is counted against the free plan
