@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.39.1 - 2026-09-06
+
+"Nothing to link yet." The sentence after it explained which switches were off, which is a note to
+whoever built them rather than an answer to the person reading the page.
+
+
 ## 0.39.0 - 2026-09-06
 
 ### Fan work says so, on every page and inside every file

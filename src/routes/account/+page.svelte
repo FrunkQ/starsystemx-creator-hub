@@ -139,10 +139,10 @@
 <div class="panel">
   <h2>Linked accounts</h2>
   {#if !data.integrations.discord && !data.integrations.patreon}
-    <p class="muted">
-      Nothing to link yet. Discord and Patreon connections are built but switched off until the
-      community server and page are set up.
-    </p>
+    <!-- FOUR WORDS, and the second sentence deleted on purpose (owner, 2026-09-06). It named the
+         switches, which is a note to whoever built them and not an answer to the person reading
+         this: they asked what they can link, and the true answer is "nothing yet". -->
+    <p class="muted">Nothing to link yet.</p>
   {/if}
 
   {#if data.integrations.discord}
