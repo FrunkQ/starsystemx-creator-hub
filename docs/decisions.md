@@ -987,6 +987,37 @@ place. Sign-in itself is email and password through the API and is unaffected by
 cover card since migration 0015, which was a promise about a domain that did not answer; it is a
 fact now, and nothing had to change to make it one.
 
+### D-42. The log has somewhere to be read, and it is the admin's
+
+The owner, 2026-09-06, having given somebody the moderator role: *"have admin get a list of all
+moderator actions in a log."*
+
+**Nothing new is recorded for this.** `audit.record` has been called on every staff action since
+migration 0001, and `audit.ts` says why: *"when a creator asks why their map vanished, the answer
+must exist."* What did not exist was anywhere to READ them - and a log nobody can open is a log
+nobody is accountable to, which is most of the value gone. `/admin/log` is that page.
+
+**ADMIN ONLY, and that is the point rather than an omission.** This is how the owner watches the
+moderators, so it belongs to the person who hands out the role. It sits in "Running the place",
+where a moderator cannot reach it.
+
+**Three filters, and the third is the owner's question asked directly:** who (any admin or
+moderator), what (Moderation / Tags / Accounts / Running the place / Other), and "only what a
+moderator can do". The filters live in the address, so a view can be linked and paged.
+
+**The labels live in `src/lib/auditLog.ts`, not in the page.** `creator.banned` and `asset.ban` are
+written by two different files and read by one; a page de-dotting slugs by hand ends up saying
+"creator banned" beside "asset ban". A slug this file has never heard of still renders - de-dotted -
+because the next session will add an action and forget this file, and a test pins that it reads as
+words rather than as nothing.
+
+**Two small honesty details.** The group and moderators-only filters are properties of the ACTION
+NAME, which lives in that module rather than the database, so the query over-reads and the Worker
+filters - putting the slug list in a SQL `in` clause would be the same list in two places, drifting.
+And an action whose actor is null shows as **"a deleted account"**: the foreign key is
+`on delete set null`, so what was done outlives whoever did it, which is exactly what an audit log
+is for.
+
 ### D-16. The takedown address is assembled at runtime, never served as text
 
 The owner's instruction was explicit: keep it off the page as scrapable text. It is stored as

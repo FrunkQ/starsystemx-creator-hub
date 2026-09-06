@@ -35,6 +35,12 @@
     </form>
   </div>
   {#if form?.tested}<p class="ok">{form.tested}</p>{/if}
+  <p class="muted foot">
+    The test email's link comes back to <code>{data.resetRedirect}</code>. That exact URL has to be
+    in Supabase's <strong>Authentication &rarr; URL Configuration &rarr; Redirect URLs</strong>, and
+    the Site URL there should be this hub's address - otherwise the link lands on whatever the Site
+    URL says. Sign-in itself is email and password through the API and needs neither.
+  </p>
 </div>
 
 <!-- What the hub believes SSE ships, and how old that belief is (D-36). -->
@@ -91,6 +97,7 @@
   .tries form { margin: 0; }
   .ok { color: var(--accent); margin: 10px 0 0; }
   .bad-text { color: var(--warn); }
+  .foot { margin: 12px 0 0; font-size: 0.9rem; max-width: 78ch; }
   .inline { display: flex; gap: 6px; }
   input {
     font: inherit; background: var(--panel-2); color: var(--ink);

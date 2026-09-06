@@ -71,6 +71,7 @@ export const ADMIN_AREAS: AdminArea[] = [
 
   { href: '/admin/debug', label: 'Debug', group: 'Debug', tier: 'admin', count: 'debug', countNoun: 'debug uploads kept' },
 
+  { href: '/admin/log', label: 'Log', group: 'Running the place', tier: 'admin' },
   { href: '/admin/stats', label: 'Usage', group: 'Running the place', tier: 'admin' },
   { href: '/admin/backup', label: 'Backups', group: 'Running the place', tier: 'admin' },
   { href: '/admin/config', label: 'Config', group: 'Running the place', tier: 'admin' }
@@ -83,6 +84,9 @@ export const ADMIN_AREAS: AdminArea[] = [
  * (suspend, ban, reinstate, remove comments, take a map down, put it back). DELETING an account,
  * and handing out the moderator role itself, stay with the owner, because neither has a way back.
  * That split lives in `routes/admin/explorers/[handle]/+page.server.ts` (`staff` vs `ownerOnly`).
+ *
+ * THE LOG IS ADMIN, and that is the point rather than an omission (D-42): it is how the owner
+ * watches the moderators, so it belongs to the person who hands out the role.
  *
  * "Gates" WAS THE LABEL until the owner said the obvious (2026-09-06): *"Gates - is not a great
  * title - its 'config' surely?"* The route was `/admin/config` all along.

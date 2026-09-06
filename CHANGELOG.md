@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.25.0 — 2026-09-06
+
+### The log
+
+`/admin/log` - every action a person with a role has taken, newest first, admin only. Nothing new
+is recorded: `audit.record` has been called on every staff action since the first migration, and
+this is somewhere to read it. Filter by who, by what (moderation, tags, accounts, running the
+place), or by "only what a moderator can do". An action whose actor has since been deleted shows as
+"a deleted account" - what was done outlives whoever did it.
+
+### The Gates page says what Supabase needs
+
+The "Send me a test email" button now shows the exact URL its link comes back to, so it can be
+copied into Supabase's redirect allow-list rather than retyped.
+
 ## 0.24.0 — 2026-09-06
 
 ### The hub answers to its own name

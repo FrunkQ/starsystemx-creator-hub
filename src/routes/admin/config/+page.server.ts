@@ -8,20 +8,24 @@ import { isDiscordWebhook } from '$lib/server/integrations/share';
 import { postShare } from '$lib/server/integrations/discord';
 import { readCache, shippedManifest } from '$lib/server/shippedContent';
 
-export const load: PageServerLoad = async ({ platform, locals }) => {
+export const load: PageServerLoad = async ({ platform, locals, url }) => {
   const env = platform?.env;
   if (!env) throw error(500, 'not configured');
   if (locals.viewer?.role !== 'admin') throw error(404, 'Not found');
 
   const sb = db(env);
-  const [{ data }, gates, cache] = await Promise.all([
+  const [{ data }, gates, cache, site] = await Promise.all([
     sb.from('config').select('key, value, note, updated_at').order('key'),
     loadGates(sb),
-    readCache(env)
+    readCache(env),
+    loadSite(sb, url)
   ]);
   // What the hub currently believes SSE ships, and when it last managed to ask (D-36).
   return {
     rows: data ?? [],
+    // The exact URL the test email's link comes back to. Shown so it can be COPIED into Supabase's
+    // redirect allow-list rather than retyped - a URL typed twice is a URL wrong once.
+    resetRedirect: site.url + '/login',
     shipped: {
       url: gates.sse_manifest_url,
       appVersion: cache?.manifest?.appVersion ?? null,
