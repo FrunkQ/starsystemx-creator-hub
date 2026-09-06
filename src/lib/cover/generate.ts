@@ -74,7 +74,7 @@ export const DEFAULT_COVER_OPTIONS: CoverOptions = {
 
 const BASES: CoverBase[] = ['auto', 'system', 'starmap', 'plain', 'image'];
 const PALETTES: CoverPalette[] = ['night', 'amber', 'mono', 'green'];
-const FONTS: FontStyle[] = ['pixel', 'bold', 'outline', 'wide'];
+const FONTS: FontStyle[] = ['pixel', 'bold', 'outline', 'wide', 'round', 'narrow'];
 
 /** Options from JSON or a form: anything unrecognised falls back to the default. */
 export function coverOptionsFrom(value: unknown): CoverOptions {
@@ -379,7 +379,7 @@ function systemLabel(root: TreeNode): string {
 }
 
 /** The constellation: every root star at its real map position, the origin named. */
-function drawStarmap(r: Raster, facts: CoverFacts, p: Palette, box: { x0: number; y0: number; x1: number; y1: number }): boolean {
+function drawStarmap(r: Raster, facts: CoverFacts, p: Palette, font: FontStyle, box: { x0: number; y0: number; x1: number; y1: number }): boolean {
   const roots = buildTree(facts.nodes).filter((n) => typeof n.map_x === 'number' && typeof n.map_y === 'number');
   if (roots.length < 2) return false;
 
@@ -440,7 +440,7 @@ function drawStarmap(r: Raster, facts: CoverFacts, p: Palette, box: { x0: number
   r.glow(o.x, o.y, 48, oc, 0.45);
   r.circle(o.x, o.y, 7, oc);
   r.circle(o.x - 2, o.y - 2, 3, highlight(p), 0.6);
-  drawText(r, o.x + 14, o.y - 7, systemLabel(origin), 2, p.ink, 0.9);
+  drawText(r, o.x + 14, o.y - 7, systemLabel(origin), 2, p.ink, 0.9, font);
   return true;
 }
 
@@ -493,7 +493,7 @@ export function renderCover(facts: CoverFacts, options: CoverOptions = DEFAULT_C
 
   let drawn = false;
   if (base === 'starmap') {
-    drawn = drawStarmap(r, facts, p, wordsOn || footOn
+    drawn = drawStarmap(r, facts, p, font, wordsOn || footOn
       ? { x0: qrOn ? 440 : 520, y0: 170, x1: qrOn ? 960 : 1120, y1: 540 }
       : { x0: 100, y0: 70, x1: 1100, y1: 560 });
   }
@@ -514,8 +514,9 @@ export function renderCover(facts: CoverFacts, options: CoverOptions = DEFAULT_C
   const write = (x: number, y: number, text: string, scale: number, c: RGB) =>
     drawText(r, x, y, text, scale, c, 1, font, halo ? shadow : undefined);
   const width = (text: string, scale: number) => textWidth(text, scale, font);
-  // A wide face fits fewer letters on a line.
-  const perLine = font === 'wide' ? 20 : 30;
+  // How many letters fit depends on the face: `wide` stretches every column half again, `narrow`
+  // is a three-column alphabet. A title set in one and wrapped for the other reads badly.
+  const perLine = font === 'wide' ? 20 : font === 'narrow' ? 44 : 30;
 
   let y = 62;
   if (options.title) {

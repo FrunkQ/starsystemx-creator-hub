@@ -4,7 +4,7 @@
 // The bundle supplies facts (what bodies exist). THIS supplies the pitch - the part that makes
 // somebody click download. Both matter, and only the creator can write the second one.
 import type { PageServerLoad, Actions } from './$types';
-import { error, fail } from '@sveltejs/kit';
+import { error, fail, redirect } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import { loadGates } from '$lib/server/config';
 import { loadSite } from '$lib/server/site';
@@ -19,6 +19,7 @@ import { tolerantWrite } from '$lib/server/tolerant';
 import { bestDensity } from '$lib/server/density';
 import type { SystemRow } from '$lib/server/database.types';
 import * as ledger from '$lib/server/ledger';
+import * as accounts from '$lib/server/accounts';
 import * as badges from '$lib/server/integrations/badges';
 import { buildShare, queueShare } from '$lib/server/integrations/share';
 import { drainOutbox } from '$lib/server/integrations/deliver';
@@ -82,12 +83,19 @@ export const load: PageServerLoad = async ({ params, platform, locals }) => {
     system,
     // What a 5 on the information meter means today (D-30) - the nudge is measured against it.
     best: await bestDensity(sb),
-    screenshots: (shots ?? []).map((s) => ({
-      ...s,
-      approved: approved.has(s.sha256),
+    screenshots: (shots ?? []).map((s) => {
+      const isApproved = approved.has(s.sha256);
       // Usable as the base of a designed card: approved, and a format the Worker can decode.
-      drawable: approved.has(s.sha256) && DRAWABLE.has(mimeOf.get(s.sha256) ?? '')
-    })),
+      const drawable = isApproved && DRAWABLE.has(mimeOf.get(s.sha256) ?? '');
+      return {
+        ...s,
+        approved: isApproved,
+        drawable,
+        // WHY NOT, when it cannot be used - the cover picker greys it and says this rather than
+        // leaving a creator to wonder which of their pictures the hub dislikes (D-44).
+        why: drawable ? null : !isApproved ? 'Waiting to be reviewed' : 'PNG or JPEG only'
+      };
+    }),
     blocking,
     mayPublish: blocking.length === 0,
     coverOptions: coverOptionsFrom(system.cover_options),
@@ -165,26 +173,28 @@ export const actions: Actions = {
     }
   },
 
-  cover: async ({ request, params, platform, locals }) => {
+  /**
+   * DELETE THIS MAP. Yours to upload, yours to take away (D-45).
+   *
+   * The title typed back is the confirmation - the same shape as deleting an account, because this
+   * cannot be undone either: the bundle goes, and any picture nothing else uses goes with it.
+   */
+  deleteMap: async ({ request, params, platform, locals }) => {
     const env = platform?.env;
     if (!env || !locals.viewer) throw error(401, 'Sign in first.');
     const sb = db(env);
-    await ownedSystem(sb, params.id, locals.viewer.id);
+    const system = await ownedSystem(sb, params.id, locals.viewer.id);
 
-    const sha256 = String((await request.formData()).get('sha256') ?? '');
-    if (!/^[0-9a-f]{64}$/.test(sha256)) return fail(400, { message: 'Pick a screenshot.' });
-
-    // Only an image already attached to THIS map may become its cover - otherwise the field is an
-    // arbitrary pointer into the whole asset store.
-    const { data: owned } = await sb.from('system_screenshots')
-      .select('sha256').eq('system_id', params.id).eq('sha256', sha256).maybeSingle();
-    if (!owned) return fail(400, { message: 'That image is not on this map.' });
-
-    // A chosen picture supersedes a designed card, so the design is forgotten: a later re-upload
-    // must not redraw over the picture the creator picked.
-    await tolerantWrite({ cover_sha256: sha256, cover_options: null },
-      (row) => Promise.resolve(sb.from('systems').update(row as Partial<SystemRow>).eq('id', params.id)));
-    return { ok: true };
+    const form = await request.formData();
+    if (String(form.get('confirm') ?? '').trim() !== system.title.trim()) {
+      return fail(400, { message: 'Type the title exactly to confirm.' });
+    }
+    try {
+      await accounts.deleteSystem(env, sb, await loadGates(sb), system, { actorId: locals.viewer.id });
+    } catch (e) {
+      return fail(500, { message: (e as Error).message });
+    }
+    redirect(303, '/account?deleted=' + encodeURIComponent(system.title));
   },
 
   /** Draw a card to the creator's design and make it the cover (D-22). */

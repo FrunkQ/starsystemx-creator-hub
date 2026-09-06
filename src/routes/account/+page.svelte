@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { page } from '$app/state';
   import Badge from '$lib/components/Badge.svelte';
   import { BADGE_IDS, CATALOGUE } from '$lib/badges';
   let { data, form } = $props();
@@ -18,6 +19,12 @@
   {data.me?.display_name ?? data.me?.handle}
   {#if data.me?.account_tier === 'pro'}<span class="tag">Pro</span>{/if}
 </p>
+
+<!-- A map the creator just deleted from its manage page (D-45): say so, because the page they
+     were on is gone and silence would read as a failure. -->
+{#if page.url.searchParams.get('deleted')}
+  <div class="panel notice"><p>"{page.url.searchParams.get('deleted')}" is deleted.</p></div>
+{/if}
 
 {#if data.me && data.me.state !== 'active'}
   <!-- The terms: "we will usually say why, because that is decent." -->

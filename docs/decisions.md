@@ -1054,6 +1054,71 @@ declares `depends('hub:counts')` and the review page invalidates that one key: t
 and the queue on screen does not re-fetch, so a reviewer holding down A pays for four head counts
 rather than for the whole queue as well.
 
+### D-44. One place chooses the cover, and a picture that cannot be used says why
+
+The owner, 2026-09-06: *"use cover does not work - even after approved. I think the add as cover
+does not go there. instead the cover designer just below should let you pick the default or any
+approved image they have ever approved (non approved appears greyed out)."*
+
+**Two controls did the same job and one of them was invisible.** A screenshot carried "Use as
+cover", which set the picture as the cover with no words on it; the designer below had its own
+"one of my screenshots" base, which draws the picture WITH the words. Whichever you pressed, the
+big image in the Cover panel went on showing the DESIGNER'S PREVIEW - so a working "Use as cover"
+looked exactly like a broken one. **I could not reproduce a failure in the write itself** - the
+action set `cover_sha256`, and `/asset/<hash>` serves any approved hash - which makes the preview
+the likeliest thing the owner was reading, and either way the answer is the same: stop having two.
+
+**So: one picker.** The designer opens with a row of choices - "The card", then every screenshot
+ever added - and what you pick is what the preview shows and what "Use this cover" stores. The
+separate button is deleted with the path (`?/cover` is gone).
+
+**A picture that cannot be used is shown and greyed with the reason** - "Waiting to be reviewed",
+or "PNG or JPEG only" - rather than left out of the list. A creator who cannot find the screenshot
+they just added is being asked to guess which of their pictures the hub dislikes.
+
+### D-45. Yours to upload, yours to take away
+
+The owner, 2026-09-06: *"how do I as a user delete a starmap i uploaded - I can unpublish but not
+seen how to remove altogether."* You could not. Unpublishing hid it; the only way to remove one was
+to delete your entire account, which is not an answer.
+
+`accounts.deleteSystem` is `deleteCreator` scoped to one map: gather what R2 holds, delete the row
+so the children go by cascade, drop the bundle, then free every asset nothing else references. On
+the manage page it is a danger zone with the title typed back, the same shape as deleting an
+account, because it cannot be undone either.
+
+**What survives it, and both are deliberate.** A ledger VERDICT outlives the map that carried the
+bytes - a banned picture stays banned, which is the rule `deleteIfUnreferenced` exists for. And the
+audit row stays: the record of what was done is the point of having one.
+
+**Said plainly on the page:** if you only want it off the site, take it down instead - that keeps
+everything and you can publish again whenever you like. Deletion should be the deliberate choice,
+not the one people reach for because the other was not obvious.
+
+### D-46. Two more alphabets, because four faces were one typeface
+
+The owner, 2026-09-06: *"Different fonts - i kinda suggested new font families for different look
+and feel."* Fair, and the earlier note in `font.ts` had already conceded it: `pixel`, `bold`,
+`outline` and `wide` are four ways of DRAWING one glyph set, so a control labelled with font names
+changed less than anybody would expect from it.
+
+**`round`** is geometric - diamond bowls on O and Q, cut corners on C, E, F, L and S, a pointed A,
+a U with a round bottom. **`narrow`** is a three-column alphabet of its own rather than the base
+squeezed: squeezing five columns into three loses the counters, and a condensed face wants
+different letters, not thinner ones. It fits a title half again as long, which the wrap width knows
+about.
+
+**Punctuation falls through to the base set**, and that is the design: a hyphen is a hyphen at any
+width, and forty more glyphs nobody could tell apart is forty more chances to draw one wrong.
+
+**BOTH FAULTS THESE SHIPPED WITH WERE FOUND BY LOOKING AT A RENDERED CARD, and both are now
+pinned by a test.** `narrow`'s `N` was indistinguishable from its `K`, so "FRUNK" read "FRUKK" -
+a diagonal has nowhere to go in three columns, so `N`, `M` and `W` were given a fourth. `round`'s
+`U` was byte-for-byte its `V`. And the test written for those two then found a third nobody had
+noticed: in both families the letter `O` and the digit `0` were the same glyph. A dotted zero and
+a slashed one. **A glyph set is data, and data can be checked** - `tests/families.test.ts` now
+refuses two characters drawn identically, which is a rule the eye finds only by accident.
+
 ### D-16. The takedown address is assembled at runtime, never served as text
 
 The owner's instruction was explicit: keep it off the page as scrapable text. It is stored as

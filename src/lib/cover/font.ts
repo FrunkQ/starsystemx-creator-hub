@@ -7,6 +7,7 @@
 //
 // Each glyph is seven rows of five characters; `#` is ink. Space is three columns wide.
 import type { Raster, RGB } from './raster';
+import { ROUND, NARROW } from './families';
 
 const G: Record<string, string[]> = {
   A: ['.###.', '#...#', '#...#', '#####', '#...#', '#...#', '#...#'],
@@ -79,7 +80,7 @@ export function fold(text: string): string {
     .trim();
 }
 
-const advance = (ch: string) => (G[ch]?.[0].length ?? 3) + 1;
+const advance = (ch: string, style: FontStyle = 'pixel') => (glyph(style, ch)[0].length ?? 3) + 1;
 
 /**
  * FOUR FACES FROM ONE SET OF GLYPHS (owner, 2026-09-04: "choose a different font"). There is one
@@ -88,13 +89,22 @@ const advance = (ch: string) => (G[ch]?.[0].length ?? 3) + 1;
  * and the body in the colour behind it; `wide` stretches every column half as much again. A second
  * glyph set would be data, not code.
  */
-export type FontStyle = 'pixel' | 'bold' | 'outline' | 'wide';
+export type FontStyle = 'pixel' | 'bold' | 'outline' | 'wide' | 'round' | 'narrow';
 const stretch = (style: FontStyle) => (style === 'wide' ? 1.5 : 1);
+
+/**
+ * THE ALPHABET A FACE IS SET IN (D-46). `round` and `narrow` are their own glyph sets - different
+ * letters, not the base letters treated - which is what the owner meant by a font family. Anything
+ * a family does not define falls through to the base set, so punctuation is drawn once.
+ */
+const FAMILY: Partial<Record<FontStyle, Record<string, string[]>>> = { round: ROUND, narrow: NARROW };
+const glyphs = (style: FontStyle) => FAMILY[style] ?? G;
+const glyph = (style: FontStyle, ch: string) => glyphs(style)[ch] ?? G[ch] ?? G[' '];
 
 /** Pixel width of a folded string at `scale`. */
 export function textWidth(folded: string, scale: number, style: FontStyle = 'pixel'): number {
   let w = 0;
-  for (const ch of folded) w += advance(ch);
+  for (const ch of folded) w += advance(ch, style);
   return Math.max(0, w - 1) * scale * stretch(style);
 }
 
@@ -106,13 +116,13 @@ export function drawText(
   const paint = (dx: number, dy: number, colour: RGB, a: number) => {
     let cx = x;
     for (const ch of folded) {
-      const rows = G[ch] ?? G[' '];
+      const rows = glyph(style, ch);
       for (let row = 0; row < GLYPH_H; row++) {
         for (let col = 0; col < rows[row].length; col++) {
           if (rows[row][col] === '#') r.rect(cx + col * sx + dx, y + row * scale + dy, sx, scale, colour, a);
         }
       }
-      cx += advance(ch) * sx;
+      cx += advance(ch, style) * sx;
     }
   };
   // OUTLINE IS INVERTED, AND THAT IS THE FIX (owner, 2026-09-06: "Outlined does nothing

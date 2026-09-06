@@ -1,5 +1,35 @@
 # Changelog
 
+## 0.27.0 — 2026-09-06
+
+### You can delete your own map
+
+Unpublishing hid a map; the only way to remove one was to delete your whole account. There is now a
+delete on the manage page, with the title typed back to confirm: the page, the file, the
+screenshots nothing else uses and the stars and comments all go. A banned picture stays banned and
+the audit record stays. If you only want it off the site, taking it down is still there and keeps
+everything.
+
+### One place chooses the cover
+
+The designer opens with a row of pictures - the card, then every screenshot you have added - and
+what you pick is what the preview shows and what gets stored. The separate "Use as cover" button on
+each screenshot is gone: two controls did one job, and the preview showed the design either way, so
+a working press looked like a broken one. A picture that cannot be used is shown greyed with the
+reason rather than left out.
+
+### Two more alphabets
+
+"Round" is geometric - diamond bowls, cut corners, a pointed A. "Narrow" is a three-column alphabet
+of its own, not the base squeezed, and fits a title half again as long. The four old choices were
+one typeface with three treatments on it, which is why picking one changed so little.
+
+### The upload target is the size of the job
+
+The save-file field was the browser's default "Choose File", small and grey on a page whose whole
+purpose is to receive that file. It is now a drop zone you can click or drag onto, and it says
+which file it is holding.
+
 ## 0.26.0 — 2026-09-06
 
 ### The cover editor, on the owner's notes

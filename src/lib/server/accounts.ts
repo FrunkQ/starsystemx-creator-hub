@@ -53,6 +53,52 @@ export async function takeDownSystem(
   await badges.reconcile(sb, gates, system.creator_id);
 }
 
+/**
+ * DELETE ONE MAP - the creator's own, or an admin's decision.
+ *
+ * The owner, 2026-09-06: *"how do I as a user delete a starmap i uploaded - I can unpublish but not
+ * seen how to remove altogether."* You could not: unpublish hid it, and only deleting your whole
+ * account removed it. Somebody who uploaded a thing should be able to take it away again, and
+ * having to close their account to do it is not an answer (D-45).
+ *
+ * The same shape as `deleteCreator`, scoped to one map: gather what R2 holds, delete the ROW (the
+ * children go by cascade), then free the bytes nothing else references.
+ *
+ * WHAT IS NOT DELETED, and both are deliberate. A ledger VERDICT outlives the map that carried the
+ * bytes - a banned picture stays banned, which is the rule `deleteIfUnreferenced` was written for.
+ * And the audit row stays: the record of what was done is the point of having one.
+ */
+export async function deleteSystem(
+  env: HubEnv, sb: Db, gates: Gates,
+  system: { id: string; creator_id: string; title: string; cover_sha256?: string | null },
+  opts: { actorId: string | null; note?: string }
+): Promise<{ freed: number }> {
+  const hashes = new Set<string>(system.cover_sha256 ? [system.cover_sha256] : []);
+  const [{ data: linked }, { data: shots }] = await Promise.all([
+    sb.from('system_assets').select('sha256').eq('system_id', system.id),
+    sb.from('system_screenshots').select('sha256').eq('system_id', system.id)
+  ]);
+  for (const a of linked ?? []) hashes.add(a.sha256 as string);
+  for (const s of shots ?? []) hashes.add(s.sha256 as string);
+
+  const { error } = await sb.from('systems').delete().eq('id', system.id);
+  if (error) throw new Error('could not delete the map: ' + error.message);
+
+  await env.HUB_BUNDLES.delete(r2.bundleKey(system.id));
+  let freed = 0;
+  for (const h of hashes) {
+    try { if (await r2.deleteIfUnreferenced(env, sb, h)) freed++; }
+    catch (e) { console.warn('asset not freed', h, e); }
+  }
+
+  // The id is gone from `systems`, so the title goes in the detail or the log says nothing useful.
+  await audit.record(sb, opts.actorId, 'system.delete', 'system:' + system.id, opts.note,
+    { title: system.title, freed });
+  // A badge earned by a published map is lost with it.
+  await badges.reconcile(sb, gates, system.creator_id);
+  return { freed };
+}
+
 /** The reverse: back to public. (What it was before is not kept; public is what a takedown was about.) */
 export async function restoreSystem(
   sb: Db, gates: Gates, actorId: string, system: { id: string; creator_id: string }

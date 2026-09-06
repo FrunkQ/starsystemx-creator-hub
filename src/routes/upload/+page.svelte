@@ -9,6 +9,8 @@
   let { data } = $props();
 
   let file = $state<File | null>(null);
+  // Whether a file is being dragged over the drop zone, so it can light up and say "yes, here".
+  let dragging = $state(false);
   let attested = $state(false);
   // Set only after the hub has DETECTED GM content and the creator has said they meant it.
   let confirmGmTree = $state(false);
@@ -61,13 +63,35 @@
 {/if}
 
 <form class="panel" onsubmit={submit}>
-  <label>
-    Your save file
+  <!-- THE ONE THING THIS PAGE IS FOR (owner, 2026-09-06: "make this more obvious"). It was the
+       browser's default "Choose File / No file chosen", which is small, grey, and easy to miss on
+       a page whose entire purpose is to receive that file. Now it is a drop zone the size of the
+       job: click it, or drag the save onto it, and it says which file it is holding. -->
+  <label
+    class="drop"
+    class:has={!!file}
+    class:over={dragging}
+    ondragover={(e) => { e.preventDefault(); dragging = true; }}
+    ondragleave={() => (dragging = false)}
+    ondrop={(e) => {
+      e.preventDefault();
+      dragging = false;
+      const dropped = e.dataTransfer?.files?.[0];
+      if (dropped) file = dropped;
+    }}
+  >
     <input
       type="file"
       accept=".zip,.json,application/zip,application/json"
       onchange={(e) => (file = (e.currentTarget as HTMLInputElement).files?.[0] ?? null)}
     />
+    {#if file}
+      <strong>{file.name}</strong>
+      <span class="hint">{(file.size / 1024 / 1024).toFixed(1)} MB - click to choose a different one</span>
+    {:else}
+      <strong>Choose your save file</strong>
+      <span class="hint">or drag it here - a .sse.zip or a .json from Star System Explorer</span>
+    {/if}
   </label>
 
   <fieldset class="attest">
@@ -173,7 +197,19 @@
   h1 { margin: 0 0 6px; }
   .lede { color: var(--ink-dim); margin: 0 0 20px; max-width: 60ch; }
   label { display: block; margin: 12px 0; color: var(--ink-dim); }
-  input[type='file'] { display: block; margin-top: 6px; color: var(--ink); }
+  /* The drop zone: the file input is still the control - it is just given a body worth aiming at. */
+  .drop {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+    min-height: 130px; margin: 4px 0 18px; padding: 20px; text-align: center; cursor: pointer;
+    border: 2px dashed var(--edge); border-radius: var(--radius); background: var(--panel-2);
+    color: var(--ink);
+  }
+  .drop:hover, .drop.over { border-color: var(--accent); background: var(--panel); }
+  .drop.has { border-style: solid; border-color: var(--accent); }
+  .drop strong { font-size: 1.05rem; }
+  .drop .hint { color: var(--ink-faint); font-size: 0.9rem; }
+  /* The input itself is hidden: the label IS the button, and a label click opens the picker. */
+  .drop input[type='file'] { display: none; }
   fieldset { border: 1px solid var(--edge); border-radius: var(--radius); margin: 18px 0; padding: 12px 14px; }
   legend { color: var(--ink-faint); padding: 0 6px; font-size: 0.9rem; }
   .attest { border-color: var(--accent); }

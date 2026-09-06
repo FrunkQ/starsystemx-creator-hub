@@ -18,13 +18,12 @@
   let cover = $state({ ...data.coverOptions });
   const onOff = (v: boolean) => (v ? 'on' : 'off');
   // Screenshots a card can be drawn over: approved, and PNG or JPEG.
-  const drawable = $derived(data.screenshots.filter((sh) => sh.drawable));
   const previewUrl = $derived(
     '/api/cover/preview?' + new URLSearchParams({
       systemId: s.id, base: cover.base, palette: cover.palette, font: cover.font,
       title: onOff(cover.title), byline: onOff(cover.byline), counts: onOff(cover.counts),
       label: onOff(cover.label), qr: onOff(cover.qr),
-      baseImage: cover.base === 'image' ? (cover.baseImage ?? drawable[0]?.sha256 ?? '') : ''
+      baseImage: cover.base === 'image' ? (cover.baseImage ?? '') : ''
     }).toString()
   );
 
@@ -208,12 +207,6 @@
         <figure>
           <img src="/private/asset/{shot.sha256}" alt={shot.caption ?? 'Screenshot'} />
           {#if !shot.approved}<figcaption class="waiting">Awaiting review</figcaption>{/if}
-          <form method="POST" action="?/cover">
-            <input type="hidden" name="sha256" value={shot.sha256} />
-            <button type="submit" disabled={s.cover_sha256 === shot.sha256}>
-              {s.cover_sha256 === shot.sha256 ? 'Cover' : 'Use as cover'}
-            </button>
-          </form>
         </figure>
       {/each}
     </div>
@@ -234,29 +227,42 @@
   <div class="designer">
     <img class="preview" src={previewUrl} alt="Cover preview" width="1200" height="630" />
     <form method="POST" action="?/design" class="controls">
-      <label>
-        Picture
-        <select name="base" bind:value={cover.base}>
-          <option value="auto">Match the map ({s.kind === 'starmap' ? 'constellation' : 'orbits'})</option>
-          <option value="starmap">Constellation</option>
-          <option value="system">Orbits</option>
-          <option value="plain">Just stars</option>
-          <option value="image" disabled={!drawable.length}>One of my screenshots{drawable.length ? '' : ' (add an approved PNG or JPEG first)'}</option>
-        </select>
-      </label>
-      {#if cover.base === 'image' && drawable.length}
-        <!-- Which one. Only approved PNG or JPEG screenshots are offered: the card is stored as
-             hub-drawn, and that holds only if everything under the words was already looked at. -->
+      <!-- ONE PLACE TO CHOOSE THE PICTURE (owner, 2026-09-06; D-44): the drawn card, or any
+           screenshot you have ever added. One that cannot be used is shown and greyed with the
+           reason, rather than left out of a list you would then have to guess about. -->
+      <fieldset class="pictures">
+        <legend>Picture</legend>
         <div class="thumbs">
-          {#each drawable as sh (sh.sha256)}
-            <label class="thumb" class:on={(cover.baseImage ?? drawable[0]?.sha256) === sh.sha256}>
-              <input type="radio" name="baseImage" value={sh.sha256}
-                checked={(cover.baseImage ?? drawable[0]?.sha256) === sh.sha256}
-                onchange={() => (cover.baseImage = sh.sha256)} />
+          <button type="button" class="thumb card" class:on={cover.base !== 'image'}
+                  onclick={() => (cover.base = 'auto')}>
+            <span>The card</span>
+          </button>
+          {#each data.screenshots as sh (sh.sha256)}
+            <button type="button" class="thumb" class:on={cover.base === 'image' && cover.baseImage === sh.sha256}
+                    disabled={!sh.drawable} title={sh.why ?? 'Use this picture'}
+                    onclick={() => { cover.base = 'image'; cover.baseImage = sh.sha256; }}>
               <img src="/private/asset/{sh.sha256}" alt={sh.caption ?? 'Screenshot'} />
-            </label>
+              {#if sh.why}<span class="why">{sh.why}</span>{/if}
+            </button>
           {/each}
         </div>
+        {#if !data.screenshots.length}
+          <p class="muted">Add a screenshot above and it appears here.</p>
+        {/if}
+      </fieldset>
+      {#if cover.base !== 'image'}
+        <label>
+          What to draw
+          <select name="base" bind:value={cover.base}>
+            <option value="auto">Match the map ({s.kind === 'starmap' ? 'constellation' : 'orbits'})</option>
+            <option value="starmap">Constellation</option>
+            <option value="system">Orbits</option>
+            <option value="plain">Just stars</option>
+          </select>
+        </label>
+      {:else}
+        <input type="hidden" name="base" value="image" />
+        <input type="hidden" name="baseImage" value={cover.baseImage ?? ''} />
       {/if}
       <label>
         Palette
@@ -274,6 +280,8 @@
           <option value="bold">Bold</option>
           <option value="outline">Outlined</option>
           <option value="wide">Wide</option>
+          <option value="round">Round</option>
+          <option value="narrow">Narrow</option>
         </select>
       </label>
       <div class="checks">
@@ -289,7 +297,6 @@
       <input type="hidden" name="counts" value={onOff(cover.counts)} />
       <input type="hidden" name="label" value={onOff(cover.label)} />
       <input type="hidden" name="qr" value={onOff(cover.qr)} />
-      {#if cover.base === 'image' && !cover.baseImage && drawable[0]}<input type="hidden" name="baseImage" value={drawable[0].sha256} />{/if}
       <button class="primary" type="submit" disabled={!data.designer.allowed}>Use this cover</button>
       <p class="muted small">
         {#if data.coverIsScreenshot}Current cover: one of your screenshots.{:else if s.cover_sha256}Current cover: a card like this.{:else}No cover yet.{/if}
@@ -307,8 +314,24 @@
   </button>
 </form>
 
+<!-- 5. Yours to upload, yours to take away (D-45). Unpublishing hides a map; this removes it. -->
+<form class="panel danger-zone" method="POST" action="?/deleteMap">
+  <h2>Delete this map</h2>
+  <p class="muted">
+    It goes from the hub for good: the page, the file people download, the screenshots nothing else
+    uses, and the stars and comments it collected. This cannot be undone.
+    <strong>If you only want it off the site, take it down above instead</strong> - that keeps
+    everything and you can publish it again whenever you like.
+  </p>
+  <label class="note">Type <code>{s.title}</code> to confirm <input name="confirm" autocomplete="off" /></label>
+  <button class="danger" type="submit">Delete "{s.title}"</button>
+</form>
+
 <style>
   h1 { margin: 0 0 4px; }
+  .danger-zone { border-color: var(--bad); margin-top: 32px; }
+  .danger-zone .note { display: block; margin: 12px 0; color: var(--ink-dim); }
+  .danger-zone input { margin-left: 8px; }
   .by { margin: 0 0 6px; color: var(--ink-faint); }
   .nudge h2 { display: flex; align-items: center; gap: 8px; margin: 0 0 6px; font-size: 1.05rem; }
   .nudge p { margin: 0; max-width: 72ch; }
@@ -316,10 +339,21 @@
   .inline { display: inline; }
   .linkish { background: none; border: none; padding: 0; font: inherit; color: var(--accent); cursor: pointer; }
   .thumbs { display: grid; gap: 6px; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); margin: 0 0 8px; }
-  .thumb { margin: 0; cursor: pointer; border: 2px solid transparent; border-radius: 6px; overflow: hidden; }
-  .thumb.on { border-color: var(--accent); }
-  .thumb input { display: none; }
   .thumb img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; display: block; }
+  .pictures { border: 1px solid var(--edge); border-radius: var(--radius); padding: 10px 12px; margin: 0 0 12px; }
+  .pictures legend { color: var(--ink-faint); padding: 0 6px; font-size: 0.9rem; }
+  /* A picture that cannot be used is SHOWN and greyed, with the reason, rather than left out. */
+  .thumb {
+    position: relative; margin: 0; padding: 0; overflow: hidden; cursor: pointer;
+    border: 2px solid var(--edge); border-radius: 6px; background: var(--panel-2);
+  }
+  .thumb.on { border-color: var(--accent); }
+  .thumb:disabled { cursor: not-allowed; opacity: 0.4; }
+  .thumb.card { display: grid; place-items: center; aspect-ratio: 16 / 9; color: var(--ink-dim); font-size: 0.85rem; }
+  .thumb .why {
+    position: absolute; left: 0; right: 0; bottom: 0; padding: 2px 4px;
+    background: rgba(0, 0, 0, 0.72); color: var(--ink-dim); font-size: 0.72rem;
+  }
   h2 { margin: 0 0 10px; font-size: 1.1rem; }
   .muted { color: var(--ink-dim); margin: 0 0 12px; max-width: 62ch; }
   label { display: block; margin: 12px 0; color: var(--ink-dim); }
@@ -354,7 +388,6 @@
   figure { margin: 0; }
   figure img { width: 100%; border-radius: 8px; border: 1px solid var(--edge); display: block; }
   .waiting { color: var(--warn); font-size: 0.82rem; margin: 4px 0; }
-  figure form { margin-top: 6px; }
   .designer { display: grid; grid-template-columns: minmax(0, 1fr) 250px; gap: 16px; align-items: start; }
   @media (max-width: 720px) { .designer { grid-template-columns: 1fr; } }
   .preview { width: 100%; height: auto; border-radius: var(--radius); border: 1px solid var(--edge); display: block; background: var(--bg); }
