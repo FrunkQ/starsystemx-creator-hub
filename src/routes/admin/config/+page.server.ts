@@ -7,6 +7,7 @@ import * as audit from '$lib/server/audit';
 import { isDiscordWebhook } from '$lib/server/integrations/share';
 import { postShare } from '$lib/server/integrations/discord';
 import { readCache, shippedManifest } from '$lib/server/shippedContent';
+import { sendMail } from '$lib/server/mail';
 
 export const load: PageServerLoad = async ({ platform, locals, url }) => {
   const env = platform?.env;
@@ -131,6 +132,34 @@ export const actions: Actions = {
         + (manifest.calendars?.length ?? 0) + ' calendars and '
         + (manifest.tagCategories?.length ?? 0) + ' tag categories.'
     };
+  },
+
+  /**
+   * THE HUB'S OWN MAIL, which is a different thing from the button below (D-49). That one asks
+   * SUPABASE to send one of its auth templates, and proves the SMTP settings in its dashboard.
+   * This one is the hub writing a message itself, through Resend, which is what the takedown form
+   * and the queue nudge use - and it can be broken while the other works.
+   */
+  testHubMail: async ({ platform, locals, url }) => {
+    const { env, me } = admin(platform, locals);
+    const sb = db(env);
+    const [gates, site] = await Promise.all([loadGates(sb), loadSite(sb, url)]);
+    if (!gates.mail_admin) return fail(400, { message: 'Set mail_admin first - that is where the hub writes to.' });
+    if (!gates.mail_from) return fail(400, { message: 'Set mail_from first - the address the hub sends as, on the verified domain.' });
+
+    const result = await sendMail(env, gates, {
+      to: gates.mail_admin,
+      subject: 'The hub can send mail',
+      text: [
+        'If you are reading this, ' + site.url + ' can send its own mail.',
+        '',
+        'That is what the takedown form and the review-queue nudge use. It is not the same path as',
+        'the password-reset test, which asks Supabase to send one of its own templates.'
+      ].join('\n')
+    });
+    if (!result.ok) return fail(502, { message: 'It did not send: ' + result.reason });
+    await audit.record(sb, me.id, 'mail.test-hub', 'config:mail_from');
+    return { tested: 'Sent to ' + gates.mail_admin + '. If it arrives, the hub can write to you.' };
   },
 
   /**

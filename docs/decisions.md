@@ -1187,6 +1187,52 @@ to be.
 standing rule (D-26): the re-index re-reads the kind from the stored bytes. It is on the manage
 page as a button, so the owner's map is one press from being a system again.
 
+### D-49. The hub can write to you, and two workarounds come out
+
+The owner, 2026-09-06: *"i got a password reset e-mail. means we have mail working - so we can
+probably fix a couple of the workarounds now - like the takedown can be sent to admin with the
+appropriate header and i can start getting mails to approve stuff."*
+
+**HALF TRUE, AND THE HALF THAT IS NOT MATTERS.** The password reset proves the Resend credentials
+and the verified domain, because Supabase Auth sent it through the SMTP settings in its dashboard.
+It does not give the hub a way to send mail: `resetPasswordForEmail` is Supabase sending one of ITS
+templates to a user of ITS auth system, and there is no "send this text to this person" anywhere in
+it. So the hub now calls **Resend's API directly** - one POST, no SMTP library, nothing held open,
+which is a Worker's natural shape anyway.
+
+**Inert until configured, exactly like the Discord integration:** `RESEND_API_KEY` as a Worker
+secret, `mail_from` and `mail_admin` as config rows (migration 0030). With any of the three missing
+nothing is sent, every surface says so, and the outbox leaves the intent PENDING rather than failed -
+it is waiting, not broken. **The key is a secret and not a row** because a row is readable by
+anything that can read the config table, and a sending key is a sending key.
+
+**The takedown form, which D-16 refused to build.** That refusal was right at the time and its
+reason was written down: *"a form that silently fails is worse than an address - a copyright claim
+that never arrives is the one message here that must not go missing."* Only the first half of that
+has changed, so: the form is offered AS WELL as the address, never instead. It rides the outbox, so
+a claim that fails to send is retried rather than lost; it carries the reporter's address as
+`reply_to`, so the notice comes from the hub's own domain (and is not filtered as a forgery) while
+pressing reply reaches the person. Every refusal hands back what they typed, because a form that
+empties itself when it says no is a form people abandon.
+
+**The dedupe key is the CONTENT and the hour**, not the person and the hour. Pressing Send twice
+sends one message; a second, different report in the same hour goes through. Keying on the sender
+would have silently swallowed a real second claim - the exact failure this whole page is written
+around.
+
+**And the nudge: "something is waiting for you".** The queues have been visible since D-38, but
+only to somebody already looking at the site, and a queue gets read when it comes to you. Three
+rules, each about not becoming noise: it writes only when something is ACTUALLY waiting (a mail
+saying "nothing to do" teaches you to filter the sender); at most one every six hours, enforced by
+the outbox's unique dedupe key rather than a new table; and work younger than thirty minutes does
+not count, because a picture uploaded a minute ago is not a backlog. It rides the existing
+fifteen-minute cron, so there is no new schedule and no new secret.
+
+**A third test button, because the two paths can break independently.** "Send me a test email"
+asks Supabase to send one of its templates and proves its SMTP; "Send a test from the hub itself"
+is the hub writing a message through Resend, which is what the form and the nudge use. Either can
+work while the other does not, and a single button would have hidden that.
+
 ### D-16. The takedown address is assembled at runtime, never served as text
 
 The owner's instruction was explicit: keep it off the page as scrapable text. It is stored as
@@ -1200,6 +1246,10 @@ looks, and nothing rendered client-side ever could. It is a spam measure, not a 
 **Why not a contact form:** it needs a mail-sending backend the hub does not have, and a form that
 silently fails is worse than an address — a copyright claim that never arrives is the one message
 here that must not go missing.
+
+**ANSWERED 2026-09-06 (D-49), and only the first half changed.** The hub can send mail now, so
+there IS a form - but the address stays on the page beside it, because the second half of that
+sentence is still true. A broken form must never be the only way out of this page.
 
 **The one open question this leaves:** confirmation that a rejected asset leaves its map
 published-without-it rather than taking the map down. The terms now say so in the takedown page

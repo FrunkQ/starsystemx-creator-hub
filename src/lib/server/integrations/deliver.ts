@@ -7,6 +7,7 @@
 import type { Db } from '../database.types';
 import type { HubEnv } from '../db';
 import type { Gates } from '../config';
+import { sendMail, mailReady } from '../mail';
 import * as outbox from './outbox';
 import { applyRole, postShare, settingsFrom } from './discord';
 import type { SharePayload } from './share';
@@ -30,6 +31,14 @@ export async function drainOutbox(env: HubEnv, sb: Db, gates: Gates, siteName: s
       } else if (item.kind === 'discord.share') {
         if (!gates.discord_share_webhook) { skipped++; continue; }
         await postShare(gates.discord_share_webhook, item.payload as unknown as SharePayload, siteName);
+      } else if (item.kind === 'mail.takedown' || item.kind === 'mail.queue') {
+        // Mail the hub sends itself (D-49). Same rule as the Discord kinds: with no key and no
+        // from-address it is WAITING, not broken, so it stays pending for the day they are set.
+        if (!mailReady(env, gates)) { skipped++; continue; }
+        const p = item.payload as { to?: string; subject?: string; text?: string; replyTo?: string };
+        if (!p.to || !p.subject || !p.text) throw new Error('incomplete payload');
+        const result = await sendMail(env, gates, { to: p.to, subject: p.subject, text: p.text, replyTo: p.replyTo });
+        if (!result.ok) throw new Error(result.reason);
       } else {
         throw new Error('unknown kind: ' + item.kind);
       }

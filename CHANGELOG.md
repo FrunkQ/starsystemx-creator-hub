@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.29.0 — 2026-09-06
+
+### The hub can send its own mail
+
+The password-reset test proved the Resend credentials and the domain - but that was Supabase Auth
+sending one of its own templates, which gives the hub no way to send anything. It now calls
+Resend's API directly: one POST, inert until `RESEND_API_KEY` is set as a Worker secret and the
+`mail_from` and `mail_admin` rows are filled (migration 0030). With any of the three missing,
+nothing is sent, every surface says so, and a queued message waits rather than failing.
+
+### A contact form on the takedown page
+
+The one D-16 refused to build, because the hub could not send mail and "a form that silently fails
+is worse than an address". Only that first half changed, so the form is offered **as well as** the
+address, never instead. It goes through the outbox, so a claim that does not send first time is
+retried rather than lost, and it carries the reporter's address as reply-to - the notice comes from
+the hub's own domain and pressing reply reaches them.
+
+### A nudge when something is waiting
+
+Pictures to review, tags to look at, reports still open - mailed to `mail_admin`. Only when
+something is genuinely waiting, at most one every six hours, and nothing under half an hour old
+counts, because a picture uploaded a minute ago is not a backlog. It rides the existing cron.
+
+The Gates page now has two mail tests, because the two paths break independently: one asks Supabase
+to send an auth template, the other is the hub writing a message itself.
+
 ## 0.28.0 — 2026-09-06
 
 ### A single system is no longer called a campaign

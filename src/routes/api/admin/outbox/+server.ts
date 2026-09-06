@@ -11,6 +11,7 @@ import { db } from '$lib/server/db';
 import { loadGates } from '$lib/server/config';
 import { loadSite } from '$lib/server/site';
 import { drainOutbox } from '$lib/server/integrations/deliver';
+import { queueNotice } from '$lib/server/queueNotice';
 
 export const POST: RequestHandler = async ({ platform, locals, request, url }) => {
   const env = platform?.env;
@@ -28,6 +29,12 @@ export const POST: RequestHandler = async ({ platform, locals, request, url }) =
 
   const sb = db(env);
   const [gates, site] = await Promise.all([loadGates(sb), loadSite(sb, url)]);
+
+  // BEFORE the drain, so anything it queues goes out in the same pass rather than waiting fifteen
+  // minutes for the next one (D-49). It never throws: a queue nudge that broke the drain would
+  // take the Discord posts down with it.
+  const notice = await queueNotice(env, sb, gates, site.url);
+
   const report = await drainOutbox(env, sb, gates, site.name);
-  return json({ ok: true, ...report });
+  return json({ ok: true, ...report, notice });
 };

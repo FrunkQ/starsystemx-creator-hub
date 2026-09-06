@@ -32,6 +32,12 @@ export interface HubEnv {
    * "cannot be turned back into an address" is only approximately true. `wrangler secret put VISITOR_SALT`.
    */
   VISITOR_SALT?: string;
+  /**
+   * The hub's own mail, through Resend's API (D-49). A SECRET, never a config row: a row is
+   * readable by anything that can read the config table, and a sending key is a sending key.
+   * `wrangler secret put RESEND_API_KEY`. Absent = the hub sends nothing and says so.
+   */
+  RESEND_API_KEY?: string;
 }
 
 export function db(env: HubEnv): Db {

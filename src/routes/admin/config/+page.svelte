@@ -28,7 +28,10 @@
       <button type="submit">Post a test to the Discord sharing channel</button>
     </form>
     <form method="POST" action="?/testMail">
-      <button type="submit">Send me a test email</button>
+      <button type="submit">Send me a test email (Supabase)</button>
+    </form>
+    <form method="POST" action="?/testHubMail">
+      <button type="submit">Send a test from the hub itself</button>
     </form>
     <form method="POST" action="?/refreshShipped">
       <button type="submit">Ask the engine what it ships</button>

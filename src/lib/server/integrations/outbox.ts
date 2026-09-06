@@ -11,11 +11,19 @@
 // happens constantly - every publish re-checks the badge rules) queues nothing new.
 import type { Db } from './../database.types';
 
-export type OutboxKind = 'discord.role.add' | 'discord.role.remove' | 'discord.share';
+export type OutboxKind =
+  | 'discord.role.add'
+  | 'discord.role.remove'
+  | 'discord.share'
+  // The hub's own mail (D-49). It rides the outbox for the same reason the Discord posts do:
+  // somebody else's service, inside a request that is about to return a page.
+  | 'mail.takedown'
+  | 'mail.queue';
 
 export interface Intent {
   kind: OutboxKind;
-  creatorId: string;
+  /** Null for an intent about nobody in particular - a takedown report, a queue nudge. */
+  creatorId: string | null;
   payload: Record<string, unknown>;
   /**
    * Must be a pure function of the INTENT, never of the moment. Including a timestamp here would

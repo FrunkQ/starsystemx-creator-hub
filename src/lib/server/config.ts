@@ -60,6 +60,16 @@ export interface Gates {
    * engine host, and they should name the same one.
    */
   sse_manifest_url: string;
+  /**
+   * THE HUB'S OWN MAIL (D-49, migration 0030). `mail_from` is the address it sends as - it must be
+   * on the verified Resend domain - and `mail_admin` is where a takedown notice or a review-queue
+   * nudge lands. The API key is a Worker secret (`RESEND_API_KEY`), never a row: a row is readable
+   * by anything that can read the config table, and a sending key is a sending key.
+   *
+   * Either one empty means the hub sends nothing, and says so where it would have offered to.
+   */
+  mail_from: string;
+  mail_admin: string;
   patreon_enabled: boolean;
   patreon_campaign_id: string;
   patreon_tier_map: Record<string, string>;
@@ -108,6 +118,8 @@ export const GATE_FALLBACKS: Gates = {
   // no `?open=` until the owner makes the read-tree release (measured 2026-09-06).
   open_in_sse_url: DEFAULT_OPEN_IN_SSE_URL,
   sse_manifest_url: DEFAULT_SSE_MANIFEST_URL,
+  mail_from: '',
+  mail_admin: '',
   patreon_enabled: false,
   patreon_campaign_id: '',
   patreon_tier_map: {}
