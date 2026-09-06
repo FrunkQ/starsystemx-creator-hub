@@ -28,3 +28,16 @@ describe('open in Star System Explorer', () => {
     expect(openLink(PREFIX, 'https://x.test', 'sol', undefined)).toBeNull();
   });
 });
+
+describe('the config row is an address, or it is off', () => {
+  it('refuses a prefix that is not an http(s) URL - "off" is a real off switch', () => {
+    expect(openLink('off', 'https://x.test', 'sol', 'starmap')).toBeNull();
+    expect(openLink('beta.starsystemx.com/?open=', 'https://x.test', 'sol', 'starmap')).toBeNull();
+    expect(openLink('   ', 'https://x.test', 'sol', 'starmap')).toBeNull();
+  });
+
+  it('tolerates a row somebody pasted with whitespace round it', () => {
+    expect(openLink('  ' + PREFIX + '  ', 'https://x.test', 'sol', 'starmap'))
+      .toBe(PREFIX + 'https%3A%2F%2Fx.test%2Fapi%2Fdownload%2Fsol');
+  });
+});

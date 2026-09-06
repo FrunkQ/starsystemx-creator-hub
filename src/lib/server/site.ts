@@ -3,11 +3,16 @@
 // Both are config rows because the hub is going to move hosts more than once. The name shows in
 // titles; the URL is what makes Open Graph previews work.
 //
-// THE FALLBACK IS THE IMPORTANT PART: with `site_url` unset, the request's own origin is used. That
-// means the hub is correct on workers.dev, on a custom domain, and on localhost with no
-// configuration whatsoever - and setting the row only becomes necessary when you want previews
-// pinned to a canonical host that differs from the one being served.
+// THE FALLBACK IS THE IMPORTANT PART, and it changed in 0.21.0: with `site_url` unset, `HUB_ORIGIN`
+// from `$lib/addresses` is used, and only then the request's own origin. The origin fallback made
+// the hub correct on any host with no configuration at all, which is a fine property for a page and
+// the wrong one for a URL the hub EMBEDS in a link somebody else fetches - the download URL inside
+// an "Open in Star System Explorer" link, an Open Graph tag, a cover's QR code. Those outlive the
+// request, and the engine only fetches hosts on its allow-list. So the address is a named default
+// with a row over it (the owner, 2026-09-06: "have it a base config item - so its easy to change
+// later"), and the request origin survives only as the last resort.
 import type { Db } from './database.types';
+import { HUB_ORIGIN } from '$lib/addresses';
 
 export interface Site {
   name: string;
@@ -31,7 +36,7 @@ export async function loadSite(sb: Db, requestUrl: URL): Promise<Site> {
     // A site that cannot read its own name should still render. Names are not a control surface.
   }
 
-  return { name, url: normalise(url) || requestUrl.origin };
+  return { name, url: normalise(url) || normalise(HUB_ORIGIN) || requestUrl.origin };
 }
 
 /** Absolute, http(s) only, no trailing slash. A malformed row falls back rather than breaking every page. */

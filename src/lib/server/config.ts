@@ -4,6 +4,7 @@
 // putting them in a table was that relaxing one should not need a deploy, and a long-lived cache
 // quietly reintroduces the wait it was meant to remove.
 import type { Db } from './database.types';
+import { DEFAULT_OPEN_IN_SSE_URL, DEFAULT_SSE_MANIFEST_URL } from '$lib/addresses';
 
 export interface Gates {
   uploads_per_user_per_day: number;
@@ -102,14 +103,31 @@ export const GATE_FALLBACKS: Gates = {
   discord_role_pro: '',
   discord_share_webhook: '',
   discord_badge_roles: {},
-  open_in_sse_url: '',
-  // Beta, because that is the only build serving it: production 404s the path until the owner
-  // makes the read-tree release (measured 2026-09-06).
-  sse_manifest_url: 'https://beta.starsystemx.com/shipped-content.json',
+  // BOTH DEFAULT TO BETA, from `$lib/addresses` - the one file that holds an address. Beta because
+  // that is the only build carrying R-13 and R-17: production 404s `/shipped-content.json` and has
+  // no `?open=` until the owner makes the read-tree release (measured 2026-09-06).
+  open_in_sse_url: DEFAULT_OPEN_IN_SSE_URL,
+  sse_manifest_url: DEFAULT_SSE_MANIFEST_URL,
   patreon_enabled: false,
   patreon_campaign_id: '',
   patreon_tier_map: {}
 };
+
+/**
+ * Gates that hold an ADDRESS, where an empty row means "nobody has said otherwise" and the code's
+ * default stands.
+ *
+ * Every other gate reads its row literally, and a `0` or a `false` has to mean what it says. An
+ * address is different: these rows were created empty by their migrations, before the engine could
+ * receive anything, and an empty string there is the absence of an answer rather than an answer.
+ * Reading it literally would mean the hub could only ever be pointed at the engine by hand, on
+ * every database, which is precisely the fiddling the owner asked to be rid of.
+ *
+ * THE OFF SWITCH IS STILL REAL: set the row to anything that is not an http(s) URL - `"off"` says
+ * it best - and the feature that needs an address is off, because nothing here will build a link
+ * out of it (`isHttpUrl`, and `openLink` refuses a prefix that is not one).
+ */
+const ADDRESS_GATES = ['open_in_sse_url', 'sse_manifest_url'] as const;
 
 export async function loadGates(sb: Db): Promise<Gates> {
   const { data, error } = await sb.from('config').select('key, value');
@@ -117,6 +135,9 @@ export async function loadGates(sb: Db): Promise<Gates> {
   const out = { ...GATE_FALLBACKS } as Record<string, unknown>;
   for (const row of data ?? []) {
     if (row.key in out) out[row.key] = row.value;
+  }
+  for (const key of ADDRESS_GATES) {
+    if (typeof out[key] !== 'string' || !String(out[key]).trim()) out[key] = GATE_FALLBACKS[key];
   }
   return out as unknown as Gates;
 }

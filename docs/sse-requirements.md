@@ -2,6 +2,21 @@
 
 **Written by the Creator Hub, for an agent working in the SSE repo. The hub does not edit that repo.**
 
+**SEAM PROTOCOL (2026-09-06, D-37). This file is the HUB's half of the contract with the engine:**
+the R-numbers as the hub wrote them and, under each, a **HUB-SIDE STATUS** saying what the hub has
+SET, CONSUMED and VERIFIED. The engine's half - the requirements banked verbatim, the coordinator's
+triage, and an `SSE-SIDE STATUS` under each R-number it ships - is
+`C:\Development\star-system-explorer-v2\<worktree>\docs\dev\hub-requirements-for-sse.md`. **Each
+side writes only its own half, reads the other's directly, and quotes it; a status that has been
+retold is not a status.** Every shipped R-number arrives as a fixed SEAM REPORT block and is pasted
+here unchanged. A change to the contract from this side goes back in the same shape with side `hub`,
+for the coordinator to paste into the engine's G57 row. The protocol and the Stream N checks live in
+the engine repo's `docs/dev/session-briefs-2026-08-28.md` under SEAM PROTOCOL.
+
+**The prod rule, stated once:** the engine's production is a read-tree release of beta on the
+owner's explicit word. Nothing here points the hub at `https://starsystemx.com` for a feature until
+he has said the release is made.
+
 Ordered by what unblocks what. R-01 and R-02 are the only ones the hub is currently *blocked* on;
 everything else makes the funnel work properly from inside the app.
 
@@ -384,6 +399,47 @@ destroying work.
 
 ## R-13. A machine-readable manifest of what SSE ships — SHIPPED engine-side, beta v3.0.315; WIRED UP hub-side in 0.20.0
 
+```
+SEAM REPORT | R-13 | engine | beta v3.0.315 (bfdacc90) | prod: NOT RELEASED
+sets:      fetch https://beta.starsystemx.com/shipped-content.json (the same path on https://starsystemx.com once released)
+must know: generated from the real sources and pinned by a spec, so it cannot drift; keys appVersion, bundleFormat,
+           appAssetPrefixes, calendars, tagCategories, starterModels, appImages, gases, liquids, fuels; everything under a
+           path in appAssetPrefixes is app artwork; lists are sorted; static JSON answers with
+           Access-Control-Allow-Origin: * on both prod and beta (measured 2026-09-06 against /temporal/calendars.json)
+verified:  five mutations seen red (a throwaway star image, a renamed calendar, a bump without a rebuild, a hand edit,
+           STAR_IMAGE pointed at a missing picture); CORS measured on both hosts
+not done:  the R-07 capture button (engine complete, surface undecided); R-04 upload, parked on the hub's pairing endpoint
+ready for: STREAM N N-3
+```
+
+**HUB-SIDE STATUS, 2026-09-06, hub 0.20.0 and 0.21.0.**
+
+- **SET.** `sse_manifest_url`, default `https://beta.starsystemx.com/shipped-content.json` from
+  `src/lib/addresses.ts` (`SSE_ORIGIN`), overridable by the config row; migration 0027 creates the
+  row and **the owner has run it**. Beta, not production, under the prod rule.
+- **CONSUMED.** `src/lib/server/shippedContent.ts` fetches it (4s deadline) and caches it in R2 at
+  `cache/shipped-content.json`; `src/lib/bundle/shipped.ts` reads it. Facet baselines come from
+  `calendars` and `tagCategories` (`baselineFrom` in `bundle/facetRules.ts`); app artwork is decided
+  by `appAssetPrefixes` (`isAppAsset`). **The hand-copied baselines are DELETED, not shadowed** -
+  `git show 0.20.0 -- src/lib/bundle/facetRules.ts` is the evidence. `gases`, `liquids` and `fuels`
+  are already named by the three R-11 rules, which stay `enabled: false` until a save carries the
+  container.
+- **THE STATED FALLBACK** (Stream N N-3.3 asks for this in the browser; the honest answer is that a
+  page never fetches it). The fetch is SERVER-SIDE, on the upload and re-index paths only, so an
+  unreachable manifest cannot break a page - no map page, card or browse view makes this request.
+  What degrades is the reading of a NEW upload: the last good manifest stands however old it is; a
+  failed check is remembered for fifteen minutes; and with no cached manifest at all the two
+  baseline facets are **skipped** rather than computed against nothing, because an empty baseline
+  reports every shipped calendar as custom. A re-index puts an affected map right afterwards.
+  `sse_manifest_url` set to `"off"` is the same path deliberately.
+- **VERIFIED.** Fetched live 2026-09-06 and parsed: `appVersion` `3.0.317` (it moved from .315 to
+  .317 during this work), 4 calendars, 13 tagCategories, 3 appAssetPrefixes, `Access-Control-Allow-Origin: *`.
+  Production 404s the path, as expected. Run over four real saves the manifest changes NOTHING today
+  (`temporal_registry` is empty since B112, and their `coiCategories` are `status`, `class`,
+  `disposition`, all of which the stale list already had) - **so the drift it fixes was latent, not
+  live.** 267 unit tests green, including "no baseline, no facet". **Not verified: a live ingest or
+  re-index through this path, which needs an upload or an admin.** That is N-3's to see.
+
 > **SHIPPED and in use.** `https://beta.starsystemx.com/shipped-content.json`, generated by the
 > engine's `scripts/shipped-manifest/build-shipped-manifest.mjs` and pinned by its suite. The hub
 > fetches and caches it (`src/lib/server/shippedContent.ts`), reads it in `bundle/shipped.ts`, and
@@ -605,6 +661,41 @@ half; it falls out of recording the chain faithfully.
 
 ## R-17. Open a hub map from a URL — SHIPPED engine-side, beta v3.0.314
 
+```
+SEAM REPORT | R-17 | engine | beta v3.0.314 (21779f3e) | prod: NOT RELEASED
+sets:      open_in_sse_url = https://beta.starsystemx.com/?open=
+must know: the parameter is `open` on the query string, not the hash; explorers.starsystemx.com answers 404 from Vercel
+           (DEPLOYMENT_NOT_FOUND) so download URLs must use the workers.dev origin until DNS moves; both hosts are already on
+           the allow-list (TRUSTED_OPEN_HOSTS, src/lib/hub/hubConfig.ts:90), so the cutover needs no engine release
+verified:  walked in a browser against the live hub - no campaign: opens; a campaign: asks in the picker's words; refused
+           host: plain message and no request; the parameter is stripped in every case
+not done:  -
+ready for: STREAM N N-1
+```
+
+**HUB-SIDE STATUS, 2026-09-06, hub 0.21.0.**
+
+- **SET.** `open_in_sse_url`, default `https://beta.starsystemx.com/?open=` from
+  `src/lib/addresses.ts`, overridable by the config row. **The row created by migration 0026 is
+  empty, and an empty ADDRESS row now means "nobody has said otherwise" so the default stands**
+  (`ADDRESS_GATES` in `server/config.ts`) - the owner asked for a variable he could change rather
+  than a row he had to set. The off switch is a row reading `"off"`, or anything that is not an
+  http(s) URL: `openLink` builds nothing from it.
+- **CONSUMED.** `src/lib/openInSse.ts` builds `prefix + encodeURIComponent(siteUrl + '/api/download/' + slug)`,
+  used by the map page, the cover link and every card.
+- **The download URL's host** is `site.url`: the `site_url` config row, and with it unset
+  `HUB_ORIGIN` = `https://starsystemx-creator-hub.orange-tree-847c.workers.dev` (0.21.0; it used to
+  be the request's own origin, which was right for a page and wrong for a link that outlives it).
+  **`explorers.starsystemx.com` is NOT used anywhere** - it 404s from Vercel, confirmed on both
+  sides, and moving to it is one constant or one row on the day the DNS moves.
+- **ONE THING THE HUB DOES THAT THE BLOCK DOES NOT COVER:** the control is hidden for a map whose
+  `kind` is not `starmap`, because `openHubBytes` refuses a single system. See R-18 - that is the
+  hub's SEAM REPORT going back the other way.
+- **VERIFIED.** Unit tests only, hub-side: the built URL, the `"off"` row, whitespace, the
+  single-system and unknown-kind refusals. **Not verified: the round trip in a browser** - a link
+  clicked, the engine's picker, the refusal, the stripped parameter. That is N-1's, and both halves
+  are now in place.
+
 > **SHIPPED, and the answer to the question this asked: the parameter is `open`, on the QUERY
 > STRING.** So the prefix for the hub's `open_in_sse_url` row is `https://beta.starsystemx.com/?open=`
 > now, and `https://starsystemx.com/?open=` only once the owner has released the engine to
@@ -705,6 +796,24 @@ question. Only the classification branch.
 
 **How the hub will know it can stop hiding the button:** it cannot, from the outside — say so, and
 the `kind !== 'starmap'` line comes out of `src/lib/openInSse.ts` with its test.
+
+**The block going the other way** (SEAM PROTOCOL rule 2, side `hub`; for the coordinator to paste
+into the engine's G57 row):
+
+```
+SEAM REPORT | R-18 | hub | 0.21.0 | prod: LIVE (the hub has one environment; a push to main is the deploy)
+sets:      nothing on the engine side. The hub hides "Open in Star System Explorer" where kind != 'starmap'
+must know: openHubBytes refuses a non-starmap with "That link points at a single system rather than a campaign";
+           the hub hosts both kinds and the SINGLE SYSTEM is the more common upload, so most of the library would
+           carry a button that opens the app to say it will not open the map; the ask is that ?open= hand a system
+           to the app's own Load System import path and let that path ask what it already asks; no change to ?hub=,
+           to TRUSTED_OPEN_HOSTS or to the replace-or-add question
+verified:  read in src/routes/+page.svelte (stream L worktree, 2026-09-06); the hub's gate is unit-tested
+           (tests/openInSse.test.ts) and the button is live-gated on kind, so nothing is broken today
+not done:  the hub cannot detect from outside when the engine gains the door - tell it, and the kind gate and its
+           test come out in one commit
+ready for: STREAM N N-1 (the starmap path only, until this ships)
+```
 
 ---
 

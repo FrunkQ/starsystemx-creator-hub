@@ -18,6 +18,7 @@
 // NOTHING HERE THROWS. An upload must not fail because another site was slow.
 // ============================================================================================
 import { parseShippedManifest, type ShippedManifest } from '$lib/bundle/shipped';
+import { isHttpUrl } from '$lib/addresses';
 import type { HubEnv } from './db';
 
 /** One object in the bundles bucket, overwritten in place. Never served to anyone. */
@@ -67,7 +68,9 @@ async function writeCache(env: HubEnv, cache: ShippedCache): Promise<void> {
 
 /** Ask the engine, once, with a deadline. Returns the parsed manifest or the reason it did not. */
 export async function fetchManifest(url: string): Promise<{ manifest: ShippedManifest } | { error: string }> {
-  if (!url) return { error: 'no manifest URL is configured' };
+  // `"off"` in the row - or anything else that is not an address - is a deliberate off switch, not
+  // a fetch to attempt. Same rule as `openLink`.
+  if (!isHttpUrl(url)) return { error: 'no manifest URL is configured' };
   let res: Response;
   try {
     res = await fetch(url, {

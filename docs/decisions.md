@@ -779,6 +779,63 @@ unset for that reason — `loadSite()` then builds download URLs from the origin
 answers — and both the requirement and this file now say so, because the next person to read them
 will believe them.
 
+### D-37. The seam has a protocol: two halves, no paraphrase, and one address file
+
+From the SSE coordinator through the owner, 2026-09-06. The protocol is written in the engine repo
+(`docs/dev/session-briefs-2026-08-28.md`, "SEAM PROTOCOL"); this records what the hub adopts, and
+what the hub changed to obey it.
+
+**Why it exists, in the coordinator's own words:** *"the contract between them drifted three times
+in one week: the hub's file still said 'paste UI pending' a day after the engine shipped it; the
+engine's copy of the requirements lacked R-17 until a brief told a stream to add it; and the rule
+that the 'Open in Star System Explorer' prefix goes to BETA first lived in nobody's file. None of
+that was a misunderstanding of terms. It was two copies of one contract, and checks that no
+single-repo agent can run."* That matches what this session found from the other end: R-13 and R-17
+had both shipped and the hub's file still called them open, and R-17's own worked example named a
+host that answers 404.
+
+**Rule 1, two halves.** `docs/sse-requirements.md` is the hub's half and now carries a **HUB-SIDE
+STATUS** under each shipped R-number: what the hub has SET, CONSUMED and VERIFIED - and, as
+important, what it has NOT verified and whose that is. The engine's half is its
+`docs/dev/hub-requirements-for-sse.md`. Each side writes only its own and quotes the other. **A
+status that has been retold is not a status.**
+
+**Rule 2, the SEAM REPORT block.** A shipped R-number arrives as one fixed block and is pasted
+whole. R-13's and R-17's are in place. R-18 is the first block going the other way, side `hub`.
+Pasting rather than summarising is the whole mechanism: a version, a commit and a URL that have
+been through somebody's paraphrase are the drift this is here to stop.
+
+**Stream N is fired by the OWNER, never by the hub.** The hub says `ready for: STREAM N N-x` when
+its half of a check is in place, and stops there.
+
+**What the hub changed to obey it.** The prod rule - production is a read-tree release on the
+owner's word - was already followed and was written in nobody's file, so it is now stated at the
+top of the hub's half and in `src/lib/addresses.ts`.
+
+**And that file is the other half of this decision, from the owner (2026-09-06):** *"URL is actually
+https://starsystemx-creator-hub.orange-tree-847c.workers.dev/ at the moment - have it a base config
+item - so its easy to change later - work off a variable just now so we can test."* `src/lib/addresses.ts`
+is now the only file in the hub that contains an address: where the hub answers, the name it will
+answer to one day, the engine's two origins, and the two defaults built from them. The engine keeps
+the same rule on its side (`src/lib/hub/hubConfig.ts`), which is what made its DNS cutover a
+one-line change rather than a hunt.
+
+**Two consequences worth stating, because both change behaviour:**
+
+1. **`site_url` unset now means `HUB_ORIGIN`, not the request's origin.** The origin fallback made
+   the hub correct on any host with no configuration, which is the right property for a page and the
+   wrong one for a URL the hub EMBEDS in a link somebody else fetches - a download URL inside an
+   "Open in SSE" link, an Open Graph tag, a cover's QR code. Those outlive the request, and the
+   engine only fetches hosts on its allow-list. A named default can be checked; an origin is
+   whatever the visitor typed.
+2. **An empty ADDRESS row means "nobody has said otherwise", so the code default stands.** Every
+   other gate reads its row literally - a `0` has to mean zero - but `open_in_sse_url` and
+   `sse_manifest_url` were created empty by their migrations, before the engine could receive
+   anything, and empty there is the absence of an answer. Reading it literally would mean the hub
+   could only ever be pointed at the engine by hand, on every database, which is the fiddling the
+   owner asked to be rid of. **The off switch stays real:** a row reading `"off"` - anything that is
+   not an http(s) URL - and nothing builds a link from it.
+
 ### D-16. The takedown address is assembled at runtime, never served as text
 
 The owner's instruction was explicit: keep it off the page as scrapable text. It is stored as

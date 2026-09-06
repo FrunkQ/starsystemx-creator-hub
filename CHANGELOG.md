@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.21.0 — 2026-09-06
+
+### Every address in one file, and the open button turns on
+
+`src/lib/addresses.ts` holds where the hub answers, the name it will answer to one day, and the
+engine's two origins - the owner's "have it a base config item so it's easy to change later". Both
+engine URLs default from it: `open_in_sse_url` is `https://beta.starsystemx.com/?open=` and
+`sse_manifest_url` the manifest beside it, so **"Open in Star System Explorer" is now on** without
+a row being set. An empty address row means "nobody has said otherwise" and the default stands; a
+row reading `off` (anything that is not an http(s) URL) is the off switch. Beta only, under the
+prod rule: production has neither feature until the owner makes the read-tree release.
+
+With `site_url` unset the hub now says it lives at the workers.dev origin rather than at whatever
+host the request arrived on - right for a link the hub embeds and somebody else fetches later, and
+one row (or one constant) to change when the DNS moves.
+
+### The seam has a protocol
+
+D-37. `docs/sse-requirements.md` is the hub's half of the contract with the engine and now carries
+a HUB-SIDE STATUS under each shipped R-number - what the hub has SET, CONSUMED and VERIFIED, and
+what it has not. The engine's SEAM REPORT blocks for R-13 and R-17 are pasted whole; R-18's goes
+back the other way. Ready for STREAM N N-1 and N-3.
+
 ## 0.20.0 — 2026-09-06
 
 ### What Star System Explorer ships is read from the engine, not copied out of it

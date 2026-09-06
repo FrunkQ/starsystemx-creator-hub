@@ -19,12 +19,16 @@
 // button returns everywhere. Until then the hub's own library is mostly single systems, and every
 // one of them would have been a dead end.
 // ============================================================================================
+import { isHttpUrl } from './addresses';
+
 // `kind` is REQUIRED, and an unknown kind gets no link: a caller who cannot say what the map is
 // cannot be promised that the app will open it.
 export function openLink(
   prefix: string | null | undefined, siteUrl: string, slug: string, kind: string | null | undefined
 ): string | null {
-  if (!prefix) return null;
+  // Not an address, no link. That is what makes `"off"` in the config row a working off switch,
+  // and it is also the guard against a half-typed row shipping a link to nowhere.
+  if (!isHttpUrl(prefix)) return null;
   if (kind !== 'starmap') return null;
-  return prefix + encodeURIComponent(siteUrl + '/api/download/' + slug);
+  return prefix.trim() + encodeURIComponent(siteUrl + '/api/download/' + slug);
 }
