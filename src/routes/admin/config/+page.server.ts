@@ -44,9 +44,16 @@ function admin(platform: App.Platform | undefined, locals: App.Locals) {
 }
 
 export const actions: Actions = {
-  // A gate an admin relaxes takes effect on the next request. That is the whole point of putting
-  // them in a table: a limit that needs a deploy to relax is a limit nobody relaxes (design 6.3).
-  default: async ({ request, platform, locals }) => {
+  /**
+   * A gate an admin relaxes takes effect on the next request. That is the whole point of putting
+   * them in a table: a limit that needs a deploy to relax is a limit nobody relaxes (design 6.3).
+   *
+   * NAMED `set`, NOT `default` (D-47). SvelteKit refuses a page that has a default action AND named
+   * ones - "When using named actions, the default action cannot be used" - and it refuses it at
+   * REQUEST time, as a 500, not at build time. This page grew its first named action in 0.18.0 and
+   * every button on it has thrown ever since: the two test buttons, and Set itself.
+   */
+  set: async ({ request, platform, locals }) => {
     const { env, me } = admin(platform, locals);
 
     const form = await request.formData();

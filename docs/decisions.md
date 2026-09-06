@@ -1119,6 +1119,41 @@ noticed: in both families the letter `O` and the digit `0` were the same glyph. 
 a slashed one. **A glyph set is data, and data can be checked** - `tests/families.test.ts` now
 refuses two characters drawn identically, which is a rule the eye finds only by accident.
 
+### D-47. Every button on the Gates page had been throwing for a fortnight
+
+The owner, 2026-09-06: *"I tested the mail and the discord link button. They both Error out with a
+500. BTW - when I add a new map it does get posted on my Discord."*
+
+**That second sentence is what made it findable.** The webhook works, the outbox works, `postShare`
+works - so the fault could not be in any of them, and a 500 rather than the 502 the action's own
+`catch` returns meant the throw happened before the code ever ran.
+
+**It is a SvelteKit rule, enforced at request time:**
+
+```
+if (actions.default && Object.keys(actions).length > 1) throw new Error(
+  'When using named actions, the default action cannot be used.')
+```
+
+The Gates page had `default` (Set a gate) from the beginning and grew its first NAMED action in
+0.18.0. From that moment every button on the page threw - not only the two test buttons but **Set
+itself**, which had worked for weeks. Nothing said a word: it is not a build error, not a type
+error, not a warning. The page renders perfectly and dies on the POST.
+
+`default` is now `set`, and the form names it.
+
+**The test is the point of this entry.** The rule is one grep over the source, so
+`tests/actions.test.ts` reads every `+page.server.ts` and refuses a default action beside named
+ones. It was run against the fault put deliberately back before being trusted - it named the file
+and listed the four actions - and the check that the heuristic itself still matches this codebase's
+way of writing an action is in there too, because a source-scanning test that quietly matches
+nothing passes every case.
+
+**What this says about the two things it broke.** "Send me a test email" has never once been
+pressable, so SMTP is still entirely unproven - the URL configuration is set, and the button that
+would test it was broken. And any config row the owner has ever set was set in SQL, because the
+page could not do it.
+
 ### D-16. The takedown address is assembled at runtime, never served as text
 
 The owner's instruction was explicit: keep it off the page as scrapable text. It is stored as

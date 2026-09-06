@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.27.1 — 2026-09-06
+
+### Every button on the Gates page works again
+
+SvelteKit refuses a page that has a default form action beside named ones - "When using named
+actions, the default action cannot be used" - and it refuses it as a 500 on the POST, with no
+build error, no type error and no warning. The Gates page grew its first named action in 0.18.0,
+and from that moment every button on it threw: both test buttons, the engine-manifest refresh, and
+the Set that had worked until then. The default action is now named `set`.
+
+So: "Send me a test email" has never actually been pressable, and SMTP is still unproven. A test
+now reads every page's actions and refuses the combination.
+
 ## 0.27.0 — 2026-09-06
 
 ### You can delete your own map

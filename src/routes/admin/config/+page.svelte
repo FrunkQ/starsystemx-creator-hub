@@ -75,7 +75,7 @@
       <tr>
         <td><code>{row.key}</code></td>
         <td>
-          <form method="POST" class="inline">
+          <form method="POST" action="?/set" class="inline">
             <input type="hidden" name="key" value={row.key} />
             <input name="value" value={JSON.stringify(row.value)} size="12" />
             <button type="submit">Set</button>
