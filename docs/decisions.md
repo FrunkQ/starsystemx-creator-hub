@@ -1529,6 +1529,41 @@ several times over - the stamp that is not the gate (R-10), the attributions fil
 verdict (`ATTRIBUTIONS.md`), the hand-copied baseline that was not the engine's list (D-36). **The
 right move when two things could answer one question is usually to keep having one.**
 
+### D-59. Every credit on the map, in one place, with a licence you can pick or type
+
+The owner, 2026-09-06, two notes in a minute: *"licence selection should be a drop down box and a
+manual type in"* and *"user should be able to see all the attributions on their file and update them
+in the same way."*
+
+**A `<datalist>` is both controls at once.** Pick a suggestion, or type a licence the hub has never
+heard of - a studio's own terms, a line from a bundle nobody else has - and it posts as plain text
+either way, so nothing downstream needs to know which happened. A `<select>` with an "Other..."
+option is the same idea with an extra click and a second piece of state to keep in step, and the
+"Other" box is always the one that gets forgotten.
+
+**Why suggest at all, when the field was already free text:** "CC BY 4.0", "cc-by-4", "CC-BY" and
+"Creative Commons Attribution" are one licence spelled four ways, and the hub SHOWS this string to
+whoever downloads the map. Making the common answer the easy one is the same reasoning as the
+creator vocabulary. **It is not a validation** - a licence the hub has not heard of is somebody's
+real licence, and `tests/licences.test.ts` says so out loud so that stays deliberate.
+
+**And the list agrees with the gate, which is pinned rather than assumed.** `breachesCcBy` refuses
+any CC-BY variant with nobody named; every suggestion containing "CC BY" trips it, and none of the
+others does - including **CC0, the one that looks like it should and must not**, because CC0 asks
+for nothing. A dropdown that suggested something the gate then refused, for a reason the creator
+could not see, would be worse than no dropdown.
+
+**The credits moved out of the failure notice and into a panel of their own.** They were only
+visible when they were BLOCKING a publish, which meant a credit that was merely thin - a licence and
+no name, a name and no source - had nowhere to be improved. Now every asset the map carries is
+listed, blocked ones first and marked with why, each with the same four fields. A model shows a
+label rather than a broken thumbnail, and a picture still waiting on review says that instead.
+
+**The shape that came out of it is better than what was asked for:** the notice at the top says
+there is a problem and links down, the panel is where the work happens, and the Publish button says
+why it is asleep (D-55). Three places, each doing one job, rather than one notice trying to do all
+three.
+
 ### D-16. The takedown address is assembled at runtime, never served as text
 
 The owner's instruction was explicit: keep it off the page as scrapable text. It is stored as

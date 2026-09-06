@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.38.0 — 2026-09-06
+
+### Every credit on your map, in one place
+
+The credit fields were only visible when an asset was blocking a publish, so a thin credit - a
+licence and no name, a name and no source - had nowhere to be improved. There is a Credits panel
+now listing everything the map carries, blocked ones first and marked with why. A model shows a
+label rather than a broken thumbnail.
+
+### The licence field suggests and still accepts anything
+
+A list of the common ones - CC0, the CC BY variants, my own work, used with permission, bought -
+that you can pick from or type straight past. It is a suggestion, never a validation, and the list
+agrees with the gate: every CC-BY option needs a name and none of the others does, CC0 included.
+
 ## 0.37.0 — 2026-09-06
 
 ### A clip's `kind` and `roleHint` are a promise now, not an accident

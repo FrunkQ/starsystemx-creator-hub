@@ -2,6 +2,7 @@
   import InfoDensity from '$lib/components/InfoDensity.svelte';
   import { densityFrom, densityLevel, densitySummary, FULL_DESCRIPTION } from '$lib/bundle/density';
   import { coverCrop } from '$lib/cover/image';
+  import { LICENCES } from '$lib/licences';
   import { COVER_W, COVER_H, renderCover } from '$lib/cover/generate';
   let { data, form } = $props();
 
@@ -230,37 +231,15 @@
   <div class="panel notice bad"><p>{form.message}</p></div>
 {/if}
 
-<!-- FIX IT HERE (D-55). The notice used to say "go back to Star System Explorer, record it, export,
-     upload again" - four steps and another program, to type a name. This is the first time anybody
-     is asked the question, so it is the right place to answer it. -->
+<!-- THE NOTICE SAYS THERE IS A PROBLEM; THE PANEL BELOW IS WHERE IT IS FIXED (D-55, D-59). -->
 {#if !data.mayPublish}
-  <div class="panel notice" id="credits">
+  <div class="panel notice">
     <h3>{data.blocking.length} {data.blocking.length === 1 ? 'picture needs' : 'pictures need'} a source before you can share this</h3>
     <p>
-      It is how the artists whose work we all use get credited. Fill in whatever you know - who made
-      it, the licence, or where it came from. <strong>Any one of them is enough</strong>, and a
-      CC-BY licence needs a name because that is the whole of what CC-BY asks.
-    </p>
-    {#if form?.credited}<p class="ok">{form.credited}</p>{/if}
-    {#each data.blocking as b (b.sha256)}
-      <form class="credit" method="POST" action="?/credits">
-        <input type="hidden" name="sha256" value={b.sha256} />
-        <img src="/private/asset/{b.sha256}" alt="" />
-        <div class="fields">
-          {#if b.cc_by_breach}
-            <p class="bad">This is CC-BY with nobody named. Add the name.</p>
-          {/if}
-          <label>Who made it <input name="credit" value={b.credit ?? ''} maxlength="200" placeholder="A name, or a studio" /></label>
-          <label>Licence <input name="license" value={b.license ?? ''} maxlength="120" placeholder="CC-BY 4.0, CC0, my own work..." /></label>
-          <label>Where it came from <input name="source_url" value={b.source_url ?? ''} maxlength="500" placeholder="https://..." /></label>
-          <label>What it is <input name="title" value={b.title ?? ''} maxlength="200" placeholder="Optional" /></label>
-          <button class="primary" type="submit">Save this credit</button>
-        </div>
-      </form>
-    {/each}
-    <p class="muted">
-      Recording it in Star System Explorer and uploading again works too, and is better - the credit
-      then travels with the file wherever it goes.
+      It is how the artists whose work we all use get credited.
+      <a href="#credits">Fill it in below</a> - who made it, the licence, or where it came from.
+      <strong>Any one of them is enough</strong>, and a CC-BY licence needs a name because that is
+      the whole of what CC-BY asks.
     </p>
   </div>
 {/if}
@@ -355,6 +334,53 @@
     </div>
   {/if}
 </div>
+
+<!-- EVERY CREDIT ON THIS MAP (owner, 2026-09-06: "user should be able to see all the attributions
+     on their file and update them in the same way"). The blocked ones first, because those are the
+     ones stopping a publish - but a thin credit is worth fixing too, and there was nowhere to do it. -->
+{#if data.credits.length}
+  <div class="panel" id="credits">
+    <h2>Credits</h2>
+    <p class="muted">
+      Everything this map carries that somebody made. Any one of who, licence or where satisfies the
+      hub; all three are what an artist would want. A CC-BY licence needs a name.
+    </p>
+    {#if form?.credited}<p class="ok">{form.credited}</p>{/if}
+    <datalist id="licences">
+      {#each LICENCES as l (l)}<option value={l}></option>{/each}
+    </datalist>
+    {#each [...data.credits].sort((a, b) => Number(b.blocked) - Number(a.blocked)) as c (c.sha256)}
+      <form class="credit" class:blocked={c.blocked} method="POST" action="?/credits">
+        <input type="hidden" name="sha256" value={c.sha256} />
+        {#if c.isImage && c.approved}
+          <img src="/private/asset/{c.sha256}" alt="" />
+        {:else}
+          <div class="noshot">{c.isImage ? 'Waiting to be reviewed' : '3D model'}</div>
+        {/if}
+        <div class="fields">
+          {#if c.cc_by_breach}
+            <p class="bad">CC-BY with nobody named. Add the name.</p>
+          {:else if c.blocked}
+            <p class="bad">Nothing recorded. This one is stopping the publish.</p>
+          {/if}
+          <label>Who made it <input name="credit" value={c.credit ?? ''} maxlength="200" placeholder="A name, or a studio" /></label>
+          <label>
+            Licence
+            <input name="license" value={c.license ?? ''} maxlength="120" list="licences"
+                   placeholder="Pick one, or type your own" autocomplete="off" />
+          </label>
+          <label>Where it came from <input name="source_url" value={c.source_url ?? ''} maxlength="500" placeholder="https://..." /></label>
+          <label>What it is <input name="title" value={c.title ?? ''} maxlength="200" placeholder="Optional" /></label>
+          <button class="primary" type="submit">Save this credit</button>
+        </div>
+      </form>
+    {/each}
+    <p class="muted foot">
+      Recording it in Star System Explorer and uploading again works too, and is better - the credit
+      then travels with the file wherever it goes.
+    </p>
+  </div>
+{/if}
 
 <!-- 3. The cover: a screenshot above, or a card drawn from the map to the creator's design. -->
 <div class="panel">
@@ -570,7 +596,15 @@
   .why { margin: 10px 0 0; color: var(--warn); font-size: 0.9rem; }
   .ok { color: var(--accent); }
   /* One picture, its fields beside it: you cannot credit a thing you cannot see. */
-  .credit { display: grid; grid-template-columns: 140px minmax(0, 1fr); gap: 14px; margin: 14px 0 0; align-items: start; }
+  .credit { display: grid; grid-template-columns: 140px minmax(0, 1fr); gap: 14px; margin: 14px 0 0; align-items: start;
+            border-top: 1px solid var(--edge); padding-top: 14px; }
+  .credit.blocked { border-left: 2px solid var(--bad); padding-left: 12px; }
+  .noshot {
+    aspect-ratio: 16 / 9; display: grid; place-items: center; text-align: center;
+    background: var(--panel-2); border: 1px solid var(--edge); border-radius: 8px;
+    color: var(--ink-faint); font-size: 0.78rem; padding: 4px;
+  }
+  .foot { margin-top: 14px; }
   .credit img { width: 100%; border-radius: 8px; border: 1px solid var(--edge); display: block; }
   .credit label { display: block; margin: 0 0 8px; color: var(--ink-dim); font-size: 0.9rem; }
   .credit input {

@@ -58,14 +58,18 @@ export const load: PageServerLoad = async ({ params, platform, locals, url }) =>
 
   const hashes = (claims ?? []).map((c) => c.sha256);
   const shotHashes = (shots ?? []).map((s) => s.sha256);
+  const allHashes = [...new Set([...hashes, ...shotHashes])];
   const [approved, { data: shotAssets }] = await Promise.all([
-    ledger.approvedOnly(sb, [...hashes, ...shotHashes]),
-    shotHashes.length
-      ? sb.from('assets').select('sha256, mime, byte_size').in('sha256', shotHashes)
-      : Promise.resolve({ data: [] as { sha256: string; mime: string; byte_size: number }[] })
+    ledger.approvedOnly(sb, allHashes),
+    // Every claimed asset, not only the screenshots: the credits panel lists them all and needs to
+    // know which are pictures, because a model has no thumbnail to show (D-59).
+    allHashes.length
+      ? sb.from('assets').select('sha256, mime, byte_size, kind').in('sha256', allHashes)
+      : Promise.resolve({ data: [] as { sha256: string; mime: string; byte_size: number; kind: string }[] })
   ]);
   const mimeOf = new Map((shotAssets ?? []).map((a) => [a.sha256, a.mime]));
   const bytesOf = new Map((shotAssets ?? []).map((a) => [a.sha256, a.byte_size ?? 0]));
+  const kindOf = new Map((shotAssets ?? []).map((a) => [a.sha256, a.kind]));
 
   // WHY PUBLISHING IS BLOCKED, IN THE CREATOR'S OWN TERMS. A gate that just says "no" is a gate
   // people complain about; one that names the three pictures needing a credit is a gate they clear.
@@ -114,6 +118,20 @@ export const load: PageServerLoad = async ({ params, platform, locals, url }) =>
       };
     }),
     blocking,
+    /**
+     * EVERY credit on this map, not only the ones stopping a publish (owner, 2026-09-06: "user
+     * should be able to see all the attributions on their file and update them in the same way").
+     * A credit that is merely thin - a licence and no name, a name and no source - is worth fixing
+     * too, and there was nowhere to do it.
+     */
+    credits: (claims ?? []).map((c) => ({
+      sha256: c.sha256,
+      title: c.title, credit: c.credit, license: c.license, source_url: c.source_url,
+      blocked: !!(c.no_provenance || c.cc_by_breach),
+      cc_by_breach: !!c.cc_by_breach,
+      isImage: (kindOf.get(c.sha256) ?? 'image') !== 'model',
+      approved: approved.has(c.sha256)
+    })),
     mayPublish: blocking.length === 0,
     coverOptions: coverOptionsFrom(system.cover_options),
     // Is the current cover one of the creator's screenshots, or a card the hub drew?
