@@ -39,6 +39,13 @@ export interface Gates {
   // can become a Pro feature without a deploy. `cover_label` is the domain printed on the card.
   cover_designer_tier: 'free' | 'pro';
   cover_label: string;
+  /**
+   * MAY THE WORKER DECODE A PICTURE ITSELF? Off, and it should stay off on a free plan (D-53, D-54).
+   * Decoding a screenshot in pure JavaScript was measured at 168ms against a 10ms budget, and going
+   * over is a 1102 rather than an error page. The creator's browser prepares the pixels instead.
+   * Turn this on only somewhere with CPU to spend - it is a fallback, not a feature.
+   */
+  cover_server_decode: boolean;
 
   // Integrations. All inert until enabled and the secrets are set.
   discord_enabled: boolean;
@@ -117,6 +124,7 @@ export const GATE_FALLBACKS: Gates = {
 
   cover_designer_tier: 'free',
   cover_label: 'explorers.starsystemx.com',
+  cover_server_decode: false,
 
   discord_enabled: false,
   discord_guild_id: '',

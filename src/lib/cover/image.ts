@@ -79,15 +79,40 @@ export function decodeImage(bytes: Uint8Array): DecodedImage | null {
 }
 
 /**
+ * WHICH PART OF THE SOURCE ENDS UP ON THE CARD - `object-fit: cover`, as numbers.
+ *
+ * Pure, and exported, because TWO things do this fit now and they must agree exactly: the Worker
+ * (`coverFit` below, when a paid plan allows it) and THE BROWSER, which is where the work actually
+ * happens (D-54). A creator's canvas and the hub's rasteriser cropping differently would be a
+ * picture that jumps when it is re-prepared.
+ */
+export function coverCrop(
+  srcW: number, srcH: number, W: number, H: number,
+  focusX = 0.5, focusY = 0.5
+) {
+  const scale = Math.max(W / srcW, H / srcH);
+  const sw = W / scale, sh = H / scale;
+  // WHERE THE CROP SITS is the creator's to choose (owner, 2026-09-06: "let the user decide where
+  // the crop happens - they can slide it"). 0 is the top or left edge, 1 the bottom or right, 0.5
+  // the middle, which is what it always did. Clamped, so a focus of 2 is the far edge and not a
+  // crop that runs off the picture.
+  const clamp = (v: number) => (Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : 0.5);
+  return {
+    sx: (srcW - sw) * clamp(focusX),
+    sy: (srcH - sh) * clamp(focusY),
+    sw,
+    sh
+  };
+}
+
+/**
  * Scale to COVER the card and crop the middle - the way a browser's `object-fit: cover` does -
  * averaging the source pixels under each destination pixel so a 4K screenshot lands smooth rather
  * than sparkly. The cheap box filter is enough: the picture goes under text at a third of a
  * screen's width.
  */
-export function coverFit(img: DecodedImage, W: number, H: number): DecodedImage {
-  const scale = Math.max(W / img.width, H / img.height);
-  const srcW = W / scale, srcH = H / scale;
-  const ox = (img.width - srcW) / 2, oy = (img.height - srcH) / 2;
+export function coverFit(img: DecodedImage, W: number, H: number, focusX = 0.5, focusY = 0.5): DecodedImage {
+  const { sx: ox, sy: oy, sw: srcW, sh: srcH } = coverCrop(img.width, img.height, W, H, focusX, focusY);
   const out = new Uint8Array(W * H * 3);
   const sw = img.width;
 

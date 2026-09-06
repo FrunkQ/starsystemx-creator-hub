@@ -1,6 +1,8 @@
 <script lang="ts">
   import InfoDensity from '$lib/components/InfoDensity.svelte';
   import { densityFrom, densityLevel, densitySummary, FULL_DESCRIPTION } from '$lib/bundle/density';
+  import { coverCrop } from '$lib/cover/image';
+  import { COVER_W, COVER_H } from '$lib/cover/generate';
   let { data, form } = $props();
 
   const s = $derived(data.system);
@@ -18,14 +20,104 @@
   let cover = $state({ ...data.coverOptions });
   const onOff = (v: boolean) => (v ? 'on' : 'off');
   // Screenshots a card can be drawn over: approved, and PNG or JPEG.
+  // ============================================================================================
+  // THE PICTURE IS PREPARED HERE, IN THE BROWSER (D-54).
+  //
+  // Decoding a screenshot in pure JavaScript on a Worker was measured at 168ms against a free
+  // plan's 10ms of CPU, and going over is not an error page - Cloudflare kills the request. A
+  // browser does the same work in single figures using the graphics hardware it already has, so it
+  // does the work and posts the RESULT: 1200x630 of raw RGB, which the hub stores and later hands
+  // to the rasteriser with no decoding at all.
+  //
+  // The owner chose this over a paid plan: "i dont wanna be on the hook for any runaway cost."
+  // ============================================================================================
+  let preparing = $state(false);
+  let prepareError = $state<string | null>(null);
+  /** Bumped when new pixels land, so the preview <img> asks for them rather than using its cache. */
+  let prepared = $state(0);
+  /** Which crops this page has already sent, so sliding back and forth does not re-upload. */
+  const sent = new Set<string>();
+  /** The chosen picture's real size, for deciding which way it can slide. */
+  let source = $state<{ width: number; height: number } | null>(null);
+
+  /** Which axis has any slack. A cover fit only ever has one, and offering both would be a lie. */
+  const slides = $derived.by(() => {
+    if (cover.base !== 'image' || !source) return null;
+    const wanted = COVER_W / COVER_H;
+    const got = source.width / source.height;
+    if (Math.abs(got - wanted) < 0.01) return null;
+    return got > wanted ? 'x' : ('y' as const);
+  });
+
+  async function prepare(sha256: string, focusX: number, focusY: number) {
+    const key = [sha256, focusX.toFixed(2), focusY.toFixed(2)].join(':');
+    if (sent.has(key) || preparing) return;
+    preparing = true;
+    prepareError = null;
+    try {
+      const res = await fetch('/private/asset/' + sha256);
+      if (!res.ok) throw new Error('that picture could not be read');
+      const bitmap = await createImageBitmap(await res.blob());
+      source = { width: bitmap.width, height: bitmap.height };
+
+      const canvas = new OffscreenCanvas(COVER_W, COVER_H);
+      const ctx = canvas.getContext('2d', { alpha: false });
+      if (!ctx) throw new Error('this browser cannot prepare a picture');
+      const { sx, sy, sw, sh } = coverCrop(bitmap.width, bitmap.height, COVER_W, COVER_H, focusX, focusY);
+      ctx.drawImage(bitmap, sx, sy, sw, sh, 0, 0, COVER_W, COVER_H);
+      bitmap.close();
+
+      // RGBA from the canvas, RGB to the hub: the alpha channel is a quarter of the upload and the
+      // card has nothing to be transparent over.
+      const rgba = ctx.getImageData(0, 0, COVER_W, COVER_H).data;
+      const rgb = new Uint8Array(COVER_W * COVER_H * 3);
+      for (let i = 0, o = 0; o < rgb.length; i += 4, o += 3) {
+        rgb[o] = rgba[i]; rgb[o + 1] = rgba[i + 1]; rgb[o + 2] = rgba[i + 2];
+      }
+
+      const put = await fetch('/api/cover/fit?' + new URLSearchParams({
+        systemId: s.id, sha256, focusX: String(focusX), focusY: String(focusY)
+      }), { method: 'POST', headers: { 'content-type': 'application/octet-stream' }, body: rgb });
+      if (!put.ok) throw new Error(await put.text().catch(() => 'the hub would not take it'));
+
+      sent.add(key);
+      prepared++;
+    } catch (e) {
+      prepareError = (e as Error).message ?? 'that picture could not be prepared';
+    } finally {
+      preparing = false;
+    }
+  }
+
+  /** Pick a picture: prepare it at the current crop, then let the preview ask for it. */
+  function choosePicture(sha256: string) {
+    cover.base = 'image';
+    cover.baseImage = sha256;
+    source = null;
+    prepare(sha256, cover.focusX, cover.focusY);
+  }
+
+  /** Slide it: same picture, a different crop, so the pixels are made again. */
+  function slide(value: number) {
+    if (slides === 'x') cover.focusX = value;
+    else cover.focusY = value;
+    if (cover.baseImage) prepare(cover.baseImage, cover.focusX, cover.focusY);
+  }
+
   const previewUrl = $derived(
     '/api/cover/preview?' + new URLSearchParams({
       systemId: s.id, base: cover.base, palette: cover.palette, font: cover.font,
       title: onOff(cover.title), byline: onOff(cover.byline), counts: onOff(cover.counts),
       label: onOff(cover.label), qr: onOff(cover.qr),
-      baseImage: cover.base === 'image' ? (cover.baseImage ?? '') : ''
+      baseImage: cover.base === 'image' ? (cover.baseImage ?? '') : '',
+      focusX: String(cover.focusX), focusY: String(cover.focusY),
+      // Cache-buster: the preview is an <img>, and the fitted pixels behind it change when the
+      // slider moves. Without this the browser shows the previous crop from its own cache.
+      v: String(prepared)
     }).toString()
   );
+
+
 
   async function addScreenshot(e: Event) {
     const input = e.currentTarget as HTMLInputElement;
@@ -240,7 +332,7 @@
           {#each data.screenshots as sh (sh.sha256)}
             <button type="button" class="thumb" class:on={cover.base === 'image' && cover.baseImage === sh.sha256}
                     disabled={!sh.drawable} title={sh.why ?? 'Use this picture'}
-                    onclick={() => { cover.base = 'image'; cover.baseImage = sh.sha256; }}>
+                    onclick={() => choosePicture(sh.sha256)}>
               <img src="/private/asset/{sh.sha256}" alt={sh.caption ?? 'Screenshot'} />
               {#if sh.why}<span class="why">{sh.why}</span>{/if}
             </button>
@@ -248,6 +340,26 @@
         </div>
         {#if !data.screenshots.length}
           <p class="muted">Add a screenshot above and it appears here.</p>
+        {/if}
+
+        <!-- WHERE THE CROP SITS is the creator's (owner, 2026-09-06: "let the user decide where the
+             crop happens - they can slide it"). A cover fit only ever has slack on ONE axis, so the
+             page offers whichever is the live one rather than a slider that does nothing. -->
+        {#if cover.base === 'image'}
+          {#if preparing}
+            <p class="muted">Preparing the picture...</p>
+          {:else if prepareError}
+            <p class="bad">{prepareError}</p>
+          {:else if slides}
+            <label class="slide">
+              {slides === 'x' ? 'Slide across' : 'Slide up and down'}
+              <input type="range" min="0" max="1" step="0.02"
+                     value={slides === 'x' ? cover.focusX : cover.focusY}
+                     oninput={(e) => slide(Number((e.currentTarget as HTMLInputElement).value))} />
+            </label>
+          {:else if source}
+            <p class="muted">This picture is already the shape of the card - nothing to slide.</p>
+          {/if}
         {/if}
       </fieldset>
       {#if cover.base !== 'image'}
@@ -297,6 +409,8 @@
       <input type="hidden" name="counts" value={onOff(cover.counts)} />
       <input type="hidden" name="label" value={onOff(cover.label)} />
       <input type="hidden" name="qr" value={onOff(cover.qr)} />
+      <input type="hidden" name="focusX" value={cover.focusX} />
+      <input type="hidden" name="focusY" value={cover.focusY} />
       <button class="primary" type="submit" disabled={!data.designer.allowed}>Use this cover</button>
       <p class="muted small">
         {#if data.coverIsScreenshot}Current cover: one of your screenshots.{:else if s.cover_sha256}Current cover: a card like this.{:else}No cover yet.{/if}
@@ -388,6 +502,9 @@
   figure { margin: 0; }
   figure img { width: 100%; border-radius: 8px; border: 1px solid var(--edge); display: block; }
   .waiting { color: var(--warn); font-size: 0.82rem; margin: 4px 0; }
+  .bad { color: var(--bad); font-size: 0.85rem; margin: 8px 0 0; }
+  .slide { display: block; margin: 10px 0 0; color: var(--ink-dim); font-size: 0.9rem; }
+  .slide input { display: block; width: 100%; margin-top: 4px; }
   .designer { display: grid; grid-template-columns: minmax(0, 1fr) 250px; gap: 16px; align-items: start; }
   @media (max-width: 720px) { .designer { grid-template-columns: 1fr; } }
   .preview { width: 100%; height: auto; border-radius: var(--radius); border: 1px solid var(--edge); display: block; background: var(--bg); }

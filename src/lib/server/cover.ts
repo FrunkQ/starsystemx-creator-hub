@@ -67,7 +67,10 @@ export function coverFacts(subject: CoverSubject, nodes: CoverNode[], baseImage:
  * holds only if everything it drew over had already been looked at. Decoded and fitted here, or
  * null when it cannot be (WebP, GIF, a broken file), in which case the card falls back to itself.
  */
-export async function loadBaseImage(env: HubEnv, sb: Db, systemId: string, sha256: string | null): Promise<DecodedImage | null> {
+export async function loadBaseImage(
+  env: HubEnv, sb: Db, systemId: string, sha256: string | null,
+  focusX = 0.5, focusY = 0.5, serverDecode = false
+): Promise<DecodedImage | null> {
   if (!sha256) return null;
   const { data: mine } = await sb.from('system_screenshots')
     .select('sha256').eq('system_id', systemId).eq('sha256', sha256).maybeSingle();
@@ -77,20 +80,25 @@ export async function loadBaseImage(env: HubEnv, sb: Db, systemId: string, sha25
   // Worker does - measured at 168ms for a 4.9 megapixel PNG, against a free plan's 10ms of CPU -
   // and the cover preview re-renders on EVERY change a creator makes to the design. So the fit is
   // done once and the raw pixels are kept: a fetch and no decode at all thereafter (D-53).
-  const fitted = await readFit(env, sha256);
+  const fitted = await readFit(env, sha256, focusX, focusY);
   if (fitted) return fitted;
+
+  // NO FIT, AND NORMALLY NO DECODE EITHER (D-54). The creator's browser prepares the pixels; if it
+  // has not yet, the card falls back to drawing itself, which is a picture arriving a moment late
+  // rather than a Worker killed for trying. The server-side decode is behind a gate for the day
+  // this runs somewhere with CPU to spend - see `cover_server_decode`.
+  if (!serverDecode) return null;
 
   const obj = await r2.getAsset(env, sha256);
   if (!obj) return null;
   const bytes = new Uint8Array(await obj.arrayBuffer());
-  // A source too big to decode inside a request's budget is refused rather than attempted: an
-  // attempt does not fail politely, it takes the whole Worker down with a 1102 (D-53).
+  // Even then: too big is refused rather than attempted. An attempt does not fail politely (D-53).
   if (!withinDecodeBudget(bytes)) return null;
 
   const decoded = decodeImage(bytes);
   if (!decoded) return null;
-  const image = coverFit(decoded, COVER_W, COVER_H);
-  await writeFit(env, sha256, image);
+  const image = coverFit(decoded, COVER_W, COVER_H, focusX, focusY);
+  await writeFit(env, sha256, image, focusX, focusY);
   return image;
 }
 
@@ -101,11 +109,19 @@ export async function loadBaseImage(env: HubEnv, sb: Db, systemId: string, sha25
  * the cost this exists to remove. 1200 x 630 x 3 is 2.27 MB - a rounding error in R2, and free of
  * CPU at the far end.
  */
-const fitKey = (sha256: string) => `cache/fit/${sha256}-${COVER_W}x${COVER_H}.rgb`;
+/**
+ * Exported, because the browser's upload writes what this reads (`api/cover/fit`). The CROP is in
+ * the key: sliding the picture is a different set of pixels, not a stale cache to invalidate.
+ * Rounded to two places so a slider does not litter the bucket with near-identical copies.
+ */
+export const fitKey = (sha256: string, focusX = 0.5, focusY = 0.5): string => {
+  const at = (v: number) => (Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : 0.5).toFixed(2);
+  return `cache/fit/${sha256}-${COVER_W}x${COVER_H}-${at(focusX)}-${at(focusY)}.rgb`;
+};
 
-async function readFit(env: HubEnv, sha256: string): Promise<DecodedImage | null> {
+async function readFit(env: HubEnv, sha256: string, focusX: number, focusY: number): Promise<DecodedImage | null> {
   try {
-    const obj = await env.HUB_BUNDLES.get(fitKey(sha256));
+    const obj = await env.HUB_BUNDLES.get(fitKey(sha256, focusX, focusY));
     if (!obj) return null;
     const rgb = new Uint8Array(await obj.arrayBuffer());
     if (rgb.length !== COVER_W * COVER_H * 3) return null;
@@ -115,9 +131,9 @@ async function readFit(env: HubEnv, sha256: string): Promise<DecodedImage | null
   }
 }
 
-async function writeFit(env: HubEnv, sha256: string, image: DecodedImage): Promise<void> {
+async function writeFit(env: HubEnv, sha256: string, image: DecodedImage, focusX: number, focusY: number): Promise<void> {
   try {
-    await env.HUB_BUNDLES.put(fitKey(sha256), image.rgb as unknown as ArrayBuffer, {
+    await env.HUB_BUNDLES.put(fitKey(sha256, focusX, focusY), image.rgb as unknown as ArrayBuffer, {
       // Safe because the key carries the content hash AND the size: these bytes cannot change.
       httpMetadata: { contentType: 'application/octet-stream', cacheControl: 'public, max-age=31536000, immutable' }
     });
@@ -135,7 +151,9 @@ export async function factsFor(
     sb.from('constructs').select('*').eq('system_id', system.id),
     sb.from('creators').select('handle, display_name').eq('id', system.creator_id).maybeSingle()
   ]);
-  const baseImage = options.base === 'image' ? await loadBaseImage(env, sb, system.id, options.baseImage) : null;
+  const baseImage = options.base === 'image'
+    ? await loadBaseImage(env, sb, system.id, options.baseImage, options.focusX, options.focusY, gates.cover_server_decode)
+    : null;
   return coverFacts({
     // The byline is the DISPLAY name when there is one: what the person chose to be called.
     title: system.title, creator: creator?.display_name ?? creator?.handle ?? null, kind: system.kind,

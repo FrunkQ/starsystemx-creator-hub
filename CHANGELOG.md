@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.33.0 — 2026-09-06
+
+### The browser prepares a cover picture, and you choose the crop
+
+Decoding a screenshot on the Worker cost 168ms against a free plan's 10ms, so it moves to the one
+machine with CPU to spare: the page fits the picture and posts the raw pixels, which the hub stores
+and later draws over without decoding anything. No paid plan needed and no runaway cost.
+
+And the crop is yours: a slider, on whichever axis the picture actually has slack - a tall one
+slides up and down, a wide one side to side. The browser and the hub use the same crop maths, so
+what you slide to is what gets stored.
+
+The Worker's own decoder is still there but switched off (`cover_server_decode`, migration 0033).
+It belongs off on a free plan.
+
 ## 0.32.0 — 2026-09-06
 
 ### Using a screenshot as a cover background no longer kills the Worker

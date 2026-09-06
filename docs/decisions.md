@@ -1358,6 +1358,44 @@ disappear and removes a whole class of future limits; or the FITTING MOVES TO TH
 can resize an image for nothing, and the Worker is handed pixels it never has to decode. The second
 is real work and only worth doing if the plan is to stay free.
 
+### D-54. The browser prepares the picture, and the creator says where it is cropped
+
+The owner, 2026-09-06, choosing between a paid plan and moving the work: *"move to browser... i
+dont wanna be on the hook for any runaway cost."* Then, immediately: *"on the crop - let the user
+decide where the crop happens... they can slide it."*
+
+**THE EXPENSIVE HALF MOVES TO THE ONE MACHINE WITH CPU TO SPARE.** A browser decodes and rescales a
+4-megapixel screenshot in single figures using graphics hardware it already has; the same work in
+pure JavaScript on a Worker was measured at 168ms against a free plan's 10ms (D-53). So the page
+does it and posts the RESULT to `/api/cover/fit`, which stores it and spends nothing.
+
+**RAW RGB, NOT A PNG, and that is the whole point.** A PNG would have to be DECODED at the far end,
+which is precisely the cost being avoided; raw pixels are stored exactly as they arrive and handed
+to the rasteriser later with no work in between. 2.27 MB once per picture per crop, against never
+spending CPU on it again.
+
+**The validation is the LENGTH, and it is exact.** There is no way to send nearly the right number
+of pixels, so anything else is refused without being looked at. The three ownership checks are the
+same three `loadBaseImage` makes, because this writes what that reads - a cover is stored
+auto-approved on the grounds that the hub drew it, and that holds only if what it drew over had been
+looked at, which is as true of pixels a browser sent as of pixels the hub decoded.
+
+**The server-side decode is not deleted, it is GATED** (`cover_server_decode`, migration 0033,
+default false). It is a fallback for a picture nobody's browser has prepared, and it belongs off on
+a free plan. With no fit and no gate, the card simply falls back to drawing itself: a picture
+arriving a moment late rather than a Worker killed for trying.
+
+**AND THE CROP IS NOW A CHOICE.** `coverCrop` takes a focus, 0 to 1 per axis, and it is exported so
+the browser and the rasteriser use the SAME MATHS - two fitters that cropped differently would be a
+picture that jumps when it is prepared again. The focus rides in `cover_options` with everything
+else, and it is in the cache key, so sliding is a different set of pixels rather than a stale cache
+to invalidate.
+
+**One slider, not two.** A cover fit only ever has slack on one axis - a tall picture slides up and
+down, a wide one side to side - so the page works out which and offers that one. Offering both would
+be a control that does nothing half the time, and **a test I wrote for this got the axis wrong first
+time and failed**, which is exactly the confusion a second slider would hand to every creator.
+
 ### D-16. The takedown address is assembled at runtime, never served as text
 
 The owner's instruction was explicit: keep it off the page as scrapable text. It is stored as

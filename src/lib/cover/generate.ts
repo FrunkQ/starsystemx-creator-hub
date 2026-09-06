@@ -63,18 +63,33 @@ export interface CoverOptions {
   qr: boolean;
   /** sha256 of the screenshot under a base of 'image'; ignored otherwise. */
   baseImage: string | null;
+  /**
+   * WHERE THE PICTURE IS CROPPED, 0 to 1 on each axis, 0.5 being the middle (D-54). A cover fit
+   * only ever has slack on ONE axis - a tall picture slides up and down, a wide one side to side -
+   * so one of these does nothing for any given picture, which is why the page offers whichever is
+   * the live one rather than two sliders.
+   */
+  focusX: number;
+  focusY: number;
 }
 
 export const DEFAULT_COVER_OPTIONS: CoverOptions = {
   base: 'auto', palette: 'night', font: 'pixel',
   // THE QR IS ON BY DEFAULT (owner, 2026-09-06). A card without one is a picture; a card with one
   // is a way back to the map, which is the only reason the hub draws cards at all.
-  title: true, byline: true, counts: true, label: true, qr: true, baseImage: null
+  title: true, byline: true, counts: true, label: true, qr: true, baseImage: null,
+  focusX: 0.5, focusY: 0.5
 };
 
 const BASES: CoverBase[] = ['auto', 'system', 'starmap', 'plain', 'image'];
 const PALETTES: CoverPalette[] = ['night', 'amber', 'mono', 'green'];
 const FONTS: FontStyle[] = ['pixel', 'bold', 'outline', 'wide', 'round', 'narrow'];
+
+/** A crop position: 0 to 1, and the middle for anything else. Forms send strings. */
+const focus = (v: unknown): number => {
+  const n = typeof v === 'number' ? v : typeof v === 'string' ? Number(v) : NaN;
+  return Number.isFinite(n) ? Math.min(1, Math.max(0, n)) : 0.5;
+};
 
 /** Options from JSON or a form: anything unrecognised falls back to the default. */
 export function coverOptionsFrom(value: unknown): CoverOptions {
@@ -86,7 +101,9 @@ export function coverOptionsFrom(value: unknown): CoverOptions {
     palette: PALETTES.includes(v.palette as CoverPalette) ? (v.palette as CoverPalette) : 'night',
     font: FONTS.includes(v.font as FontStyle) ? (v.font as FontStyle) : 'pixel',
     title: flag('title'), byline: flag('byline'), counts: flag('counts'), label: flag('label'), qr: flag('qr'),
-    baseImage: typeof v.baseImage === 'string' && /^[0-9a-f]{64}$/.test(v.baseImage) ? v.baseImage : null
+    baseImage: typeof v.baseImage === 'string' && /^[0-9a-f]{64}$/.test(v.baseImage) ? v.baseImage : null,
+    focusX: focus(v.focusX),
+    focusY: focus(v.focusY)
   };
 }
 
