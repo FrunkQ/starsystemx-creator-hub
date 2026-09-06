@@ -7,7 +7,7 @@ import * as audit from '$lib/server/audit';
 import { isDiscordWebhook } from '$lib/server/integrations/share';
 import { postShare } from '$lib/server/integrations/discord';
 import { readCache, shippedManifest } from '$lib/server/shippedContent';
-import { sendMail } from '$lib/server/mail';
+import { sendMail, adminAddresses } from '$lib/server/mail';
 
 export const load: PageServerLoad = async ({ platform, locals, url }) => {
   const env = platform?.env;
@@ -21,9 +21,21 @@ export const load: PageServerLoad = async ({ platform, locals, url }) => {
     readCache(env),
     loadSite(sb, url)
   ]);
+  // WHO THE HUB WOULD WRITE TO, shown rather than left to be guessed at (D-50). The owner asked
+  // "where?" when told to set `mail_admin`, which is a fair question about a row nobody can see
+  // the effect of - so the page says the address it would use, and where that address came from.
+  const to = await adminAddresses(sb, gates);
+
   // What the hub currently believes SSE ships, and when it last managed to ask (D-36).
   return {
     rows: data ?? [],
+    mail: {
+      canSend: !!env.RESEND_API_KEY,
+      from: gates.mail_from,
+      to,
+      /** True when the addresses came from the sign-ins rather than from the row. */
+      lookedUp: !gates.mail_admin.trim()
+    },
     // The exact URL the test email's link comes back to. Shown so it can be COPIED into Supabase's
     // redirect allow-list rather than retyped - a URL typed twice is a URL wrong once.
     resetRedirect: site.url + '/login',
@@ -135,6 +147,28 @@ export const actions: Actions = {
   },
 
   /**
+   * PIN THE ADDRESS the hub would write to anyway into the row, so it is explicit and editable
+   * (the owner, 2026-09-06: *"it needs to be pinned there for admin emails"*). Nothing changes
+   * about where mail goes; what changes is that it now SAYS where, and stays put if the sign-in
+   * behind it ever changes.
+   */
+  pinMailAdmin: async ({ platform, locals }) => {
+    const { env, me } = admin(platform, locals);
+    const sb = db(env);
+    const gates = await loadGates(sb);
+    const to = await adminAddresses(sb, gates);
+    if (!to.length) return fail(400, { message: 'There is no address to pin: no admin sign-in carries one.' });
+
+    const value = to.join(', ');
+    const { error: e } = await sb.from('config')
+      .update({ value, updated_by: me.id, updated_at: new Date().toISOString() })
+      .eq('key', 'mail_admin');
+    if (e) return fail(500, { message: e.message });
+    await audit.record(sb, me.id, 'config.set', 'mail_admin', 'pinned from the admin sign-ins', { value });
+    return { tested: 'mail_admin is now ' + value + '. Edit the row to send somewhere else.' };
+  },
+
+  /**
    * THE HUB'S OWN MAIL, which is a different thing from the button below (D-49). That one asks
    * SUPABASE to send one of its auth templates, and proves the SMTP settings in its dashboard.
    * This one is the hub writing a message itself, through Resend, which is what the takedown form
@@ -144,11 +178,18 @@ export const actions: Actions = {
     const { env, me } = admin(platform, locals);
     const sb = db(env);
     const [gates, site] = await Promise.all([loadGates(sb), loadSite(sb, url)]);
-    if (!gates.mail_admin) return fail(400, { message: 'Set mail_admin first - that is where the hub writes to.' });
-    if (!gates.mail_from) return fail(400, { message: 'Set mail_from first - the address the hub sends as, on the verified domain.' });
+    if (!env.RESEND_API_KEY) {
+      return fail(400, { message: 'No RESEND_API_KEY on the Worker. `wrangler secret put RESEND_API_KEY` - it is the only thing that has to be set by hand.' });
+    }
+    // Nobody has to be named: with `mail_admin` empty the hub writes to the admins' own sign-in
+    // addresses, which it already knows (D-50).
+    const to = await adminAddresses(sb, gates);
+    if (!to.length) {
+      return fail(400, { message: 'No admin has an email address on their sign-in, and mail_admin is empty. Set mail_admin to somewhere the hub should write.' });
+    }
 
     const result = await sendMail(env, gates, {
-      to: gates.mail_admin,
+      to: to[0],
       subject: 'The hub can send mail',
       text: [
         'If you are reading this, ' + site.url + ' can send its own mail.',
@@ -159,7 +200,7 @@ export const actions: Actions = {
     });
     if (!result.ok) return fail(502, { message: 'It did not send: ' + result.reason });
     await audit.record(sb, me.id, 'mail.test-hub', 'config:mail_from');
-    return { tested: 'Sent to ' + gates.mail_admin + '. If it arrives, the hub can write to you.' };
+    return { tested: 'Sent from ' + gates.mail_from + ' to ' + to[0] + '. If it arrives, the hub can write to you.' };
   },
 
   /**

@@ -1233,6 +1233,34 @@ asks Supabase to send one of its templates and proves its SMTP; "Send a test fro
 is the hub writing a message through Resend, which is what the form and the nudge use. Either can
 work while the other does not, and a single button would have hidden that.
 
+### D-50. The hub already knows your address; asking for it back was a row for the sake of a row
+
+The owner, 2026-09-06, on being told "Set mail_admin first - that is where the hub writes to":
+*"where? i am the admin - i used an email to set it up."* Then: *"it needs to be pinned there for
+admin emails."* Both fair, and they want two different things, so it does both.
+
+**The lookup.** `mail_admin` empty now means EVERY ADMIN'S OWN SIGN-IN ADDRESS. The hub already
+reads one to send the Supabase test; asking the owner to type it back in was friction with nothing
+on the other side of it. Plural deliberately: with two admins, a queue nudge that reaches one of
+them is a rota nobody agreed to. The row still wins when it is set - that is how notices go to a
+shared inbox or an alias instead.
+
+**And the sender defaults too.** `mail_from` is `hub@starsystemx.com` from `$lib/addresses`, the
+one file that holds an address. It encodes the fact that matters: the sender must be on the domain
+VERIFIED with Resend, which is `starsystemx.com` and NOT the hostname the hub is served from - a
+verified domain does not carry its subdomains. A wrong sender is refused loudly by the mail service
+and reported on the button, where a missing one was a row somebody had to be told about.
+
+**So `RESEND_API_KEY` is the only thing that must be set by hand**, which is the right shape: a
+secret cannot have a default, and everything that can have one does.
+
+**Then: PIN IT, because a default nobody can see is a magic trick.** The Gates page now names the
+address the hub would write to and says where it came from, and offers one button to write that
+address into the row. Nothing about the destination changes; what changes is that it becomes
+explicit, editable, and stable if the sign-in behind it ever moves. The general rule this is the
+second instance of (after `open_in_sse_url`): **a default the page states out loud is a
+convenience; the same default kept quiet is a surprise waiting for whoever inherits it.**
+
 ### D-16. The takedown address is assembled at runtime, never served as text
 
 The owner's instruction was explicit: keep it off the page as scrapable text. It is stored as

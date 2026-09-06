@@ -22,7 +22,7 @@
 import type { Db } from './database.types';
 import type { Gates } from './config';
 import { enqueue } from './integrations/outbox';
-import { mailReady, type MailSecrets } from './mail';
+import { mailReady, adminAddresses, type MailSecrets } from './mail';
 
 /** Work younger than this is not a backlog, it is something that just happened. */
 const SETTLE_MINUTES = 30;
@@ -95,18 +95,23 @@ export async function queueNotice(
     if (!mailReady(env as MailSecrets & { RESEND_API_KEY?: string }, gates)) {
       return { sent: false, reason: 'mail is not configured' };
     }
+    const to = await adminAddresses(sb, gates);
+    if (!to.length) return { sent: false, reason: 'there is no admin address to write to' };
     const waiting = await waitingWork(sb);
     if (!waiting.pictures && !waiting.tags && !waiting.reports) {
       return { sent: false, reason: 'nothing is waiting' };
     }
     const { subject, text } = noticeText(waiting, siteUrl);
-    await enqueue(sb, {
-      kind: 'mail.queue',
-      creatorId: null,
-      payload: { to: gates.mail_admin, subject, text },
-      // The dedupe key IS the rate limit: a second nudge in the same six-hour bucket is not queued.
-      dedupeKey: 'queue:' + bucketOf(new Date())
-    });
+    // One intent per ADMIN per bucket: two admins both hear, and neither hears twice.
+    for (const address of to) {
+      await enqueue(sb, {
+        kind: 'mail.queue',
+        creatorId: null,
+        payload: { to: address, subject, text },
+        // The dedupe key IS the rate limit: a second nudge in the same six-hour bucket is refused.
+        dedupeKey: 'queue:' + bucketOf(new Date()) + ':' + address
+      });
+    }
     return { sent: true, reason: subject };
   } catch (e) {
     return { sent: false, reason: 'could not check: ' + ((e as Error)?.message ?? String(e)) };

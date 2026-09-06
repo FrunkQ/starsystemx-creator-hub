@@ -46,6 +46,36 @@
   </p>
 </div>
 
+<!-- WHO THE HUB WRITES TO, said out loud (D-50). "Set mail_admin first" is a fair thing to be
+     confused by when the hub already knows your address; this panel names it, says where it came
+     from, and lets you pin it into the row so it is explicit and editable. -->
+<div class="panel">
+  <h3>Mail</h3>
+  {#if !data.mail.canSend}
+    <p class="muted">
+      No <code>RESEND_API_KEY</code> on the Worker, so the hub sends nothing: no takedown form, no
+      nudge when a queue has been waiting. It is the one thing that has to be set by hand -
+      <code>wrangler secret put RESEND_API_KEY</code>. Everything else here has a default.
+    </p>
+  {:else if data.mail.to.length}
+    <p>
+      Sending as <code>{data.mail.from}</code> to <code>{data.mail.to.join(', ')}</code>.
+      {#if data.mail.lookedUp}
+        <span class="muted">That is your sign-in address - <code>mail_admin</code> is empty, so the hub looks it up.</span>
+      {/if}
+    </p>
+    {#if data.mail.lookedUp}
+      <form method="POST" action="?/pinMailAdmin">
+        <button type="submit">Pin that address in mail_admin</button>
+      </form>
+    {/if}
+  {:else}
+    <p class="bad-text">
+      Nowhere to write: no admin sign-in carries an email address and <code>mail_admin</code> is empty.
+    </p>
+  {/if}
+</div>
+
 <!-- What the hub believes SSE ships, and how old that belief is (D-36). -->
 <div class="panel">
   <h3>Shipped content</h3>

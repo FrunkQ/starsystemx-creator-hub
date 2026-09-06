@@ -4,7 +4,7 @@
 // putting them in a table was that relaxing one should not need a deploy, and a long-lived cache
 // quietly reintroduces the wait it was meant to remove.
 import type { Db } from './database.types';
-import { DEFAULT_OPEN_IN_SSE_URL, DEFAULT_SSE_MANIFEST_URL } from '$lib/addresses';
+import { DEFAULT_OPEN_IN_SSE_URL, DEFAULT_SSE_MANIFEST_URL, DEFAULT_MAIL_FROM } from '$lib/addresses';
 
 export interface Gates {
   uploads_per_user_per_day: number;
@@ -69,6 +69,11 @@ export interface Gates {
    * Either one empty means the hub sends nothing, and says so where it would have offered to.
    */
   mail_from: string;
+  /**
+   * Where the hub writes TO. **Empty means the admins' own sign-in addresses** (D-50) - the hub
+   * already knows them, and asking the owner to type in an address it could look up was a row for
+   * the sake of a row. Set it to send somewhere else instead: a shared inbox, an alias.
+   */
   mail_admin: string;
   patreon_enabled: boolean;
   patreon_campaign_id: string;
@@ -118,7 +123,7 @@ export const GATE_FALLBACKS: Gates = {
   // no `?open=` until the owner makes the read-tree release (measured 2026-09-06).
   open_in_sse_url: DEFAULT_OPEN_IN_SSE_URL,
   sse_manifest_url: DEFAULT_SSE_MANIFEST_URL,
-  mail_from: '',
+  mail_from: DEFAULT_MAIL_FROM,
   mail_admin: '',
   patreon_enabled: false,
   patreon_campaign_id: '',
@@ -139,7 +144,7 @@ export const GATE_FALLBACKS: Gates = {
  * it best - and the feature that needs an address is off, because nothing here will build a link
  * out of it (`isHttpUrl`, and `openLink` refuses a prefix that is not one).
  */
-const ADDRESS_GATES = ['open_in_sse_url', 'sse_manifest_url'] as const;
+const ADDRESS_GATES = ['open_in_sse_url', 'sse_manifest_url', 'mail_from'] as const;
 
 export async function loadGates(sb: Db): Promise<Gates> {
   const { data, error } = await sb.from('config').select('key, value');

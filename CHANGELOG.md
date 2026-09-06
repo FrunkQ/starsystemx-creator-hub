@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.29.1 — 2026-09-06
+
+### The hub knows who you are
+
+"Set mail_admin first" was a fair thing to be annoyed by: the hub already reads your sign-in
+address to send the Supabase test. An empty `mail_admin` now means every admin's own address, and
+`mail_from` defaults to the verified domain - so `RESEND_API_KEY` is the only thing that has to be
+set by hand.
+
+The Gates page has a Mail panel that says who it would write as and to, where that address came
+from, and offers one button to pin it into the row so it is explicit and editable.
+
 ## 0.29.0 — 2026-09-06
 
 ### The hub can send its own mail

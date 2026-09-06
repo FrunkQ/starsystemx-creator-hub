@@ -2,7 +2,7 @@ import type { PageServerLoad, Actions } from './$types';
 import { error, fail } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import { loadGates } from '$lib/server/config';
-import { mailReady, looksLikeEmail } from '$lib/server/mail';
+import { mailReady, looksLikeEmail, adminAddresses } from '$lib/server/mail';
 import { enqueue } from '$lib/server/integrations/outbox';
 import { drainOutbox } from '$lib/server/integrations/deliver';
 
@@ -24,8 +24,12 @@ export const load: PageServerLoad = async ({ platform }) => {
   // is broken - so an unreachable config means "no form", not an error.
   if (!env?.SUPABASE_URL) return { canSend: false };
   try {
-    const gates = await loadGates(db(env));
-    return { canSend: mailReady(env, gates) };
+    const sb = db(env);
+    const gates = await loadGates(sb);
+    // Both halves: the hub can send, AND there is somebody to send to. Either missing means the
+    // form is not offered - the address below is the whole point of it still being there.
+    const to = mailReady(env, gates) ? await adminAddresses(sb, gates) : [];
+    return { canSend: to.length > 0 };
   } catch {
     return { canSend: false };
   }
@@ -47,7 +51,8 @@ export const actions: Actions = {
     // form people abandon, and this is the message that must not go missing.
     const typed = { name, email, url, detail };
 
-    if (!mailReady(env, gates)) {
+    const to = mailReady(env, gates) ? await adminAddresses(sb, gates) : [];
+    if (!to.length) {
       return fail(503, { ...typed, message: 'The hub cannot send mail at the moment. Please write to the address below instead.' });
     }
     if (!looksLikeEmail(email)) return fail(400, { ...typed, message: 'We need an address to reply to.' });
@@ -77,7 +82,7 @@ export const actions: Actions = {
     await enqueue(sb, {
       kind: 'mail.takedown',
       creatorId: null,
-      payload: { to: gates.mail_admin, subject: 'Copyright report via the hub', text, replyTo: email },
+      payload: { to: to[0], subject: 'Copyright report via the hub', text, replyTo: email },
       dedupeKey: 'takedown:' + new Date().toISOString().slice(0, 13) + ':' + digest.slice(0, 16)
     });
 

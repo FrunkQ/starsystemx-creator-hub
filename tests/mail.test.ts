@@ -13,11 +13,17 @@ const configured = { ...GATE_FALLBACKS, mail_from: 'hub@example.test', mail_admi
 const key = { RESEND_API_KEY: 'test-key' };
 
 describe('whether the hub can send at all', () => {
-  it('needs the key AND both rows', () => {
+  it('needs the key and a sender', () => {
     expect(mailReady(key, configured)).toBe(true);
     expect(mailReady({}, configured)).toBe(false);
     expect(mailReady(key, { ...configured, mail_from: '' })).toBe(false);
-    expect(mailReady(key, { ...configured, mail_admin: '' })).toBe(false);
+  });
+
+  // WHO IT WRITES TO IS NOT PART OF THE QUESTION (D-50). The owner: "where? i am the admin - i used
+  // an email to set it up." An empty `mail_admin` means the admins' own sign-in addresses, which
+  // the hub already knows, so a missing row is not a reason to say it cannot send.
+  it('does not require somebody to have typed a recipient in', () => {
+    expect(mailReady(key, { ...configured, mail_admin: '' })).toBe(true);
   });
 
   it('says WHICH piece is missing, rather than failing silently', async () => {

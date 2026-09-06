@@ -11,13 +11,17 @@
 //
 // INERT UNTIL CONFIGURED, exactly like the Discord integration:
 //   RESEND_API_KEY   a Worker secret - `wrangler secret put RESEND_API_KEY`. NEVER in a file.
-//   mail_from        a config row, on the verified domain (e.g. `hub@starsystemx.com`).
-//   mail_admin       a config row: where the hub writes TO. Empty means nothing is sent.
+//                    THE ONLY THING THAT MUST BE SET BY HAND.
+//   mail_from        who it sends AS. Defaults to the verified domain (`$lib/addresses`); the row
+//                    overrides it.
+//   mail_admin       who it writes TO. Empty means every admin's own sign-in address, which the
+//                    hub already knows (D-50); the row overrides it with an inbox or an alias.
 //
-// With any of the three missing, `sendMail` refuses and says which - it does not throw, and it does
-// not pretend. Every caller here is a notification; none of them may fail the thing they describe.
+// With the key missing, `sendMail` refuses and says which piece is absent - it does not throw, and
+// it does not pretend. Every caller is a notification; none may fail the thing it describes.
 // ============================================================================================
 import type { Gates } from './config';
+import type { Db } from './database.types';
 
 export interface MailSecrets {
   RESEND_API_KEY?: string;
@@ -38,9 +42,43 @@ export interface Mail {
 
 export type MailResult = { ok: true; id: string | null } | { ok: false; reason: string };
 
-/** Is the hub able to send at all? For a page that wants to say so before offering a form. */
+/**
+ * Is the hub able to send at all? The key and a sender - NOT a recipient, which has its own answer
+ * below and does not need the owner to type anything (D-50).
+ */
 export function mailReady(secrets: MailSecrets, gates: Gates): boolean {
-  return !!secrets.RESEND_API_KEY && !!gates.mail_from && !!gates.mail_admin;
+  return !!secrets.RESEND_API_KEY && !!gates.mail_from;
+}
+
+/**
+ * WHO THE HUB WRITES TO, and why this is not simply a config row.
+ *
+ * The owner, 2026-09-06, on being told to set `mail_admin`: *"where? i am the admin - i used an
+ * email to set it up."* Quite. The hub knows every admin's sign-in address already - it reads one
+ * to send the Supabase test - so asking for it back was a row for the sake of a row.
+ *
+ * So: the `mail_admin` row when it is set, which is how notices go to a shared inbox or an alias
+ * instead; otherwise EVERY ADMIN'S OWN ADDRESS, looked up. Plural on purpose - when there are two
+ * admins, a queue nudge that reaches one of them is a rota nobody agreed to.
+ *
+ * Never throws, and an empty list is a real answer: it means there is nobody to write to, which is
+ * a thing a page needs to be able to say.
+ */
+export async function adminAddresses(sb: Db, gates: Gates): Promise<string[]> {
+  const named = gates.mail_admin.trim();
+  if (named) return named.split(',').map((a) => a.trim()).filter(looksLikeEmail);
+  try {
+    const { data: admins } = await sb.from('creators').select('id').eq('role', 'admin');
+    const found: string[] = [];
+    for (const a of admins ?? []) {
+      const { data } = await sb.auth.admin.getUserById(a.id as string);
+      const email = data?.user?.email;
+      if (looksLikeEmail(email)) found.push(email);
+    }
+    return found;
+  } catch {
+    return [];
+  }
 }
 
 /** A plausible address. Not validation - that is the mail server's job - just a refusal of nonsense. */

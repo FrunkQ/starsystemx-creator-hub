@@ -59,6 +59,18 @@ export const DEFAULT_OPEN_IN_SSE_URL = SSE_ORIGIN + '/?open=';
 /** R-13: what the engine says it ships. Overridden by `sse_manifest_url`. */
 export const DEFAULT_SSE_MANIFEST_URL = SSE_ORIGIN + '/shipped-content.json';
 
+/**
+ * WHO THE HUB SENDS AS (D-50). Overridden by the `mail_from` row.
+ *
+ * It has to be on the domain verified with Resend, which is `starsystemx.com` - NOT the hostname
+ * the hub is served from, because a verified domain does not carry its subdomains. That is the one
+ * fact this default encodes, and it is why the default is a guess worth making: a wrong sender is
+ * refused loudly by the mail service and reported on the button, where a missing one was a row the
+ * owner had to be told to fill.
+ */
+export const MAIL_DOMAIN = 'starsystemx.com';
+export const DEFAULT_MAIL_FROM = 'hub@' + MAIL_DOMAIN;
+
 /** An address a link may be built from. `"off"` in a config row is therefore a working off switch. */
 export const isHttpUrl = (value: unknown): value is string =>
   typeof value === 'string' && /^https?:\/\/./.test(value.trim());
