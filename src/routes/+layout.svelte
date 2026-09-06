@@ -5,7 +5,16 @@
   import '../app.css';
   import { version } from '$app/environment';
   import PixelText from '$lib/components/PixelText.svelte';
+  // The one file that holds an address (D-37). This is the APP's own home, so production:
+  // a general "go and look at the tool" link, not a feature link that has to wait for a release.
+  import { SSE_PROD_ORIGIN } from '$lib/addresses';
+  import StaffNav from '$lib/components/StaffNav.svelte';
+  import { outstanding, badgeLabel, EMPTY_COUNTS } from '$lib/adminNav';
+  import { page } from '$app/state';
   let { children, data } = $props();
+
+  // The staff strip is drawn where the staff work is, and nowhere else.
+  const staff = $derived(data?.viewer?.role === 'admin' && page.url.pathname.startsWith('/admin'));
 </script>
 
 <!-- Cloudflare Web Analytics. `defer` and nothing else: no third-party script gets to block a page
@@ -35,23 +44,38 @@
     <a href="/browse">Browse</a>
     <a href="/upload">Share a map</a>
     {#if data?.viewer}
-      <a href="/account">{data.viewer.handle}</a>
+      <a class="me" href="/account">
+        {data.viewer.handle}
+        {#if data.viewer.role === 'admin'}<span class="role">admin</span>{/if}
+      </a>
+      <!-- ONE staff link, not eight. The areas are grouped in the strip below, which appears on the
+           admin pages themselves; a public map page has no business carrying the review queue. The
+           badge is the work waiting, so it is visible from anywhere without the links being. -->
       {#if data.viewer.role === 'admin'}
-        <a href="/admin/review">Review</a>
-        <a href="/admin/comments">Comments</a>
-        <a href="/admin/explorers">Explorers</a>
-        <a href="/admin/reports">Reports</a>
-        <a href="/admin/backup">Backups</a>
-        <a href="/admin/config">Gates</a>
-        <a href="/admin/stats">Usage</a>
-        <a href="/admin/debug">Debug</a>
+        {@const waiting = outstanding(data.counts ?? EMPTY_COUNTS)}
+        <a class="staff-link" href="/admin/review" aria-current={staff ? 'page' : undefined}>
+          Admin
+          {#if waiting > 0}
+            <span class="badge" title="{waiting} things waiting: pictures to review and reports still open">
+              {badgeLabel(waiting)}
+            </span>
+          {/if}
+        </a>
       {/if}
       <form method="POST" action="/logout"><button class="linkish" type="submit">Sign out</button></form>
     {:else}
       <a href="/login">Sign in</a>
     {/if}
-    <a class="cta" href="https://starsystemx.com" target="_blank" rel="noopener">Open Star System Explorer</a>
+    <!-- NO "Open Star System Explorer" HERE (owner, 2026-09-06: "we have it at the bottom and on
+         every map"). The banner's job is to get out of the way; a general link to the app competes
+         with the specific one on every map and card, which opens THAT map rather than the app. -->
   </nav>
+
+  {#if staff}
+    <div class="staff-strip">
+      <StaffNav counts={data?.counts ?? EMPTY_COUNTS} path={page.url.pathname} />
+    </div>
+  {/if}
 </header>
 
 <main id="main">
@@ -66,7 +90,7 @@
       orbits, climates, atmospheres and all - and then handing them to your players.
       Everything on this hub opens directly in it.
     </p>
-    <a class="cta" href="https://starsystemx.com" target="_blank" rel="noopener">Open Star System Explorer</a>
+    <a class="cta" href={SSE_PROD_ORIGIN} target="_blank" rel="noopener">Open Star System Explorer</a>
   </div>
   <div class="small">
     <!-- Written and owner-signed-off 2026-08-28. `acceptable-use` is a 308 to the relevant section

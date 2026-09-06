@@ -65,6 +65,25 @@ header nav {
 }
 .cta:hover { text-decoration: none; filter: brightness(1.08); }
 
+/* WHO YOU ARE, IN THE BANNER (owner, 2026-09-06: colour tells the roles apart). A signed-in
+   Explorer is just their name; staff carry a coloured word, because someone who can take a map
+   down should be able to see at a glance that they are logged in as the person who can. */
+header .me { display: inline-flex; align-items: center; gap: 7px; }
+header .role {
+  font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.07em; font-weight: 700;
+  padding: 1px 6px; border-radius: 999px;
+  background: var(--warn); color: var(--accent-ink);
+}
+/* ONE staff entry, carrying the work waiting. The areas themselves live in the strip below. */
+header .staff-link { display: inline-flex; align-items: center; gap: 7px; color: var(--warn); }
+header .staff-link .badge {
+  min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;
+  background: var(--bad); color: #1a0606;
+  font-size: 0.74rem; font-weight: 700; line-height: 18px; text-align: center;
+}
+/* The strip is a second band under the banner, on the admin pages only. */
+.staff-strip { border-top: 1px solid var(--edge); background: var(--bg); }
+
 main { max-width: var(--max); margin: 0 auto; padding: 20px 32px 56px; }
 @media (max-width: 720px) { main { padding: 16px 16px 48px; } }
 /* Prose pages (the terms, the takedown page) keep a readable measure however wide the screen. */

@@ -11,6 +11,7 @@
   //      taking the whole map. It serves the same funnel - a clip used is SSE opened.
   import NodeTree from '$lib/components/NodeTree.svelte';
   import RoleIcon from '$lib/components/RoleIcon.svelte';
+  import { SSE_PROD_ORIGIN } from '$lib/addresses';
   import Badge from '$lib/components/Badge.svelte';
   import InfoDensity from '$lib/components/InfoDensity.svelte';
   import { orderRoles } from '$lib/components/roleIcons';
@@ -122,7 +123,7 @@
       </p>
       <p class="download-note">
         Free. No account needed. Opens directly in
-        <a href="https://starsystemx.com" target="_blank" rel="noopener">Star System Explorer</a>,
+        <a href={SSE_PROD_ORIGIN} target="_blank" rel="noopener">Star System Explorer</a>,
         which runs in your browser - nothing to install.
       </p>
       <p class="social">

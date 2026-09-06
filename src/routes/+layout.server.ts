@@ -1,6 +1,7 @@
 import type { LayoutServerLoad } from './$types';
 import { db } from '$lib/server/db';
 import { loadSite, DEFAULT_SITE_NAME } from '$lib/server/site';
+import { outstandingCounts, EMPTY_COUNTS } from '$lib/server/outstanding';
 
 // Analytics, and deliberately the smallest possible amount of it.
 //
@@ -23,11 +24,19 @@ export const load: LayoutServerLoad = async ({ platform, locals, url }) => {
     ? await loadSite(db(env), url)
     : { name: DEFAULT_SITE_NAME, url: url.origin };
 
+  // OUTSTANDING WORK, for the number circles in the staff nav - and only for staff, because it is
+  // three counts on every page view and nobody else's nav has anywhere to put them.
+  const counts =
+    locals.viewer?.role === 'admin' && env?.SUPABASE_URL
+      ? await outstandingCounts(db(env))
+      : EMPTY_COUNTS;
+
   return {
     site,
     cfBeaconToken: token && /^[a-zA-Z0-9]{8,64}$/.test(token) ? token : null,
     // Only what the chrome needs. Never the whole viewer object - it carries state the nav has no
     // business knowing, and a layout payload is serialised into every page.
-    viewer: locals.viewer ? { handle: locals.viewer.handle, role: locals.viewer.role } : null
+    viewer: locals.viewer ? { handle: locals.viewer.handle, role: locals.viewer.role } : null,
+    counts
   };
 };

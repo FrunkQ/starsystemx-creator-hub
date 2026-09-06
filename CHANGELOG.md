@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.22.0 — 2026-09-06
+
+### The banner is a banner again
+
+"Open Star System Explorer" is gone from the top of every page (owner: "we have it at the bottom
+and on every map"). A general link to the app was competing with the specific one beside every
+download and on every card, which opens THAT map rather than the app.
+
+### The staff areas are grouped, coloured, and say what is waiting
+
+The eight admin links are out of the banner, which now carries one "Admin" entry with the work
+waiting on it as a number circle - pictures to review plus reports still open. The areas
+themselves are a strip on the admin pages, grouped by capability: Moderation (review, reports,
+comments, explorers) and Running the place (usage, backups, gates, debug), each area coloured by
+the lowest tier that could reach it. Review, Reports and Debug carry their own counts.
+
+A count that cannot be taken shows no badge rather than a confident zero, and the debug uploads
+are deliberately kept out of the banner number: they are stored files, not a queue, and a badge
+that never reaches zero teaches people to stop reading badges.
+
+**There is no moderator role yet** - `creator_role` is `user | admin`. The colour key shows what a
+moderator would reach, drawn so the decision can be made by looking at it (`src/lib/adminNav.ts`).
+
+### Every address really is in one file now
+
+The footer's link to the app, the map page's "opens directly in", and the takedown page's fallback
+all take it from `src/lib/addresses.ts` instead of writing it out, which is what D-37 said and what
+the code did not yet do.
+
 ## 0.21.2 — 2026-09-06
 
 Two claims in the hub's half of the contract corrected against what is actually true: the test

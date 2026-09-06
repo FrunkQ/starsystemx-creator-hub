@@ -13,6 +13,9 @@
   // WHY NOT A CONTACT FORM: it would need a mail-sending backend the hub does not have, and a form
   // that silently fails is far worse than an address, because a copyright claim that never arrives
   // is the one message here that must not go missing.
+  // The site link in the hint below - from the one file that holds an address (D-37).
+  import { SSE_PROD_ORIGIN } from '$lib/addresses';
+
   const PARTS = [102, 114, 117, 110, 107, 64, 102, 114, 117, 110, 107, 46, 110, 101, 116];
   const SUBJECT = 'SSE TAKEDOWN REQUEST: ';
 
@@ -53,7 +56,7 @@
     </p>
     <p class="hint">
       Hidden from address harvesters, not from you. If scripts are blocked, the same inbox is
-      reachable through the contact details on <a href="https://starsystemx.com" rel="noopener">starsystemx.com</a>.
+      reachable through the contact details on <a href={SSE_PROD_ORIGIN} rel="noopener">starsystemx.com</a>.
     </p>
   {/if}
 </div>

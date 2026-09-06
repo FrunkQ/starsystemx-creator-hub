@@ -836,6 +836,47 @@ one-line change rather than a hunt.
    owner asked to be rid of. **The off switch stays real:** a row reading `"off"` - anything that is
    not an http(s) URL - and nothing builds a link from it.
 
+### D-38. The banner is a banner; the staff areas are grouped by capability and coloured by tier
+
+The owner, 2026-09-06, twice in one message: *"get rid of the 'Open Star System Explorer' in the
+top banner - we have it at the bottom and on every map"*, and *"have the report/messages, etc have
+remainder of outstanding work on them (number circles usual) - also structure better on admin.
+perhaps use colour to differentiate between 'normal user' 'admin user' and 'moderators' - who will
+have access to a lot less. group by area/capability."*
+
+**The general link had become the weakest link on the page.** Every map page and every card now
+carries "Open in Star System Explorer" for THAT map, which is the funnel working; a banner link to
+the app in general competes with it and wins nothing. Gone from the top, kept in the footer, where
+it answers the question the footer asks ("What is Star System Explorer?").
+
+**Eight admin links in the banner made a public map page's chrome half staff plumbing.** The banner
+now carries one "Admin" entry with the work waiting on it, and the areas themselves are a strip
+that appears on the admin pages, grouped:
+
+- **Moderation** - review, reports, comments, explorers. Watching what people post.
+- **Running the place** - usage, backups, gates, debug. Owning the server.
+
+**The colour is the TIER, and the grouping and the colour say the same thing twice on purpose.**
+Blue is what somebody who moderates could reach; amber is the owner's. A key at the end of the
+strip says so, because a colour nobody can read is decoration.
+
+**There is no moderator role yet, and inventing one was not this task.** `creator_role` is
+`('user', 'admin')` (migration 0001). `src/lib/adminNav.ts` declares each area's tier anyway, so
+the shape of the role is drawn before it exists and the decision can be made by looking at it
+rather than by imagining it. Creating it is one migration, one guard, and a decision about who
+moderates - the owner's. **The one judgement already made and worth arguing with:** `explorers` is
+ADMIN, not moderation. Removing a picture or a comment is undoable; suspending, banning or deleting
+a person ends their account and their maps. A moderator watches the content; the account is the
+owner's to end. `tests/adminNav.test.ts` pins that.
+
+**The counts.** Three head counts in the root layout, for admins only: pictures waiting
+(`assets.review_state = 'novel'`, exactly the review queue's own predicate, so the badge and the
+page can never disagree), reports still open, and debug uploads stored. **Null is not zero:** a
+count that could not be taken shows no badge, because a nav that says "0 reports" when it does not
+know is the same shape as the truth and wrong. **And the debug count stays out of the banner
+number** - those are kept files, not a queue, so it would never reach zero, and a badge that never
+clears teaches people to stop reading the two that mean something.
+
 ### D-16. The takedown address is assembled at runtime, never served as text
 
 The owner's instruction was explicit: keep it off the page as scrapable text. It is stored as
