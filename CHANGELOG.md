@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.33.1 — 2026-09-06
+
+The kind badge on a card is a matched pair: the same surround for both, and only the colour
+differs - a system in ink, a starmap in the accent. The system's was drawn in the divider colour,
+which disappears against a cover photograph, so one badge looked deliberate and the other looked
+like an accident.
+
 ## 0.33.0 — 2026-09-06
 
 ### The browser prepares a cover picture, and you choose the crop

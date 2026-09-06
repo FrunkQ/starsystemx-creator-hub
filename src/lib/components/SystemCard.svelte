@@ -123,11 +123,16 @@
   .pic { position: relative; }
   /* Top-RIGHT: a generated cover letters its title top-left in the same pixels, and two lines of
      the same font in the same corner read as one. */
+  /* A MATCHED PAIR (owner, 2026-09-06: "perhaps also surround the system in white... to follow
+     design language through"). Both kinds get the SAME surround, and only the colour differs:
+     a system in ink, a starmap in the accent. The system's used to be drawn in `--edge`, which is
+     a colour for a divider and disappears against a cover photograph - so one badge looked
+     deliberate and the other looked like an accident. */
   .kind {
     position: absolute; right: 8px; top: 8px; line-height: 0;
     font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600;
     color: var(--ink); background: rgba(10, 13, 20, 0.72);
-    border: 1px solid var(--edge); border-radius: 6px; padding: 2px 7px;
+    border: 1px solid var(--ink); border-radius: 6px; padding: 2px 7px;
   }
   .card.starmap .kind { border-color: var(--accent); color: var(--accent); }
   .open {
