@@ -69,7 +69,19 @@ export const DEFAULT_SSE_MANIFEST_URL = SSE_ORIGIN + '/shipped-content.json';
  * owner had to be told to fill.
  */
 export const MAIL_DOMAIN = 'starsystemx.com';
-export const DEFAULT_MAIL_FROM = 'hub@' + MAIL_DOMAIN;
+
+/**
+ * `keeper@`, the owner's choice (2026-09-06: *"keeper@starsystemx.com is the mail... from the
+ * site - you started it!"*) - and he is right that it came from here. **Keeper** is the hub's own
+ * badge for the person running the place: *"Keeps the lights on and the celestial bodies
+ * clothed."* The site had already named the role; the mailbox may as well use its name.
+ *
+ * SENDING ONLY. The Resend domain has receiving switched off, so nothing arrives at this address -
+ * which is fine for everything the hub sends: a notice to an admin needs no reply, and the takedown
+ * form sets `reply_to` to the person who wrote it, so pressing reply reaches THEM. The public
+ * address for writing TO a person is the one on the takedown page, and it is somewhere else.
+ */
+export const DEFAULT_MAIL_FROM = 'keeper@' + MAIL_DOMAIN;
 
 /** An address a link may be built from. `"off"` in a config row is therefore a working off switch. */
 export const isHttpUrl = (value: unknown): value is string =>

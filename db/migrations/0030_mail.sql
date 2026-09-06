@@ -13,7 +13,7 @@
 insert into config (key, value, note)
 values
   ('mail_from', '""'::jsonb,
-   'The address the hub sends AS. Must be on the verified Resend domain, e.g. hub@starsystemx.com. Empty = the hub sends nothing.'),
+   'The address the hub sends AS. Must be on the verified Resend domain, e.g. keeper@starsystemx.com. Empty = the hub sends nothing.'),
   ('mail_admin', '""'::jsonb,
    'Where the hub writes TO: takedown notices from the contact form, and a nudge when the review queues have been waiting. Empty = nothing is sent.')
 on conflict (key) do nothing;

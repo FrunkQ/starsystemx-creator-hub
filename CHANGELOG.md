@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.30.1 — 2026-09-06
+
+The hub writes as `keeper@starsystemx.com` - the owner's choice, and the site's own word for the
+person running the place. Sending only: nothing arrives at it, which is fine, because a notice to
+an admin needs no reply and the takedown form sets reply-to to whoever wrote it.
+
 ## 0.30.0 — 2026-09-06
 
 ### A switch for the Discord posts

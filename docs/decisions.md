@@ -1245,7 +1245,9 @@ on the other side of it. Plural deliberately: with two admins, a queue nudge tha
 them is a rota nobody agreed to. The row still wins when it is set - that is how notices go to a
 shared inbox or an alias instead.
 
-**And the sender defaults too.** `mail_from` is `hub@starsystemx.com` from `$lib/addresses`, the
+**And the sender defaults too.** `mail_from` is `keeper@starsystemx.com` from `$lib/addresses` -
+the owner's choice, and the site's own word for the person running the place (the **Keeper** badge:
+*"Keeps the lights on and the celestial bodies clothed"*). It is the
 one file that holds an address. It encodes the fact that matters: the sender must be on the domain
 VERIFIED with Resend, which is `starsystemx.com` and NOT the hostname the hub is served from - a
 verified domain does not carry its subdomains. A wrong sender is refused loudly by the mail service
