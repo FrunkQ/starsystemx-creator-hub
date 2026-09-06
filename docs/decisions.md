@@ -1435,6 +1435,36 @@ treats a zip member with no matching row as "not a tracked asset: these always t
 document, ATTRIBUTIONS.md, README.txt), so unlinking it would make it travel unconditionally. Binning
 has to be an explicit withholding, not an absence.
 
+### D-56. A system cannot be opened, so it is copied instead
+
+The owner, 2026-09-06: *"you can't OPEN systems into SSE like starmaps... but you can PASTE them
+in... so follow through with a white 'Copy for SSE' button instead."*
+
+**The engine has two doors and only one of them refuses a system.** `?open=` takes a campaign and
+turns a single system away (R-18, D-43), which is why the hub hides that button for one. But the
+PASTE target has been there since engine v3.0.292 (R-14), and every row of the tree on a map page
+has offered a clip since D-19. So the door that works is the one the button uses: where a starmap
+gets "Open in Star System Explorer", a system gets **"Copy for Star System Explorer"**, which is the
+same clip rooted at the whole map rather than at one branch.
+
+**White, and that is the design language rather than a preference.** The cards draw the kinds as a
+matched pair - a starmap in the accent, a system in ink (D-43) - so the button that replaces the
+blue one is the same shape in the other colour. It is a `<button>` and not an `<a>` because it
+copies rather than goes, and it says "Copied - paste it into SSE" for two seconds afterwards, since
+a clipboard write with no acknowledgement is indistinguishable from a broken button.
+
+**ONE ROOT, and the limit is the envelope's.** `SseClip` carries `root`, singular, so a system whose
+nodes form two separate top-level trees copies the larger one - chosen as the root with the most
+beneath it, which is the star rather than a stray barycentre. **Not worked around**, because the
+envelope is a contract with the engine and widening it unilaterally is how two codebases stop
+agreeing.
+
+**AND THERE IS A CHANGE COMING.** The owner: *"We may need some extra data put into paste files to
+ID the [file] - i have asked the hub to work that out - will let you know."* When that arrives it is
+a `CLIP_FORMAT` bump in `bundle/clip.ts` - the number exists precisely so the shape can change
+without breaking what is already out there - and it should arrive as a SEAM REPORT block (D-37)
+rather than as a description.
+
 ### D-16. The takedown address is assembled at runtime, never served as text
 
 The owner's instruction was explicit: keep it off the page as scrapable text. It is stored as

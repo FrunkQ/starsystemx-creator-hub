@@ -10,6 +10,7 @@
   //      pasting into SSE. That is SECONDARY: the cheap way to lift one body or one star without
   //      taking the whole map. It serves the same funnel - a clip used is SSE opened.
   import NodeTree from '$lib/components/NodeTree.svelte';
+  import { buildClip, clipText } from '$lib/bundle/clip';
   import RoleIcon from '$lib/components/RoleIcon.svelte';
   import { SSE_PROD_ORIGIN } from '$lib/addresses';
   import Badge from '$lib/components/Badge.svelte';
@@ -21,6 +22,44 @@
 
   const s = $derived(data.system);
   const total = $derived(data.bodies.length + data.constructs.length);
+
+  // ============================================================================================
+  // COPY FOR SSE (D-56). The engine opens a campaign from a URL and refuses a single system - so
+  // where a starmap gets "Open in Star System Explorer", a system gets the other door the engine
+  // already has: the clipboard. R-14 shipped the paste target in v3.0.292, and every row of the
+  // tree below has offered a clip since D-19; this is the same thing rooted at the whole map.
+  //
+  // ONE ROOT, because the envelope carries one (`root` in `bundle/clip.ts`). A system with two
+  // separate top-level trees copies the larger. The owner has an engine-side change coming for
+  // what a paste file carries - "extra data put into paste files to ID the fast" - and when the
+  // format grows, `CLIP_FORMAT` is the number that says so.
+  // ============================================================================================
+  const nodes = $derived([...data.bodies, ...data.constructs]);
+  /** The node with the most beneath it: the star of a system, not a stray barycentre. */
+  const wholeRoot = $derived.by(() => {
+    const roots = nodes.filter((n) => !n.parent_id);
+    if (!roots.length) return null;
+    const under = (id: string) => nodes.filter((n) => n.parent_id === id).length;
+    return [...roots].sort((a, b) => under(b.node_id) - under(a.node_id))[0].node_id;
+  });
+  const copyable = $derived(s.kind !== 'starmap' && !!wholeRoot);
+  let copied = $state(false);
+
+  async function copyWhole() {
+    if (!wholeRoot) return;
+    const clip = buildClip(nodes as never, wholeRoot, {
+      site: data.site.name, url: data.site.url + '/s/' + s.slug, title: s.title,
+      creator: data.creator?.display_name ?? data.creator?.handle ?? null
+    }, credits as never);
+    if (!clip) return;
+    try {
+      await navigator.clipboard.writeText(clipText(clip));
+      copied = true;
+      setTimeout(() => (copied = false), 2200);
+    } catch {
+      copied = false; // a denied clipboard permission is not an error worth shouting about
+    }
+  }
   let reportOpen = $state(false);
 
   // Comments are counted like stars: the trigger-kept count when the column exists, the rows
@@ -119,6 +158,15 @@
         <!-- One click into the app (D-35): shown once the engine can receive a URL (R-17). -->
         {#if data.openInSse}
           <a class="download open" href={data.openInSse} target="_blank" rel="noopener">Open in Star System Explorer</a>
+        {:else if copyable}
+          <!-- A SYSTEM CANNOT BE OPENED, BUT IT CAN BE PASTED (owner, 2026-09-06; D-56). The
+               engine's `?open=` takes a campaign and refuses a single system, so the button that
+               would have opened it copies it instead - the same clip every row of the tree below
+               already offers, rooted at the whole thing. White rather than blue, because that is
+               what a system is called on a card. -->
+          <button class="download paste" type="button" onclick={copyWhole}>
+            {copied ? 'Copied - paste it into SSE' : 'Copy for Star System Explorer'}
+          </button>
         {/if}
       </p>
       <p class="download-note">
@@ -361,6 +409,13 @@
   .lead .dl { display: flex; gap: 8px; flex-wrap: wrap; }
   .download.open { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
   .download.open:hover { background: var(--panel-2); filter: none; }
+  /* THE SAME SHAPE IN THE OTHER COLOUR (D-56), which is the pair the cards already draw: a starmap
+     in the accent, a system in ink. A button rather than a link, because it copies rather than goes. */
+  .download.paste {
+    background: transparent; color: var(--ink); border: 1px solid var(--ink);
+    font: inherit; font-size: 1.05rem; font-weight: 650; cursor: pointer;
+  }
+  .download.paste:hover { background: var(--panel-2); filter: none; }
   .lead .download-note { margin: 0 0 12px; }
   .lead .panel { margin: 12px 0 0; }
   .visual .cover { margin: 0 0 12px; }

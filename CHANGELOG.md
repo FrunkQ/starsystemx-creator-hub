@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.35.0 — 2026-09-06
+
+### "Copy for Star System Explorer" on a system
+
+The engine opens a campaign from a link and refuses a single system - but it has taken a paste since
+v3.0.292, and every row of a map page has offered a clip since 0.12. So where a starmap gets "Open
+in Star System Explorer", a system now gets "Copy for Star System Explorer": the same clip, rooted
+at the whole map, in white rather than blue - the same pair the cards already draw.
+
+A system whose nodes form two separate trees copies the larger. The envelope carries one root, and
+that is a contract with the engine rather than something to widen quietly.
+
 ## 0.34.1 — 2026-09-06
 
 `docs/handover-2026-09-06-evening.md`: the day's work handed over, with the Discord bot as the next
