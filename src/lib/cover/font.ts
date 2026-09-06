@@ -84,8 +84,9 @@ const advance = (ch: string) => (G[ch]?.[0].length ?? 3) + 1;
 /**
  * FOUR FACES FROM ONE SET OF GLYPHS (owner, 2026-09-04: "choose a different font"). There is one
  * glyph set; the faces are ways of drawing it. `pixel` is the glyph as it is; `bold` paints it
- * twice with a horizontal offset; `outline` paints a halo in the shadow colour first; `wide`
- * stretches every column half as much again. A second glyph set would be data, not code.
+ * twice with a horizontal offset; `outline` paints the glyph HOLLOW - the ring in the text colour
+ * and the body in the colour behind it; `wide` stretches every column half as much again. A second
+ * glyph set would be data, not code.
  */
 export type FontStyle = 'pixel' | 'bold' | 'outline' | 'wide';
 const stretch = (style: FontStyle) => (style === 'wide' ? 1.5 : 1);
@@ -114,13 +115,21 @@ export function drawText(
       cx += advance(ch) * sx;
     }
   };
-  // The halo: the glyph in the shadow colour at eight offsets, so words read over anything.
-  if (shadow) {
+  // OUTLINE IS INVERTED, AND THAT IS THE FIX (owner, 2026-09-06: "Outlined does nothing
+  // noticeable"). It used to paint the same halo every face gets over a photograph - in the
+  // BACKGROUND colour, on the background - which is invisible by construction. An outline is
+  // hollow letters: the ring takes the text colour and the body takes the colour behind it.
+  const outline = style === 'outline' && !!shadow;
+  const ring = outline ? c : shadow;
+  const body = outline ? (shadow as RGB) : c;
+
+  // The halo: the glyph at eight offsets, so words read over anything.
+  if (ring) {
     const d = Math.max(1, scale * 0.45);
-    for (const [ox, oy] of [[-d, 0], [d, 0], [0, -d], [0, d], [-d, -d], [d, -d], [-d, d], [d, d]]) paint(ox, oy, shadow, alpha);
+    for (const [ox, oy] of [[-d, 0], [d, 0], [0, -d], [0, d], [-d, -d], [d, -d], [-d, d], [d, d]]) paint(ox, oy, ring, alpha);
   }
-  if (style === 'bold') paint(Math.max(1, scale * 0.35), 0, c, alpha);
-  paint(0, 0, c, alpha);
+  if (style === 'bold') paint(Math.max(1, scale * 0.35), 0, body, alpha);
+  paint(0, 0, body, alpha);
 }
 
 /** Word-wrap to at most `maxChars` per line and `maxLines` lines; the last line is cut with '...'. */

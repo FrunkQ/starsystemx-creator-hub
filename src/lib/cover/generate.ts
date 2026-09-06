@@ -57,7 +57,7 @@ export interface CoverOptions {
   title: boolean;
   byline: boolean;
   counts: boolean;
-  /** The bottom-right label: the site's domain. */
+  /** The address under the counts: the site's domain. */
   label: boolean;
   /** A QR code to the map's page. */
   qr: boolean;
@@ -67,7 +67,9 @@ export interface CoverOptions {
 
 export const DEFAULT_COVER_OPTIONS: CoverOptions = {
   base: 'auto', palette: 'night', font: 'pixel',
-  title: true, byline: true, counts: true, label: true, qr: false, baseImage: null
+  // THE QR IS ON BY DEFAULT (owner, 2026-09-06). A card without one is a picture; a card with one
+  // is a way back to the map, which is the only reason the hub draws cards at all.
+  title: true, byline: true, counts: true, label: true, qr: true, baseImage: null
 };
 
 const BASES: CoverBase[] = ['auto', 'system', 'starmap', 'plain', 'image'];
@@ -91,7 +93,7 @@ export function coverOptionsFrom(value: unknown): CoverOptions {
 export interface CoverFacts {
   title: string;
   creator: string | null;
-  /** Bottom-right text - the site's domain, e.g. explorers.starsystemx.com. */
+  /** The line under the counts - the site's domain, e.g. explorers.starsystemx.com. */
   label: string;
   /** The map page, for the QR code. Null draws no code even when asked. */
   url: string | null;
@@ -107,11 +109,21 @@ export interface CoverFacts {
 export const COVER_W = 1200;
 export const COVER_H = 630;
 
-interface Palette {
+export interface Palette {
   bgTop: RGB; bgBottom: RGB; ink: RGB; dim: RGB; faint: RGB; edge: RGB; accent: RGB; star: RGB; warn: RGB;
+  /**
+   * ONE PHOSPHOR FOR THE WHOLE PICTURE, when a palette has it.
+   *
+   * The palette used to colour the WORDS and leave the map alone, so a green screen carried a blue
+   * ocean world and an orange K star (owner, 2026-09-06: "Greenscreen should colour the elements on
+   * the map green more"). A real green screen has one colour and varies only in brightness - which
+   * is what `tinted` does: it keeps each element's relative brightness, so a gas giant still reads
+   * differently from a moon, and maps the hue onto the phosphor.
+   */
+  tint?: RGB;
 }
 
-const PALETTE: Record<CoverPalette, Palette> = {
+export const PALETTE: Record<CoverPalette, Palette> = {
   night: {
     bgTop: [16, 22, 40], bgBottom: [6, 9, 17], ink: [232, 236, 245], dim: [154, 166, 191],
     faint: [107, 119, 148], edge: [52, 66, 100], accent: [111, 179, 255], star: [255, 233, 176], warn: [255, 194, 102]
@@ -127,12 +139,31 @@ const PALETTE: Record<CoverPalette, Palette> = {
   // The green screen: phosphor on black, the terminal every starship bridge was drawn from.
   green: {
     bgTop: [4, 16, 8], bgBottom: [1, 5, 2], ink: [130, 255, 150], dim: [90, 205, 110],
-    faint: [55, 140, 75], edge: [30, 92, 46], accent: [170, 255, 180], star: [210, 255, 210], warn: [235, 255, 120]
+    faint: [55, 140, 75], edge: [30, 92, 46], accent: [170, 255, 180], star: [210, 255, 210], warn: [235, 255, 120],
+    tint: [120, 255, 140]
   }
 };
 
 const WHITE: RGB = [255, 255, 255];
 const QR_DARK: RGB = [8, 10, 16];
+
+/**
+ * A colour as this palette would draw it. Without a tint, itself.
+ *
+ * With one, its LUMINANCE on the phosphor's ramp: the floor is lifted off black so a dark element
+ * does not vanish into the background, and the ceiling is the tint itself. Relative brightness
+ * survives, which is the whole reason to do it this way rather than painting everything one green -
+ * a gas giant and a moon are still told apart, they are just both green.
+ */
+export function tinted(c: RGB, p: Palette): RGB {
+  if (!p.tint) return c;
+  const l = (0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]) / 255;
+  const k = 0.3 + 0.7 * l;
+  return [Math.round(p.tint[0] * k), Math.round(p.tint[1] * k), Math.round(p.tint[2] * k)];
+}
+
+/** The specular dot on a star or a planet. White, unless the palette has only one colour. */
+const highlight = (p: Palette): RGB => tinted(WHITE, p);
 
 /** FNV-1a: a stable 32-bit hash of a string, for angles and seeds. */
 export function fnv(s: string): number {
@@ -188,6 +219,10 @@ const EARTH_KG = 5.972e24;
 
 /** Star colour from the spectral letter. Anything unknown is the palette's star colour. */
 function starColour(cls: string | null | undefined, p: Palette): RGB {
+  return tinted(spectralColour(cls, p), p);
+}
+
+function spectralColour(cls: string | null | undefined, p: Palette): RGB {
   const letter = (cls ?? '').trim().charAt(0).toUpperCase();
   switch (letter) {
     case 'O': case 'B': return [170, 190, 255];
@@ -219,6 +254,11 @@ function starSize(cls: string | null | undefined): number {
 
 /** A planet's disc: size from its radius, colour from its mass and whether it has an ocean. */
 function planetStyle(n: CoverNode, p: Palette): { r: number; c: RGB } {
+  const style = rawPlanetStyle(n, p);
+  return { r: style.r, c: tinted(style.c, p) };
+}
+
+function rawPlanetStyle(n: CoverNode, p: Palette): { r: number; c: RGB } {
   const earths = n.mass_kg ? n.mass_kg / EARTH_KG : null;
   if (earths !== null && earths >= 50) return { r: 11, c: [214, 180, 140] }; // gas giant
   if (earths !== null && earths >= 8) return { r: 9, c: [150, 190, 230] };   // ice giant
@@ -290,7 +330,7 @@ function drawSystem(r: Raster, facts: CoverFacts, p: Palette, box: { cx: number;
   const sc = starColour(primary.star_class, p);
   r.glow(cx, cy, 120, sc, 0.38);
   r.circle(cx, cy, 24, sc);
-  r.circle(cx - 3, cy - 3, 12, WHITE, 0.55);
+  r.circle(cx - 3, cy - 3, 12, highlight(p), 0.55);
 
   orbiting.forEach((child, i) => {
     const radius = radii[i];
@@ -302,7 +342,7 @@ function drawSystem(r: Raster, facts: CoverFacts, p: Palette, box: { cx: number;
         // A ringed planet wears its ring: a thin tilted ellipse around the disc.
         if (child.children.some((k) => k.role_hint === 'ring')) r.ring(x, y, pr + 5, 1.6, p.dim, 0.8, 0.35);
         r.circle(x, y, pr, c);
-        r.circle(x - pr * 0.3, y - pr * 0.3, pr * 0.4, WHITE, 0.4);
+        r.circle(x - pr * 0.3, y - pr * 0.3, pr * 0.4, highlight(p), 0.4);
         const moons = child.children.filter((m) => m.role_hint === 'moon').slice(0, 4);
         if (moons.length) r.ring(x, y, pr + 9, 0.8, p.edge, 0.8);
         moons.forEach((m, k) => {
@@ -399,7 +439,7 @@ function drawStarmap(r: Raster, facts: CoverFacts, p: Palette, box: { x0: number
   const oc = starColour(systemClass(origin), p);
   r.glow(o.x, o.y, 48, oc, 0.45);
   r.circle(o.x, o.y, 7, oc);
-  r.circle(o.x - 2, o.y - 2, 3, WHITE, 0.6);
+  r.circle(o.x - 2, o.y - 2, 3, highlight(p), 0.6);
   drawText(r, o.x + 14, o.y - 7, systemLabel(origin), 2, p.ink, 0.9);
   return true;
 }
@@ -463,7 +503,7 @@ export function renderCover(facts: CoverFacts, options: CoverOptions = DEFAULT_C
     for (let i = 0; i < Math.min(40, Math.max(0, facts.systems - 1)); i++) {
       const x = rand() * COVER_W, y = rand() * COVER_H;
       r.glow(x, y, 7, p.star, 0.25);
-      r.circle(x, y, 1.4 + rand(), WHITE, 0.85);
+      r.circle(x, y, 1.4 + rand(), highlight(p), 0.85);
     }
     drawSystem(r, facts, p, wordsOn || footOn
       ? { cx: qrOn ? 760 : 860, cy: 392, inner: 62, outer: 182 }
@@ -488,33 +528,34 @@ export function renderCover(facts: CoverFacts, options: CoverOptions = DEFAULT_C
     write(60, options.title ? y + 6 : y, fold('by ' + facts.creator), 3, p.dim);
   }
 
+  // THE FOOT: what is in it, and the address UNDER it (owner, 2026-09-06: "Put:
+  // explorers.starsystemx.com text BELOW the What is in it if enabled").
+  //
+  // The domain used to sit at the bottom RIGHT, opposite the counts, with a rule that shuffled it up
+  // a line when the two would touch. Stacked in the left column they read as one block - what this
+  // map is, and where it came from - and the rule that kept them apart is gone with the problem.
+  // The QR keeps the bottom-right corner it has always had, which is the placement the owner said
+  // was fine.
+  const right = COVER_W - 60;
   const baseline = COVER_H - 60 - 21;
-  let countsWidth = 0;
+  const labelOn = options.label && !!facts.label;
+
+  // The QR is drawn FIRST so the text can be told how much room is left. Its own quiet zone is
+  // white, and text over it would stop it scanning.
+  let qrLeft = right;
+  if (qrOn) qrLeft = right - drawQr(r, facts.url as string, right, COVER_H - 60) - 24;
+
   if (options.counts) {
     const parts: string[] = [];
     if (facts.systems > 1) parts.push(facts.systems + ' systems');
     parts.push(facts.bodies + (facts.bodies === 1 ? ' body' : ' bodies'));
     if (facts.constructs) parts.push(facts.constructs + (facts.constructs === 1 ? ' construct' : ' constructs'));
     const counts = fold(parts.join(' - '));
-    countsWidth = width(counts, 3);
-    write(60, baseline, counts, 3, p.dim);
+    // A very long line of counts beside a QR code gets set smaller rather than running under it.
+    const scale = width(counts, 3) > qrLeft - 60 ? 2 : 3;
+    write(60, labelOn ? baseline - 30 : baseline, counts, scale, p.dim);
   }
-
-  const right = COVER_W - 60;
-  let labelTop = baseline;
-  if (options.label && facts.label) {
-    const label = fold(facts.label);
-    const w = width(label, 3);
-    // The counts and the domain share the bottom line; when the two would touch, the domain
-    // moves up a line rather than running into the numbers.
-    if (options.counts && 60 + countsWidth + 40 > right - w) labelTop = baseline - 30;
-    write(right - w, labelTop, label, 3, p.faint);
-  }
-  if (qrOn) {
-    // Above the label when there is one, otherwise on the baseline.
-    const bottom = options.label && facts.label ? labelTop - 16 : COVER_H - 60;
-    drawQr(r, facts.url as string, right, bottom);
-  }
+  if (labelOn) write(60, baseline, fold(facts.label), 3, p.faint);
 
   return encodePng(COVER_W, COVER_H, r.data);
 }

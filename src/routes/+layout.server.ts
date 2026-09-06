@@ -17,7 +17,17 @@ import { isStaff } from '$lib/server/auth';
 //
 // Absent token = no script tag at all. A page whose job is to LOAD FAST does not get a third-party
 // script it did not ask for.
-export const load: LayoutServerLoad = async ({ platform, locals, url }) => {
+export const load: LayoutServerLoad = async ({ platform, locals, url, depends }) => {
+  // A NAMED DEPENDENCY so a page that changes the numbers can refresh JUST this load.
+  //
+  // The review queue decides by `fetch` rather than by a form action, so nothing re-ran the layout
+  // and the badge kept its load-time number until a full page load - the owner watched a (1) sit
+  // there after clearing the queue (D-43). Every other staff page posts a real form, and SvelteKit
+  // re-runs every load after an action, which is why only this one was wrong.
+  //
+  // `invalidate('hub:counts')` re-runs this load and NOT the page's own, so a reviewer holding down
+  // A pays for four head counts rather than for the queue as well.
+  depends('hub:counts');
   const env = platform?.env;
   const token = (env as unknown as { PUBLIC_CF_BEACON_TOKEN?: string })?.PUBLIC_CF_BEACON_TOKEN;
   // Site identity, so a host change is a config edit rather than a release.

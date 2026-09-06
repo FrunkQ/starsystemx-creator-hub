@@ -7,6 +7,7 @@
   //
   // Every decision is written against the HASH with a reviewer and a timestamp. Never against the
   // upload, or the same bytes come back tomorrow.
+  import { invalidate } from '$app/navigation';
   let { data } = $props();
 
   // A decided hash is hidden by FILTERING the loaded queue rather than by mutating a local copy.
@@ -38,6 +39,10 @@
       decided = new Set(decided).add(card.sha256);
       lastHash = card.sha256;
       if (cursor >= cards.length) cursor = Math.max(0, cards.length - 1);
+      // The number circle in the banner is the layout's, and this page decides by fetch - so say
+      // so, or it keeps the count it was drawn with (D-43). Not awaited: the queue on screen is
+      // already right, and a reviewer should not wait for a badge.
+      void invalidate('hub:counts');
     } catch {
       alert('That decision did not save. Nothing has changed.');
     } finally {
@@ -56,6 +61,7 @@
       next.delete(lastHash);
       decided = next;
       lastHash = null;
+      void invalidate('hub:counts');
     } catch {
       alert('That undo did not save.');
     } finally {

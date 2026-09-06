@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.26.0 — 2026-09-06
+
+### The cover editor, on the owner's notes
+
+**Outlined is outlined.** It painted its halo in the background colour, on the background, so it
+did nothing visible at all; now the letters are hollow - the ring in the text colour, the body in
+the colour behind it.
+
+**The domain sits under what is in it**, left-aligned, so the two read as one block instead of
+sitting at opposite ends of the card. The QR keeps its corner, and is now drawn first so a long
+counts line is set smaller rather than running under it.
+
+**The QR is on by default** - a card without one is a picture; a card with one is a way back to the
+map. A creator who turned it off keeps it off.
+
+**Green screen is one colour now.** The palette reached the words and left the map's blues and
+oranges alone. Every element colour goes through the phosphor: luminance onto a green ramp, so a
+gas giant still reads differently from a moon and both are green. The QR keeps its white, because
+it has to scan.
+
+### The number circle clears
+
+Clearing the review queue left the (1) sitting in the banner. The review page decides by fetch
+rather than a form, so nothing re-ran the count; it now invalidates just that one load - the badge
+refreshes without re-fetching the queue.
+
 ## 0.25.0 — 2026-09-06
 
 ### The log

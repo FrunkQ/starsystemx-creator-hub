@@ -1018,6 +1018,42 @@ And an action whose actor is null shows as **"a deleted account"**: the foreign 
 `on delete set null`, so what was done outlives whoever did it, which is exactly what an audit log
 is for.
 
+### D-43. Four notes on the cover editor, and a badge that would not clear
+
+The owner, 2026-09-06, after using the designer for the first time.
+
+**"Outlined does nothing noticeable" - and it did nothing, by construction.** `outline` painted the
+same halo every face gets over a photograph, in `p.bgBottom` - the background colour - on the
+background. Invisible, and it had been since the face shipped. An outline is HOLLOW letters: the
+ring takes the text colour and the body takes the colour behind it. That is what the name says and
+it is now unmistakable at a glance, which was the complaint.
+
+**"Put explorers.starsystemx.com BELOW the What is in it."** The domain sat at the bottom RIGHT,
+opposite the counts, with a rule that shuffled it up a line when the two would collide. Stacked in
+the left column they read as one block - what this map is, and where it came from - and the
+collision rule is gone with the problem it solved. **The QR keeps the corner it has always had**,
+which the owner said was the right placement; it is now drawn FIRST so the counts can be told how
+much room is left and set smaller rather than run under it.
+
+**The QR is on by default.** A card without one is a picture; a card with one is a way back to the
+map, which is the only reason the hub draws cards. `coverOptionsFrom` still honours a creator who
+turned it off - a default must not reach back and re-tick a cleared box, and a test pins that.
+
+**"Greenscreen should colour the elements on the map green more."** The palette reached the words
+and left the map alone, so a green screen carried a blue ocean world and an orange K star. A palette
+may now carry a `tint`, and every element colour goes through it: LUMINANCE onto the phosphor's
+ramp, floor lifted off black so nothing vanishes. **Relative brightness survives, which is the whole
+argument for a ramp over one flat green** - a gas giant still reads differently from a moon, they
+are just both green. The QR keeps its white quiet zone in every palette, because it has to scan.
+
+**And the badge that would not clear.** The owner cleared the review queue and watched the (1) sit
+there. The cause: the review page decides by `fetch`, not by a form action, so nothing re-ran the
+layout load that counts the queue - every other staff page posts a real form, and SvelteKit re-runs
+every load after an action, which is exactly why only this one was wrong. The layout load now
+declares `depends('hub:counts')` and the review page invalidates that one key: the badge refreshes
+and the queue on screen does not re-fetch, so a reviewer holding down A pays for four head counts
+rather than for the whole queue as well.
+
 ### D-16. The takedown address is assembled at runtime, never served as text
 
 The owner's instruction was explicit: keep it off the page as scrapable text. It is stored as
