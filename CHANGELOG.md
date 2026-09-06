@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.34.1 — 2026-09-06
+
+`docs/handover-2026-09-06-evening.md`: the day's work handed over, with the Discord bot as the next
+job, the credit write-back as the most valuable half-done thing, and the five traps that cost real
+time.
+
 ## 0.34.0 — 2026-09-06
 
 ### Credit a picture from the manage page, and be told why Publish is asleep
