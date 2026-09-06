@@ -285,7 +285,12 @@ export const actions: Actions = {
     }).eq('system_id', params.id).eq('sha256', sha256);
     if (e) return fail(500, { message: e.message });
 
-    return { credited: 'Credited. ' + (entry.credit ?? entry.license ?? entry.sourceUrl) };
+    // Says where it landed, because that is the part that was missing (D-62): the credit now
+    // travels in the download, and a creator who is not told that has no reason to believe it.
+    return {
+      credited: 'Credited: ' + (entry.credit ?? entry.license ?? entry.sourceUrl)
+        + '. It goes into the file from the next download.'
+    };
   },
 
   /**

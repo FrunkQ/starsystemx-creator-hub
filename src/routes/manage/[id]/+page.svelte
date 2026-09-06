@@ -494,6 +494,13 @@
       Everything this map carries that somebody made. Any one of who, licence or where satisfies the
       hub; all three are what an artist would want. A CC-BY licence needs a name.
     </p>
+    <!-- SAY WHERE IT ENDS UP (D-62). A creator typing a name here has no way of knowing whether it
+         reaches the file somebody downloads, and until today it did not. -->
+    <p class="muted">
+      What you write here goes into the file people download - the save itself and its
+      <code>ATTRIBUTIONS.md</code> - not just onto this page. Your own copy in Star System Explorer
+      is untouched, so copy it across there too if you want your next export to have it.
+    </p>
     {#if form?.credited}<p class="ok">{form.credited}</p>{/if}
     <datalist id="licences">
       {#each LICENCES as l (l)}<option value={l}></option>{/each}

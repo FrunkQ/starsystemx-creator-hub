@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.40.0 - 2026-09-06
+
+### A credit typed on the hub now reaches the file people download
+
+Fixing a credit on the manage page satisfied the publish gate and printed on the map's page, and
+the download still carried a picture with nobody's name on it. It goes into the save itself now -
+every node that uses the asset - and into the `ATTRIBUTIONS.md` beside it, which is regenerated to
+match and says plainly that some of it was filled in on the hub.
+
+It is applied **on the way out**, not written into the stored bundle. The stored bytes stay as
+uploaded, which is what the attestation was made about; the claims stay the single source of truth
+the gate reads; and the download cannot drift, because it is rebuilt from both every time.
+
+An empty box never blanks a credit the app already recorded. That direction would have been worse
+than not running at all.
+
+
 ## 0.39.1 - 2026-09-06
 
 "Nothing to link yet." The sentence after it explained which switches were off, which is a note to

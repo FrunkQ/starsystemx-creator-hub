@@ -118,3 +118,72 @@ describe('what the engine reads off a pasted node (D-58)', () => {
     expect(snippet.radius_km).toBe(850000);
   });
 });
+
+// ============================================================================================
+// NOTHING TRAVELS UNCREDITED. The owner asked directly, 2026-09-06: *"does every copy/paste carry
+// its attributions to copy into other maps?"*
+//
+// The answer has two halves and they meet exactly:
+//
+//   - An asset the BUNDLE carries (`assets/...`, a `model.hash`) is the only kind the attributions
+//     file lists, and it is precisely the kind `snippetFor` REMOVES - it would paste a broken link
+//     into somebody else's save. No asset, nothing to credit, nothing orphaned.
+//   - An asset that is a real url - somebody else's hosting, or an app-shipped starter model -
+//     survives the clip AND KEEPS ITS CREDIT FIELDS, because the snippet is a spread and a deny
+//     list (D-58). The ISS is still the ISS, and it is still credited to NASA.
+//
+// So a clip can never carry a picture without its provenance. The gap that WOULD be a bug is the
+// second case losing its credit while keeping its url, so that is what these pin.
+// ============================================================================================
+describe('a clip never carries art without its credit', () => {
+  it('keeps the credit on a picture that travels, because the url still works elsewhere', () => {
+    const shaped = normalise({
+      nodes: [{
+        id: 'iss', name: 'ISS', kind: 'construct', parentId: null,
+        image: {
+          url: 'https://images.example/iss.jpg',
+          title: 'ISS over Earth', credit: 'A Photographer', license: 'CC BY 4.0',
+          sourceUrl: 'https://images.example/iss'
+        },
+        model: { url: '/models/nasa/iss.glb', credit: 'NASA', license: 'Public domain' }
+      }]
+    });
+    // A construct, deliberately: the owner copies stations and megastructures as often as bodies.
+    const snippet = shaped.constructs[0].snippet as Record<string, any>;
+    expect(snippet.image.url).toBe('https://images.example/iss.jpg');
+    expect(snippet.image.credit).toBe('A Photographer');
+    expect(snippet.image.license).toBe('CC BY 4.0');
+    expect(snippet.image.sourceUrl).toBe('https://images.example/iss');
+    expect(snippet.model.credit).toBe('NASA');
+  });
+
+  it('removes the WHOLE picture when the bundle carried it, credit and all - never a bare url', () => {
+    // A half-stripped image - the url gone but the credit left behind, or the other way round -
+    // would be either a broken link or a credit for nothing. It is all or nothing.
+    const shaped = normalise({
+      nodes: [{
+        id: 'b', name: 'Bellwether', kind: 'body', parentId: null,
+        image: { url: 'assets/images/b.png', credit: 'A Painter', license: 'CC BY 4.0' },
+        model: { hash: 'deadbeef', url: 'assets/models/deadbeef.glb', credit: 'A Modeller' }
+      }]
+    });
+    const snippet = shaped.bodies[0].snippet as Record<string, any>;
+    expect(snippet.image).toBeUndefined();
+    expect(snippet.model).toBeUndefined();
+    expect(JSON.stringify(snippet)).not.toContain('A Painter');
+    expect(JSON.stringify(snippet)).not.toContain('A Modeller');
+  });
+
+  it('carries the CARTOGRAPHER on the envelope, which is the credit a bundle asset cannot leave with', () => {
+    // The map-level half: the engine records this as a content credit on paste (R-16), so the
+    // receiving map says "includes work from X by Y" even though no file crossed over.
+    const clip = buildClip(
+      [{ node_id: 'a', parent_id: null, snippet: { id: 'a', name: 'A' } }],
+      'a',
+      { site: 'the hub', url: 'https://hub.test/s/m', title: 'A Map', creator: 'A Cartographer' }
+    );
+    expect(clip?.source.creator).toBe('A Cartographer');
+    expect(clip?.source.title).toBe('A Map');
+    expect(clip?.source.url).toBe('https://hub.test/s/m#node=a');
+  });
+});

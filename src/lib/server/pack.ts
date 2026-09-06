@@ -22,7 +22,8 @@ import type { HubEnv } from './db';
 import * as r2 from './r2';
 import * as ledger from './ledger';
 import { readZip } from '$lib/bundle/read';
-import { isZip, README_NAME } from '$lib/bundle/contract';
+import { isZip, README_NAME, ATTRIBUTIONS_NAME, DOC_NAME, detectKind } from '$lib/bundle/contract';
+import { creditedDoc, type ClaimsByPath } from '$lib/bundle/credits';
 import { fanWorkFileNotice } from '$lib/fanWork';
 
 export interface PackResult {
@@ -74,6 +75,24 @@ export async function packForDownload(
     withheld.push(path);
   }
 
+  // ------------------------------------------------------------------------------------------
+  // THE CREDITS THE CREATOR TYPED ON THE HUB GO INTO THE FILE (D-62).
+  //
+  // The owner: *"that is then written back to the file for publication as this is the first time
+  // the user is challenged."* Before this, a credit fixed on the manage page satisfied the publish
+  // gate and printed on the map's page - and the download still carried a picture with nobody's
+  // name on it. The hub was saying something on a web page that the file it served did not agree
+  // with, which is the wrong way round for a hub whose argument is "credit the artists".
+  //
+  // ON THE WAY OUT, not into the stored bytes: those are what was uploaded and attested to, the
+  // claims are already the truth the gate reads, and patching here cannot drift - edit a credit
+  // and the very next download has it. `bundle/credits.ts` has the full reasoning.
+  //
+  // NEVER FATAL. A save whose doc will not parse, or a claim that matches nothing, leaves the
+  // download exactly as it was. A download that failed because a credit could not be applied would
+  // be a worse outcome than a download missing a line of provenance.
+  await creditDownload(sb, systemId, out).catch(() => undefined);
+
   if (withheld.length) out[README_NAME] = strToU8(withheldNote(out[README_NAME], withheld));
 
   // THE FAN-WORK NOTICE TRAVELS WITH THE FILE (D-61). A notice that only exists on a web page
@@ -107,4 +126,60 @@ function withheldNote(existing: Uint8Array | undefined, withheld: string[]): str
     'ones are still waiting, so they have been left out of this download. The map itself is\n' +
     'complete and will open normally - the bodies concerned simply have no picture.\n\n' +
     withheld.map((w) => '  ' + w).join('\n') + '\n';
+}
+
+
+/**
+ * Put the creator's typed credits into the copy of the save that is about to leave (D-62).
+ *
+ * MUTATES `out` - the member map the zip is built from. Silent when there is nothing to do, which
+ * is the overwhelmingly common case: most maps have every credit already recorded in the app.
+ */
+async function creditDownload(sb: Db, systemId: string, out: Record<string, Uint8Array>): Promise<void> {
+  // Only claims with something in them. A row with all four fields empty is a picture nobody has
+  // credited yet - it is BLOCKING the publish, not waiting to be copied into a file.
+  const { data: rows } = await sb.from('asset_claims')
+    .select('sha256, title, credit, license, source_url')
+    .eq('system_id', systemId)
+    .or('title.not.is.null,credit.not.is.null,license.not.is.null,source_url.not.is.null');
+  if (!rows?.length) return;
+
+  // sha256 -> where that asset sits in THIS bundle. The claim is keyed by bytes; the doc refers to
+  // paths; `system_assets` is the only thing that knows both.
+  const { data: assets } = await sb.from('system_assets')
+    .select('sha256, bundle_path').eq('system_id', systemId);
+  const pathBySha = new Map((assets ?? []).map((a) => [a.sha256 as string, a.bundle_path as string]));
+
+  const claims: ClaimsByPath = new Map();
+  for (const r of rows as unknown as Array<Record<string, any>>) {
+    const path = pathBySha.get(r.sha256);
+    if (!path) continue;
+    claims.set(path, { title: r.title, credit: r.credit, license: r.license, sourceUrl: r.source_url });
+  }
+  if (!claims.size) return;
+
+  const docPath = Object.keys(out).find((n) => n.endsWith(DOC_NAME.starmap))
+    ?? Object.keys(out).find((n) => n.endsWith(DOC_NAME.system));
+  if (!docPath) return;
+
+  let doc: unknown;
+  try {
+    doc = JSON.parse(new TextDecoder().decode(out[docPath]));
+  } catch {
+    // A save whose own document will not parse is not one to start editing.
+    return;
+  }
+
+  const patched = creditedDoc(doc, detectKind(doc, docPath), claims);
+  if (!patched) return;
+
+  // Two spaces, which is what the engine exports and what anybody opening the file expects to see.
+  // The README tells them to edit it in a text editor, so it has to stay readable.
+  out[docPath] = strToU8(JSON.stringify(patched.doc, null, 2));
+
+  // WHERE THE SAVE ALREADY KEEPS IT, or the root when it has none. Writing to the root regardless
+  // would leave a save with two attributions files disagreeing with each other, which is worse than
+  // either of them being wrong on its own.
+  const attrPath = Object.keys(out).find((n) => n.endsWith(ATTRIBUTIONS_NAME)) ?? ATTRIBUTIONS_NAME;
+  out[attrPath] = strToU8(patched.attributions);
 }
