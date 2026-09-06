@@ -15,16 +15,20 @@ describe('who can reach what', () => {
 
   it('gives a moderator the moderation work and none of the running of the place', () => {
     const seen = visibleTo('moderator');
-    expect(seen.map((a) => a.href)).toEqual(['/admin/review', '/admin/reports', '/admin/comments']);
+    expect(seen.map((a) => a.href)).toEqual([
+      '/admin/tags', '/admin/review', '/admin/reports', '/admin/comments', '/admin/explorers'
+    ]);
     expect(seen.every((a) => a.group === 'Moderation')).toBe(true);
   });
 
-  it('keeps ENDING an account out of a moderator\'s hands', () => {
-    // Removing a picture or a comment is undoable and is the moderator's job; suspending, banning
-    // and deleting a person ends their account and their maps, and stays the owner's.
-    const explorers = ADMIN_AREAS.find((a) => a.href === '/admin/explorers')!;
-    expect(explorers.tier).toBe('admin');
-    expect(visibleTo('moderator').map((a) => a.href)).not.toContain('/admin/explorers');
+  it("keeps the running of the place out of a moderator's hands", () => {
+    // The owner, 2026-09-06: "Running the place = just admin." Explorers moved the OTHER way in
+    // the same message, so the earlier reading here - that ending an account is not a moderator's
+    // job - survives as one guarded action in the route, not as a whole area.
+    const mods = visibleTo('moderator').map((a) => a.href);
+    for (const href of ['/admin/config', '/admin/stats', '/admin/backup', '/admin/debug']) {
+      expect(mods).not.toContain(href);
+    }
   });
 
   it('every area belongs to a group the nav draws', () => {
@@ -34,7 +38,7 @@ describe('who can reach what', () => {
 });
 
 describe('the number circles', () => {
-  const counts = { review: 3, reports: 1, debug: 12 };
+  const counts = { review: 3, reports: 1, debug: 12, tags: 2 };
 
   it('shows a count where there is one', () => {
     expect(badgeFor(ADMIN_AREAS.find((a) => a.href === '/admin/review')!, counts)).toBe(3);
@@ -60,14 +64,14 @@ describe('the number circles', () => {
 });
 
 describe('the one number in the banner', () => {
-  it('is the two real queues added up', () => {
-    expect(outstanding({ review: 3, reports: 1, debug: 12 })).toBe(4);
+  it('is the three real queues added up', () => {
+    expect(outstanding({ review: 3, reports: 1, debug: 12, tags: 2 })).toBe(6);
   });
 
   // Debug uploads are kept files, not a queue. A badge that never reaches zero teaches people to
   // stop reading badges, which costs the two that mean something.
   it('leaves the debug uploads out', () => {
-    expect(outstanding({ review: 0, reports: 0, debug: 40 })).toBe(0);
+    expect(outstanding({ review: 0, reports: 0, debug: 40, tags: 0 })).toBe(0);
   });
 
   it('is zero when nothing could be counted', () => {

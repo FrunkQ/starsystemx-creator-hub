@@ -1,12 +1,13 @@
 import type { PageServerLoad } from './$types';
 import { error } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
+import { isStaff } from '$lib/server/auth';
 
 // Everyone, newest first, or a search by handle: the way in to an explorer's own page (D-28).
 export const load: PageServerLoad = async ({ platform, locals, url }) => {
   const env = platform?.env;
   if (!env) throw error(500, 'not configured');
-  if (locals.viewer?.role !== 'admin') throw error(404, 'Not found');
+  if (!isStaff(locals.viewer)) throw error(404, 'Not found');
 
   const sb = db(env);
   const q = (url.searchParams.get('q') ?? '').replace(/[^a-z0-9_-]/gi, '').slice(0, 40);

@@ -7,6 +7,8 @@
   // HOW MUCH IS WRITTEN ABOUT IT (D-30), and what would lift it: the nudge to make the effort.
   const density = $derived(densityFrom(s.info_density, s.info_detail));
   const infoLevel = $derived(densityLevel(s.info_density, data.best));
+  // Which group's "+" is open, if any (D-40). One at a time: the field belongs to a group.
+  let adding = $state<string | null>(null);
   let uploading = $state(false);
   let uploadMessage = $state<string | null>(null);
 
@@ -152,12 +154,37 @@
               <span>{tag}</span>
             </label>
           {/each}
+          <!-- THE "+" (D-40). Not a free text box: a request. It opens a field OUTSIDE this form,
+               below, because a tag has to be reviewed before anyone can use it - including you. -->
+          <button type="button" class="add" onclick={() => (adding = adding === group.label ? null : group.label)}
+                  title="Ask for a tag this list does not have">+</button>
         </div>
+        {#each data.waitingTags.filter((w) => w.group === group.label) as w (w.tag)}
+          <p class="waiting">"{w.tag}" is with a reviewer.</p>
+        {/each}
       </div>
     {/each}
   </fieldset>
   <button class="primary" type="submit">Save</button>
 </form>
+
+<!-- Its own form, because it is a different request from saving the map, and a nested form is not
+     a thing HTML has. Shown only once the "+" above has been pressed. -->
+{#if adding}
+  <form class="panel ask" method="POST" action="?/proposeTag">
+    <h3>Ask for a tag in "{adding}"</h3>
+    <p class="muted">
+      A word the list is missing. Every tag is looked at by a person first - if it means the same as
+      one that already exists, yours is swapped for that one, so the filter keeps finding every map.
+      Kept tags become available to everyone.
+    </p>
+    <input type="hidden" name="group" value={adding} />
+    <input name="tag" maxlength="32" placeholder="e.g. stars-without-number" autocomplete="off" required />
+    <button class="primary" type="submit">Ask</button>
+    <button type="button" onclick={() => (adding = null)}>Cancel</button>
+  </form>
+{/if}
+{#if form?.proposed}<div class="panel notice"><p>{form.proposed}</p></div>{/if}
 
 <!-- 2. Screenshots. -->
 <div class="panel">
@@ -312,6 +339,16 @@
           padding: 3px 10px; border-radius: 999px; cursor: pointer;
           background: var(--panel-2); border: 1px solid var(--edge); font-size: 0.85rem; }
   .pick.on { border-color: var(--accent); }
+  /* The "+": the same size and shape as a pill, so it reads as one more thing you can pick. */
+  .add {
+    padding: 2px 10px; border-radius: 999px; line-height: 1.5;
+    border: 1px dashed var(--edge); background: none; color: var(--ink-faint);
+  }
+  .add:hover { border-color: var(--accent); color: var(--accent); background: none; }
+  .waiting { margin: 6px 0 0; color: var(--ink-faint); font-size: 0.85rem; }
+  .ask { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .ask h3, .ask p { width: 100%; margin: 0; }
+  .ask input[name='tag'] { min-width: 260px; }
   .pick input { margin: 0; }
   .shots { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); margin-top: 14px; }
   figure { margin: 0; }

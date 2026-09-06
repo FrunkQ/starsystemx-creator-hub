@@ -2,11 +2,12 @@ import type { PageServerLoad } from './$types';
 import { error } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import * as ledger from '$lib/server/ledger';
+import { isStaff } from '$lib/server/auth';
 
 export const load: PageServerLoad = async ({ platform, locals }) => {
   const env = platform?.env;
   if (!env) throw error(500, 'not configured');
-  if (locals.viewer?.role !== 'admin') throw error(404, 'Not found');
+  if (!isStaff(locals.viewer)) throw error(404, 'Not found');
 
   const sb = db(env);
   const queue = await ledger.queue(sb, 60);

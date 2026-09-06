@@ -2,6 +2,7 @@ import type { LayoutServerLoad } from './$types';
 import { db } from '$lib/server/db';
 import { loadSite, DEFAULT_SITE_NAME } from '$lib/server/site';
 import { outstandingCounts, newCommentsFor, EMPTY_COUNTS } from '$lib/server/outstanding';
+import { isStaff } from '$lib/server/auth';
 
 // Analytics, and deliberately the smallest possible amount of it.
 //
@@ -29,7 +30,7 @@ export const load: LayoutServerLoad = async ({ platform, locals, url }) => {
   // count is for anybody signed in: it is the one thing waiting for an ordinary Explorer, and it
   // was previously visible only by going to the page that clears it.
   const [counts, newComments] = await Promise.all([
-    locals.viewer?.role === 'admin' && env?.SUPABASE_URL
+    isStaff(locals.viewer) && env?.SUPABASE_URL
       ? outstandingCounts(db(env))
       : Promise.resolve(EMPTY_COUNTS),
     locals.viewer && env?.SUPABASE_URL

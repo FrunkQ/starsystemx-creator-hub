@@ -2,6 +2,7 @@ import type { PageServerLoad, Actions } from './$types';
 import { error, fail } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import * as audit from '$lib/server/audit';
+import { isStaff } from '$lib/server/auth';
 
 // Every live comment on the hub, newest first, with Remove on each row - so an admin never hunts
 // for one map by map (owner, 2026-09-05: "admins need to be able to delete comments easily").
@@ -10,7 +11,7 @@ import * as audit from '$lib/server/audit';
 export const load: PageServerLoad = async ({ platform, locals, url }) => {
   const env = platform?.env;
   if (!env) throw error(500, 'not configured');
-  if (locals.viewer?.role !== 'admin') throw error(404, 'Not found');
+  if (!isStaff(locals.viewer)) throw error(404, 'Not found');
 
   const sb = db(env);
   const removed = url.searchParams.has('removed');
@@ -48,7 +49,7 @@ const ID = /^[0-9a-f-]{36}$/;
 export const actions: Actions = {
   remove: async ({ request, platform, locals }) => {
     const env = platform?.env;
-    if (!env || locals.viewer?.role !== 'admin') throw error(404, 'Not found');
+    if (!env || !isStaff(locals.viewer)) throw error(404, 'Not found');
     const id = String((await request.formData()).get('id') ?? '');
     if (!ID.test(id)) return fail(400, { message: 'bad id' });
 
@@ -63,7 +64,7 @@ export const actions: Actions = {
 
   restore: async ({ request, platform, locals }) => {
     const env = platform?.env;
-    if (!env || locals.viewer?.role !== 'admin') throw error(404, 'Not found');
+    if (!env || !isStaff(locals.viewer)) throw error(404, 'Not found');
     const id = String((await request.formData()).get('id') ?? '');
     if (!ID.test(id)) return fail(400, { message: 'bad id' });
 

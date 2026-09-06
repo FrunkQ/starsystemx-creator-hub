@@ -1,5 +1,39 @@
 # Changelog
 
+## 0.23.0 — 2026-09-06
+
+### Moderators
+
+`creator_role` gains `moderator` (migration 0028). A moderator gets tag review, picture review,
+comments, reports and the explorers page; running the place - config, usage, backups, debug - stays
+with the owner. The line is whether it can be undone, so the two irreversible things on a page a
+moderator otherwise reaches in full stay the owner's: deleting an account, and handing out the role
+itself. The role is granted on an explorer's own page, by an admin, never on yourself.
+
+"Gates" is now "Config", Debug is its own group between Moderation and Running the place in its own
+red, and the strip shows a moderator only what they can reach.
+
+### Game systems, and a "+" on every tag group
+
+Two new groups: Game system (opening with system-agnostic, any-system and homebrew-rules, then two
+dozen named ones) and Rules style (osr, pbta, forged-in-the-dark, rules-light, crunchy and the
+rest). Every group now has a "+" that asks for a word the list is missing.
+
+It is a request, not a free text box: a proposed tag waits for review rather than appearing on a
+public page, and Tag review shows each one beside the tags that already nearly mean it. Swapping is
+one click and puts the existing tag on the asking map - accepting a genuinely new word is the
+deliberate second option, and it makes the tag available to everyone on the next request, no deploy
+(migration 0029). A merged or rejected word is remembered, so the second person to ask gets the
+first person's answer.
+
+### Debug reads a crash log
+
+It used to answer "neither a zip nor JSON", which is true and useless: when the app falls over the
+console is what a person has to hand. A text upload is now read as a log - the build, the browser,
+the first error with the frames under it, and each distinct error once. A file starting with `[`
+now has to parse before it counts as JSON, because that is what a console log's first line looks
+like.
+
 ## 0.22.1 — 2026-09-06
 
 The number circle an ordinary Explorer needed: new comments on your own maps, on your own name in

@@ -8,11 +8,12 @@ import { json, error } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import * as ledger from '$lib/server/ledger';
 import * as audit from '$lib/server/audit';
+import { isStaff } from '$lib/server/auth';
 
 export const POST: RequestHandler = async ({ request, platform, locals }) => {
   const env = platform?.env;
   if (!env) throw error(500, 'not configured');
-  if (locals.viewer?.role !== 'admin') throw error(404, 'Not found');
+  if (!isStaff(locals.viewer)) throw error(404, 'Not found');
 
   // The request body is whatever a client sent. Shape it at the boundary and validate below;
   // nothing downstream sees an unchecked value.

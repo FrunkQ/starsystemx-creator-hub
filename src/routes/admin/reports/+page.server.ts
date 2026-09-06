@@ -5,6 +5,7 @@ import type { Db } from '$lib/server/database.types';
 import { loadGates } from '$lib/server/config';
 import * as accounts from '$lib/server/accounts';
 import * as audit from '$lib/server/audit';
+import { isStaff } from '$lib/server/auth';
 
 // Reports, and what to do about them (D-33). A picture report is settled in the review queue;
 // a map report by taking the map down or dismissing it; a comment report by removing the
@@ -12,7 +13,7 @@ import * as audit from '$lib/server/audit';
 export const load: PageServerLoad = async ({ platform, locals }) => {
   const env = platform?.env;
   if (!env) throw error(500, 'not configured');
-  if (locals.viewer?.role !== 'admin') throw error(404, 'Not found');
+  if (!isStaff(locals.viewer)) throw error(404, 'Not found');
 
   const sb = db(env);
   // Reasons drive triage order, and report velocity against one creator or one hash is itself a
@@ -40,7 +41,7 @@ export const load: PageServerLoad = async ({ platform, locals }) => {
 
 async function admin(platform: App.Platform | undefined, locals: App.Locals) {
   const env = platform?.env;
-  if (!env || locals.viewer?.role !== 'admin') throw error(404, 'Not found');
+  if (!env || !isStaff(locals.viewer)) throw error(404, 'Not found');
   return { env, sb: db(env), me: locals.viewer };
 }
 

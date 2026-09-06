@@ -13,8 +13,10 @@
   import { page } from '$app/state';
   let { children, data } = $props();
 
-  // The staff strip is drawn where the staff work is, and nowhere else.
-  const staff = $derived(data?.viewer?.role === 'admin' && page.url.pathname.startsWith('/admin'));
+  // WHO IS STAFF (D-39): a moderator or an admin. The strip is drawn where the staff work is and
+  // nowhere else; the tier decides which areas of it they are offered.
+  const tier = $derived(data?.viewer?.role === 'admin' ? 'admin' : data?.viewer?.role === 'moderator' ? 'moderator' : null);
+  const staff = $derived(!!tier && page.url.pathname.startsWith('/admin'));
 </script>
 
 <!-- Cloudflare Web Analytics. `defer` and nothing else: no third-party script gets to block a page
@@ -46,7 +48,7 @@
     {#if data?.viewer}
       <a class="me" href="/account">
         {data.viewer.handle}
-        {#if data.viewer.role === 'admin'}<span class="role">admin</span>{/if}
+        {#if tier}<span class="role" class:mod={tier === 'moderator'}>{tier}</span>{/if}
         <!-- What is waiting for THIS person: comments on their maps since they last looked. The
              account page clears it by showing them, which is why it can be a number and not a dot. -->
         {#if (data.newComments ?? 0) > 0}
@@ -58,12 +60,12 @@
       <!-- ONE staff link, not eight. The areas are grouped in the strip below, which appears on the
            admin pages themselves; a public map page has no business carrying the review queue. The
            badge is the work waiting, so it is visible from anywhere without the links being. -->
-      {#if data.viewer.role === 'admin'}
+      {#if tier}
         {@const waiting = outstanding(data.counts ?? EMPTY_COUNTS)}
-        <a class="staff-link" href="/admin/review" aria-current={staff ? 'page' : undefined}>
-          Admin
+        <a class="staff-link" class:mod={tier === 'moderator'} href="/admin/review" aria-current={staff ? 'page' : undefined}>
+          {tier === 'admin' ? 'Admin' : 'Moderate'}
           {#if waiting > 0}
-            <span class="badge" title="{waiting} things waiting: pictures to review and reports still open">
+            <span class="badge" title="{waiting} things waiting: tags and pictures to review, and reports still open">
               {badgeLabel(waiting)}
             </span>
           {/if}
@@ -80,7 +82,7 @@
 
   {#if staff}
     <div class="staff-strip">
-      <StaffNav counts={data?.counts ?? EMPTY_COUNTS} path={page.url.pathname} />
+      <StaffNav counts={data?.counts ?? EMPTY_COUNTS} path={page.url.pathname} tier={tier ?? 'moderator'} />
     </div>
   {/if}
 </header>

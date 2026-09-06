@@ -877,6 +877,79 @@ know is the same shape as the truth and wrong. **And the debug count stays out o
 number** - those are kept files, not a queue, so it would never reach zero, and a badge that never
 clears teaches people to stop reading the two that mean something.
 
+### D-39. The moderator role exists, and the line is "can it be undone"
+
+The owner, 2026-09-06: *"I do have someone to give that role to... so useful if built - they would
+need: Tag Review, Review, Comments, Explorers, Reports. Running the place = just admin. Like the
+new bar."* Migration 0028 adds `moderator` to `creator_role`; `server/auth.ts` grew `isStaff` and
+`isAdmin`, which are type predicates rather than booleans because they replaced
+`viewer?.role !== 'admin'` at every guard and that comparison was doing the null check too.
+
+**The line, in one sentence: a moderator judges CONTENT, and everything they can do can be undone.**
+Suspend, ban, reinstate, remove comments, take a map down, put it back, keep or merge a tag, approve
+or ban a picture. The owner's alone: the config, the usage, the backups, the debug uploads - **and
+two things inside a page a moderator can otherwise reach in full: DELETING an account, and handing
+out the role itself.** Neither has a way back, and the second decides who the staff are. Said here
+because it is the one place this session went further than the instruction, and it is one line in
+`routes/admin/explorers/[handle]/+page.server.ts` (`staff` against `ownerOnly`) if the owner would
+rather it moved.
+
+**Nobody is granted the role by a migration.** It is a control on the explorer's own page, admin
+only, never on yourself - an admin who could demote themselves can lock the place, and one who
+could promote themselves makes the role meaningless.
+
+**Also in the bar, from the same message:** "Gates" became **Config** (*"Gates - is not a great
+title - its 'config' surely?"* - the route was `/admin/config` all along), and **Debug is its own
+group between Moderation and Running the place, in its own red**. That is right, and the reason is
+worth writing: a debug upload is neither the library's content nor the server's housekeeping. It is
+raw, unreviewed bytes from somebody whose app fell over.
+
+### D-40. A creator can ask for a tag, and the review page's job is "did you mean this one?"
+
+The owner, 2026-09-06: *"Tag group around game systems: grab all the relatively well known ones and
+more open categories. Also all yah categories should have the option of adding custom tags. With a
++. But I will always review and on review page similar named tags (fuzzy search) can be shown next
+time it and be swapped in on a click instead. Otherwise accepting it makes it a tag for everyone to
+use."*
+
+**Two new groups first.** `Game system` opens with `system-agnostic`, `any-system` and
+`homebrew-rules` before any of the two dozen named ones, because most maps are not made for a named
+system and a list that opens with trademarks tells that creator their map does not belong.
+`Rules style` is the "more open categories" half: `osr`, `pbta`, `forged-in-the-dark`,
+`rules-light`, `crunchy` and the rest, which are real things to filter on whatever the system.
+
+**The "+" is a REQUEST, not a text box, and that is the whole design.** The vocabulary is curated
+because free tags fragment - "scifi", "sci-fi", "science fiction" and "SF" become four dead-end
+filters that each find a quarter of the maps - and a "+" is exactly the door fragmenting comes
+through. So a proposed tag does not go on the map yet: it would be an unreviewed word on a public
+page, which is what the picture queue exists to prevent, and it would filter nothing because nobody
+else can pick it. It lands on the map when a reviewer says yes, or the map gets the tag it was
+merged into.
+
+**The review page therefore does not ask "is this a good word".** It asks **"do we already have
+this one?"** - the near matches sit first, drawn as pills, one click each, and taking an existing
+tag is easier than keeping a new one. `similarTags` maxes three signals rather than averaging them,
+because each is evidence on its own: edit distance catches `travellar`, containment catches
+`hard-sf-setting`, and shared words catch `number-stars-without`. **What it cannot do is said in the
+code and pinned by a test: a synonym sharing no letters is not a string problem.** `sci-fi` will
+never suggest `hard-sf`. That is the reviewer's judgement, and the reason a person sees every word.
+
+**Accepting makes it everyone's on the next request, with no deploy.** The vocabulary is now three
+layers - the curated list, the `creator_vocabulary` config row, and accepted rows in
+`tag_proposals` (migration 0029) merged into their group. A merged or rejected word is remembered,
+so the second person to ask gets the first person's answer instantly, and a rejection does not
+reopen by being asked again.
+
+**And a crash log is now a thing the inspector reads.** The owner asked, in the same message,
+whether debug parses crash files. It did not: a log is neither a zip nor JSON, so it got "neither a
+zip nor JSON", which is true and useless - when the app falls over, the console is what a person
+has to hand. `inspect.ts` now reads text as a log and pulls out the build, the browser, the first
+error with the frames under it (the first is the cause; the rest are its echoes) and each distinct
+error once. **One trap, found by a test rather than by thinking: a console log's first line is
+often `[holo] scene ready`, and the old code called any leading `[` JSON.** A leading bracket now
+has to parse before it counts as JSON; a leading `{` still means a save, because reporting on
+broken saves is what the page is for.
+
 ### D-16. The takedown address is assembled at runtime, never served as text
 
 The owner's instruction was explicit: keep it off the page as scrapable text. It is stored as

@@ -11,6 +11,7 @@
   {p.handle}
   {#if p.display_name}<span class="muted">· {p.display_name}</span>{/if}
   {#if p.role === 'admin'}<span class="tag">admin</span>{/if}
+  {#if p.role === 'moderator'}<span class="tag mod">moderator</span>{/if}
   {#if p.account_tier === 'pro'}<span class="tag">Pro</span>{/if}
 </h1>
 <p class="by">
@@ -122,18 +123,39 @@
   </table>
 {/if}
 
-<form class="panel danger-zone" method="POST" action="?/delete">
-  <h2>Delete this account</h2>
-  <p class="muted">
-    Their maps and everything under them go, their sign-in goes, and any picture nobody else uses is
-    freed from storage. A banned picture stays banned. This cannot be undone.
-  </p>
-  <label><input type="radio" name="comments" value="keep" checked /> Keep their comments, shown as a former explorer's</label>
-  <label><input type="radio" name="comments" value="remove" /> Delete their comments too</label>
-  <label class="note">Why <input name="note" maxlength="500" /></label>
-  <label class="note">Type <code>{p.handle}</code> to confirm <input name="confirm" autocomplete="off" /></label>
-  <button class="danger" type="submit" disabled={data.self}>Delete {p.handle}</button>
-</form>
+{#if data.owner}
+  <!-- WHO IS STAFF is the owner's alone (D-39): a moderator can reach this page and do everything
+       on it that can be undone, but not decide who else gets to. -->
+  <form class="panel" method="POST" action="?/role">
+    <h2>Role</h2>
+    <p class="muted">
+      A moderator gets the moderation work - tags, pictures, comments, reports and this page - and
+      none of the running of the place: no config, no usage, no backups, no debug uploads. They
+      cannot delete an account or hand out this role.
+    </p>
+    {#if p.role === 'admin'}
+      <p class="muted">This account is an admin. That is changed in the database, deliberately.</p>
+    {:else}
+      <label><input type="radio" name="role" value="user" checked={p.role !== 'moderator'} /> Explorer</label>
+      <label><input type="radio" name="role" value="moderator" checked={p.role === 'moderator'} /> Moderator</label>
+      <button class="primary" type="submit" disabled={data.self}>Save</button>
+      {#if data.self}<span class="muted"> Not on yourself.</span>{/if}
+    {/if}
+  </form>
+
+  <form class="panel danger-zone" method="POST" action="?/delete">
+    <h2>Delete this account</h2>
+    <p class="muted">
+      Their maps and everything under them go, their sign-in goes, and any picture nobody else uses is
+      freed from storage. A banned picture stays banned. This cannot be undone.
+    </p>
+    <label><input type="radio" name="comments" value="keep" checked /> Keep their comments, shown as a former explorer's</label>
+    <label><input type="radio" name="comments" value="remove" /> Delete their comments too</label>
+    <label class="note">Why <input name="note" maxlength="500" /></label>
+    <label class="note">Type <code>{p.handle}</code> to confirm <input name="confirm" autocomplete="off" /></label>
+    <button class="danger" type="submit" disabled={data.self}>Delete {p.handle}</button>
+  </form>
+{/if}
 
 <style>
   .crumb { margin: 0 0 4px; }
@@ -157,5 +179,6 @@
   .text { color: var(--ink-dim); max-width: 48ch; white-space: pre-wrap; overflow-wrap: anywhere; }
   tr.off td { color: var(--ink-faint); }
   .danger-zone { border-color: var(--bad); margin-top: 32px; }
+  .tag.mod { background: var(--accent); color: var(--accent-ink); }
   code { background: var(--panel-2); border: 1px solid var(--edge); border-radius: 4px; padding: 1px 5px; }
 </style>

@@ -20,14 +20,16 @@ import type { AdminCounts } from '$lib/adminNav';
 import { EMPTY_COUNTS } from '$lib/adminNav';
 
 export async function outstandingCounts(sb: Db): Promise<AdminCounts> {
-  const [review, reports, debug] = await Promise.all([
+  const [review, reports, debug, tags] = await Promise.all([
     // The review queue: exactly `ledger.queue`'s predicate, so the badge and the page agree.
     count(sb, 'assets', (q) => q.eq('review_state', 'novel')),
     count(sb, 'reports', (q) => q.eq('state', 'open')),
     // Debug uploads are DELETED when they have been dealt with, so what is stored is what is left.
-    count(sb, 'debug_uploads', (q) => q)
+    count(sb, 'debug_uploads', (q) => q),
+    // Tags a creator has asked for and nobody has answered yet (D-40).
+    count(sb, 'tag_proposals', (q) => q.eq('state', 'pending'))
   ]);
-  return { review, reports, debug };
+  return { review, reports, debug, tags };
 }
 
 /**

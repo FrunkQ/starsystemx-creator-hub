@@ -46,6 +46,36 @@
     {/if}
   </section>
 
+  <!-- A CRASH LOG rather than a save (D-40). When the app falls over, the console is what a person
+       has to hand, so the inspector reads one: the build, the browser, and the FIRST error with the
+       frames under it - the cause, where the ones after it are usually its echoes. -->
+  {#if r.log}
+    <section class="panel">
+      <h2>The log</h2>
+      <dl>
+        <dt>Lines</dt><dd>{r.log.lines.toLocaleString('en-GB')}</dd>
+        <dt>Build</dt><dd>{r.log.appVersion ?? 'not stated'}</dd>
+        <dt>Browser</dt><dd class="mono">{r.log.userAgent ?? 'not stated'}</dd>
+        <dt>Errors</dt>
+        <dd>
+          {#if r.log.errors}<span class="bad">{r.log.errors}</span>{:else}none{/if}
+          {#if r.log.warnings}, {r.log.warnings} warnings{/if}
+        </dd>
+      </dl>
+      {#if r.log.firstError}
+        <h3>First failure</h3>
+        <pre class="log">{r.log.firstError}{#each r.log.stack as f (f)}
+{f}{/each}</pre>
+      {/if}
+      {#if r.log.distinct.length > 1}
+        <h3>Every distinct error</h3>
+        <ul class="distinct">
+          {#each r.log.distinct as e (e)}<li class="mono">{e}</li>{/each}
+        </ul>
+      {/if}
+    </section>
+  {/if}
+
   <section class="panel">
     <h2>The document</h2>
     {#if !r.doc}
@@ -118,4 +148,7 @@
   details { margin-top: 10px; }
   summary { cursor: pointer; color: var(--ink-dim); }
   ul { margin: 0; padding-left: 18px; }
+  .log { white-space: pre-wrap; }
+  h3 { font-size: 0.95rem; margin: 14px 0 6px; color: var(--ink-dim); }
+  .distinct { margin: 0; padding-left: 18px; color: var(--ink-dim); font-size: 0.88rem; }
 </style>

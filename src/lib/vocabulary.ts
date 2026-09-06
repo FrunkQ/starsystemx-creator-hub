@@ -81,6 +81,39 @@ export const DEFAULT_VOCABULARY: VocabGroup[] = [
     label: 'Scale',
     hint: 'How much of it there is.',
     tags: ['solar-system', 'single-star', 'binary', 'cluster', 'sector', 'deep-space']
+  },
+  // ADDED 2026-09-06 at the owner's request: "Tag group around game systems: grab all the
+  // relatively well known ones and more open categories."
+  //
+  // THE FIRST THREE ARE THE OPEN ONES AND THEY COME FIRST ON PURPOSE. Most maps are not made for a
+  // named system, and a list that opens with two dozen trademarks tells that creator their map does
+  // not belong here. `system-agnostic` is the honest answer for most of the library.
+  //
+  // The named list is the well-known ones a star map is plausibly FOR - space opera, hard SF and
+  // the sci-fi end of the big generics. It is not a complete list of role-playing games and cannot
+  // become one: the "+" (D-40) is how a creator asks for the one that is missing, which is a better
+  // mechanism than this list growing by guesswork.
+  {
+    label: 'Game system',
+    hint: 'The rules it was made for, if any.',
+    tags: [
+      'system-agnostic', 'any-system', 'homebrew-rules',
+      'traveller', 'cepheus-engine', 'stars-without-number', 'mothership', 'alien-rpg', 'coriolis',
+      'the-expanse', 'eclipse-phase', 'starfinder', 'star-trek-adventures', 'star-wars-rpg',
+      'cyberpunk-red', 'shadowrun', 'lancer', 'scum-and-villainy', 'impulse-drive', 'death-in-space',
+      'esper-genesis', 'warhammer-40k', 'dune-rpg', 'fading-suns', 'ashen-stars', 'diaspora',
+      'dnd-5e', 'pathfinder', 'savage-worlds', 'gurps', 'fate'
+    ]
+  },
+  {
+    label: 'Rules style',
+    hint: 'The kind of game it suits, whatever the system.',
+    // The "more open categories" half of the same request: a map made for no particular system
+    // still suits a particular KIND of table, and that is a real thing to filter on.
+    tags: [
+      'rules-light', 'crunchy', 'narrative', 'simulationist', 'osr', 'pbta', 'forged-in-the-dark',
+      'd20', 'solo-play', 'west-marches'
+    ]
   }
 ];
 

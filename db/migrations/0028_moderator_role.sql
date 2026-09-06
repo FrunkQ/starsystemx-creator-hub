@@ -1,0 +1,16 @@
+-- The moderator role (owner, 2026-09-06: "I do have someone to give that role to"; D-39).
+-- Run after 0027. Safe to run twice.
+--
+-- `creator_role` has been ('user', 'admin') since 0001, where the comment said a moderator tier was
+-- "easy to add later and pointless before there is a queue worth sharing". There is now both a
+-- queue and a person, so this is that.
+--
+-- WHAT A MODERATOR REACHES, decided by the owner: tag review, picture review, comments, explorers,
+-- reports. Not the config, the usage, the backups or the debug uploads - running the place stays
+-- with the owner. `src/lib/adminNav.ts` is where that list lives in the code, and
+-- `tests/adminNav.test.ts` pins it.
+--
+-- POSTGRES NOTE: a value added to an enum cannot be USED in the same transaction that adds it, so
+-- this migration does one thing and nothing else. The role is granted afterwards, from
+-- /admin/explorers/<handle>, by an admin - never by a moderator, and never to yourself.
+alter type creator_role add value if not exists 'moderator';

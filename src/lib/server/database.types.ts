@@ -21,7 +21,7 @@ export type AssetRole = 'model' | 'node_image' | 'player_image' | 'cover';
 export type SystemState = 'draft' | 'public' | 'hidden' | 'removed';
 export type BundleKindDb = 'starmap' | 'system';
 export type Visibility = 'public' | 'unlisted' | 'private';
-export type CreatorRole = 'user' | 'admin';
+export type CreatorRole = 'user' | 'moderator' | 'admin';
 export type CreatorState = 'active' | 'suspended' | 'banned';
 export type ReportTarget = 'system' | 'asset' | 'comment';
 export type ReportState = 'open' | 'actioned' | 'dismissed';
@@ -241,6 +241,24 @@ export type HeartRow = {
   created_at: string;
 }
 
+// 0029 (D-40). A tag a creator asked for. The row is the whole history: pending while it waits,
+// then accepted (it joins the vocabulary), merged (a reviewer pointed at the tag that already
+// meant this) or rejected. `uses` is how many people have asked for the same word, which is the
+// number a reviewer should see first.
+export type TagProposalRow = {
+  tag: string;
+  group_label: string;
+  state: 'pending' | 'accepted' | 'merged' | 'rejected';
+  merged_into: string | null;
+  proposed_by: string | null;
+  system_id: string | null;
+  uses: number;
+  note: string | null;
+  created_at: string;
+  decided_by: string | null;
+  decided_at: string | null;
+}
+
 export type ReportRow = {
   id: string;
   reporter_id: string;
@@ -406,6 +424,7 @@ export interface Database {
       app_tokens: Table<AppTokenRow>;
       debug_invites: Table<DebugInviteRow>;
       debug_uploads: Table<DebugUploadRow>;
+      tag_proposals: Table<TagProposalRow>;
     };
     Views: { [_ in never]: never };
     Functions: {

@@ -79,9 +79,12 @@ describe('inspecting a save', () => {
   });
 
   it('survives something that is neither', () => {
+    // Plain words are now READ AS A LOG rather than refused (D-40): when the app falls over, text
+    // is what a person has to hand. Actual binary is still refused, and empty is still empty.
     const r = inspectBytes(strToU8('hello there'));
-    expect(r.container).toBe('unknown');
-    expect(r.warnings[0]).toContain('Neither a zip nor JSON');
+    expect(r.container).toBe('text');
+    expect(r.log?.errors).toBe(0);
+    expect(inspectBytes(new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x00])).container).toBe('unknown');
     expect(inspectBytes(new Uint8Array()).warnings[0]).toContain('empty');
   });
 

@@ -8,7 +8,8 @@ import { error, fail } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import { loadGates } from '$lib/server/config';
 import { loadSite } from '$lib/server/site';
-import { sanitiseTags, vocabularyFrom } from '$lib/vocabulary';
+import { sanitiseTags } from '$lib/vocabulary';
+import { loadVocabulary, proposeTag } from '$lib/server/tags';
 import {
   storeGeneratedCover, linkCover, factsFor, regenerateGeneratedCover, coverIsScreenshot
 } from '$lib/server/cover';
@@ -62,15 +63,22 @@ export const load: PageServerLoad = async ({ params, platform, locals }) => {
   // people complain about; one that names the three pictures needing a credit is a gate they clear.
   const blocking = (claims ?? []).filter((c) => c.no_provenance || c.cc_by_breach);
 
-  const { data: vocabRow } = await sb.from('config')
-    .select('value').eq('key', 'creator_vocabulary').maybeSingle();
+  // The vocabulary the hub actually serves: the curated list, the owner's override, and every
+  // custom tag a reviewer has accepted (D-40).
+  const vocabulary = await loadVocabulary(sb);
+  // What this creator has asked for and nobody has answered yet, so the page can say so rather
+  // than looking as though the word vanished.
+  const { data: waiting } = await sb.from('tag_proposals')
+    .select('tag, group_label, state, merged_into')
+    .eq('system_id', params.id).eq('state', 'pending');
 
   // The designer is free for everyone at launch and a config row away from being Pro (D-22).
   const proOnly = gates.cover_designer_tier === 'pro';
   const allowed = !proOnly || me?.account_tier === 'pro';
 
   return {
-    vocabulary: vocabularyFrom(vocabRow?.value ?? null),
+    vocabulary,
+    waitingTags: (waiting ?? []).map((w) => ({ tag: w.tag, group: w.group_label })),
     system,
     // What a 5 on the information meter means today (D-30) - the nudge is measured against it.
     best: await bestDensity(sb),
@@ -104,9 +112,7 @@ export const actions: Actions = {
 
     // Checkboxes from the curated list. Validated server-side against the vocabulary, because a
     // form field is whatever the client decided to send.
-    const { data: vocabRow } = await sb.from('config')
-      .select('value').eq('key', 'creator_vocabulary').maybeSingle();
-    const tags = sanitiseTags(form.getAll('tags'), vocabularyFrom(vocabRow?.value ?? null));
+    const tags = sanitiseTags(form.getAll('tags'), await loadVocabulary(sb));
 
     const { error: e } = await sb.from('systems').update({
       title,
@@ -127,6 +133,38 @@ export const actions: Actions = {
   },
 
   /** Use one of the map's own screenshots as the cover. */
+  /**
+   * THE "+": a creator asks for a tag their map needs and the list does not have (D-40).
+   *
+   * It does NOT go on the map yet. A pending tag shown publicly would be an unreviewed word on a
+   * public page, which is the one thing the picture queue exists to prevent; and it would filter
+   * nothing, because nobody else can pick it. So the map gets it when a reviewer says yes - or
+   * gets the tag it was merged into, which is the outcome the review page makes easiest.
+   */
+  proposeTag: async ({ request, params, platform, locals }) => {
+    const env = platform?.env;
+    if (!env || !locals.viewer) throw error(401, 'Sign in first.');
+    const sb = db(env);
+    await ownedSystem(sb, params.id, locals.viewer.id);
+
+    const form = await request.formData();
+    const result = await proposeTag(sb, {
+      text: String(form.get('tag') ?? ''),
+      group: String(form.get('group') ?? ''),
+      creatorId: locals.viewer.id,
+      systemId: params.id,
+      vocabulary: await loadVocabulary(sb)
+    });
+
+    switch (result.kind) {
+      case 'bad': return fail(400, { message: result.message });
+      case 'have': return { proposed: 'Good news - "' + result.tag + '" already exists. Tick it above and save.' };
+      case 'merged': return { proposed: 'That one is kept as "' + result.tag + '". Tick that above and save.' };
+      case 'no': return { proposed: 'That word has been looked at before and turned down.' };
+      default: return { proposed: 'Asked for. A reviewer will look, and it appears on your map if it is kept.' };
+    }
+  },
+
   cover: async ({ request, params, platform, locals }) => {
     const env = platform?.env;
     if (!env || !locals.viewer) throw error(401, 'Sign in first.');

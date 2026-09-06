@@ -2,18 +2,19 @@ import type { PageServerLoad, Actions } from './$types';
 import { error, fail, redirect } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import type { Db } from '$lib/server/database.types';
-import type { CreatorState } from '$lib/server/database.types';
+import type { CreatorState, CreatorRole } from '$lib/server/database.types';
 import { loadGates } from '$lib/server/config';
 import * as accounts from '$lib/server/accounts';
 import * as audit from '$lib/server/audit';
 import { isBadge } from '$lib/badges';
+import { isStaff, isAdmin } from '$lib/server/auth';
 
 // One explorer: who they are, what they have shared and said, and everything the hub can do
 // about it (D-28). Every action here is one the terms already promise and the audit log records.
 export const load: PageServerLoad = async ({ platform, locals, params }) => {
   const env = platform?.env;
   if (!env) throw error(500, 'not configured');
-  if (locals.viewer?.role !== 'admin') throw error(404, 'Not found');
+  if (!isStaff(locals.viewer)) throw error(404, 'Not found');
   const sb = db(env);
 
   const { data: person } = await sb.from('creators').select('*').eq('handle', params.handle).maybeSingle();
@@ -48,6 +49,8 @@ export const load: PageServerLoad = async ({ platform, locals, params }) => {
       created_at: person.created_at
     },
     self: person.id === locals.viewer.id,
+    // Only the owner sees the two irreversible controls: the role, and deletion (D-39).
+    owner: isAdmin(locals.viewer),
     badges: (badgeRows ?? []).map((b) => b.badge).filter(isBadge),
     maps: (maps ?? []).map((m) => ({
       id: m.id, slug: m.slug, title: m.title, kind: m.kind, state: m.state, state_note: m.state_note ?? null,
@@ -66,9 +69,26 @@ export const load: PageServerLoad = async ({ platform, locals, params }) => {
 
 type Ctx = { env: NonNullable<App.Platform['env']>; sb: Db; me: { id: string } };
 
-async function admin(platform: App.Platform | undefined, locals: App.Locals): Promise<Ctx> {
+/**
+ * STAFF: a moderator or an admin. Every action reached through this is one that can be UNDONE -
+ * suspend, ban, reinstate, remove comments, take a map down, put it back (D-39).
+ */
+async function staff(platform: App.Platform | undefined, locals: App.Locals): Promise<Ctx> {
   const env = platform?.env;
-  if (!env || locals.viewer?.role !== 'admin') throw error(404, 'Not found');
+  if (!env || !isStaff(locals.viewer)) throw error(404, 'Not found');
+  return { env, sb: db(env), me: locals.viewer };
+}
+
+/**
+ * THE OWNER, for the two things that are not undoable: DELETING an account with its maps, and
+ * granting or taking the moderator role. The owner said a moderator gets Explorers, and they do -
+ * the whole page and every reversible action on it. Deletion is the exception because there is no
+ * way back from it, and handing out the role is how the staff list itself is decided. Say the word
+ * and either one moves.
+ */
+async function ownerOnly(platform: App.Platform | undefined, locals: App.Locals): Promise<Ctx> {
+  const env = platform?.env;
+  if (!env || !isAdmin(locals.viewer)) throw error(404, 'Not found');
   return { env, sb: db(env), me: locals.viewer };
 }
 
@@ -90,7 +110,7 @@ const ID = /^[0-9a-f-]{36}$/;
 export const actions: Actions = {
   /** Suspend, ban, reinstate - with the reason the person will read. */
   state: async ({ request, platform, locals, params }) => {
-    const { sb, me } = await admin(platform, locals);
+    const { sb, me } = await staff(platform, locals);
     const person = await personByHandle(sb, params.handle);
     if (person.id === me.id) return fail(400, { message: 'Not yourself. Ask another admin, or sleep on it.' });
     const form = await request.formData();
@@ -102,7 +122,7 @@ export const actions: Actions = {
   },
 
   removeComments: async ({ request, platform, locals, params }) => {
-    const { sb, me } = await admin(platform, locals);
+    const { sb, me } = await staff(platform, locals);
     const person = await personByHandle(sb, params.handle);
     try {
       const n = await accounts.removeAllComments(sb, me.id, person.id, noteOf(await request.formData()));
@@ -111,7 +131,7 @@ export const actions: Actions = {
   },
 
   removeComment: async ({ request, platform, locals, params }) => {
-    const { sb, me } = await admin(platform, locals);
+    const { sb, me } = await staff(platform, locals);
     const person = await personByHandle(sb, params.handle);
     const id = String((await request.formData()).get('id') ?? '');
     if (!ID.test(id)) return fail(400, { message: 'bad id' });
@@ -124,7 +144,7 @@ export const actions: Actions = {
   },
 
   takedown: async ({ request, platform, locals, params }) => {
-    const { sb, me } = await admin(platform, locals);
+    const { sb, me } = await staff(platform, locals);
     const person = await personByHandle(sb, params.handle);
     const form = await request.formData();
     const id = String(form.get('id') ?? '');
@@ -136,7 +156,7 @@ export const actions: Actions = {
   },
 
   restore: async ({ request, platform, locals, params }) => {
-    const { sb, me } = await admin(platform, locals);
+    const { sb, me } = await staff(platform, locals);
     const person = await personByHandle(sb, params.handle);
     const id = String((await request.formData()).get('id') ?? '');
     if (!ID.test(id)) return fail(400, { message: 'bad id' });
@@ -146,9 +166,29 @@ export const actions: Actions = {
     return { done: 'Map restored and public.' };
   },
 
+  /**
+   * MAKE SOMEBODY STAFF, or stop them being staff. The owner's alone, and never on yourself: an
+   * admin who could demote themselves can lock the place, and one who could promote themselves
+   * makes the role meaningless.
+   */
+  role: async ({ request, platform, locals, params }) => {
+    const { sb, me } = await ownerOnly(platform, locals);
+    const person = await personByHandle(sb, params.handle);
+    if (person.id === me.id) return fail(400, { message: 'Not yourself.' });
+    const role = String((await request.formData()).get('role') ?? '') as CreatorRole;
+    if (role !== 'user' && role !== 'moderator') {
+      return fail(400, { message: 'A person is made a moderator or an ordinary Explorer here; an admin is made in the database.' });
+    }
+    if (person.role === 'admin') return fail(400, { message: 'That account is an admin. Change it in the database, deliberately.' });
+    const { error: e } = await sb.from('creators').update({ role }).eq('id', person.id);
+    if (e) return fail(500, { message: e.message });
+    await audit.record(sb, me.id, 'creator.role', 'creator:' + person.id, undefined, { role });
+    return { done: role === 'moderator' ? person.handle + ' is a moderator.' : person.handle + ' is an ordinary Explorer again.' };
+  },
+
   /** The account, its maps, its sign-in. The handle typed back is the confirmation. */
   delete: async ({ request, platform, locals, params }) => {
-    const { env, sb, me } = await admin(platform, locals);
+    const { env, sb, me } = await ownerOnly(platform, locals);
     const person = await personByHandle(sb, params.handle);
     if (person.id === me.id) return fail(400, { message: 'Not yourself. Your own account page has that button.' });
     const form = await request.formData();

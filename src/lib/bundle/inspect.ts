@@ -46,11 +46,41 @@ export interface DocReport {
   hiddenNodes: number;
 }
 
+/**
+ * A CRASH LOG, read as evidence (owner, 2026-09-06: "does debug parse crash files too?").
+ *
+ * It did not, and it should: when the app falls over, what a person has to hand is the console, not
+ * the save. The file that arrives is then plain text, which the inspector used to refuse with
+ * "neither a zip nor JSON" - technically true and useless.
+ *
+ * WHAT IS PULLED OUT is only what a maintainer reads first: which build it was, what the browser
+ * was, the FIRST error with the frames under it (the first is the cause; the rest are usually its
+ * echoes), and how many errors there are in total. Everything else stays in the file, which is
+ * still there to be read.
+ */
+export interface LogReport {
+  lines: number;
+  /** An app version the log mentions - `3.0.317`, or whatever it said. */
+  appVersion: string | null;
+  /** The browser's own line, when the log carries one. */
+  userAgent: string | null;
+  /** How many lines look like an error or a warning. */
+  errors: number;
+  warnings: number;
+  /** The first error line, and the stack frames directly under it. */
+  firstError: string | null;
+  stack: string[];
+  /** Every distinct error line, deduplicated, most recent last. */
+  distinct: string[];
+}
+
 export interface InspectReport {
   bytes: number;
-  container: 'zip' | 'json' | 'unknown';
+  container: 'zip' | 'json' | 'text' | 'unknown';
   zip: ZipReport | null;
   doc: DocReport | null;
+  /** Present when the upload is a log rather than a save. */
+  log: LogReport | null;
   /** Files under assets/ the document refers to, and whether the zip has them. */
   requires: string[];
   missing: string[];
@@ -59,6 +89,8 @@ export interface InspectReport {
 }
 
 const MAX_TEXT = 80 * 1024 * 1024;
+/** A log is read by a person, and a person reads the top of it. A megabyte is already generous. */
+const MAX_LOG = 1024 * 1024;
 const MAX_NODES = 250_000;
 const LIST = 12;
 
@@ -172,9 +204,86 @@ export function requiredAssets(text: string): string[] {
   return [...out].sort();
 }
 
+/**
+ * Is this readable text rather than some other binary?
+ *
+ * A cheap, honest test on the first kilobyte: no NUL bytes, and almost everything printable. It is
+ * not charset detection and does not try to be - the question is only "would a person see words if
+ * they opened this", and a wrong answer costs a report saying "no errors found" rather than a crash.
+ */
+export function looksLikeText(bytes: Uint8Array): boolean {
+  const head = bytes.subarray(0, 1024);
+  if (!head.length) return false;
+  let printable = 0;
+  for (const b of head) {
+    if (b === 0) return false;
+    if (b === 9 || b === 10 || b === 13 || (b >= 32 && b !== 127)) printable++;
+  }
+  return printable / head.length > 0.9;
+}
+
+/** Does the whole thing parse as JSON? Bounded, and false rather than throwing on anything. */
+function parsesAsJson(bytes: Uint8Array): boolean {
+  if (bytes.length > MAX_TEXT) return false;
+  try {
+    JSON.parse(new TextDecoder().decode(bytes));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Lines that read as a failure. Deliberately broad: a missed error is worse than a false one. */
+const ERROR_LINE = /(^|[^a-z])(error|exception|uncaught|unhandled|fatal|failed|cannot read|is not a function|is not defined)([^a-z]|$)/i;
+const WARN_LINE = /(^|[^a-z])(warn|warning|deprecated)([^a-z]|$)/i;
+/** A stack frame, in the shapes the three browsers write them. */
+const STACK_LINE = /^\s*(at\s|[\w$.<>]+@|\s{4,}\S)/;
+
+/**
+ * Read a log. Bounded, never throws: a file that crashed the app must not crash this.
+ */
+export function logReport(text: string): LogReport {
+  const lines = text.split(/\r?\n/);
+  const out: LogReport = {
+    lines: lines.length, appVersion: null, userAgent: null,
+    errors: 0, warnings: 0, firstError: null, stack: [], distinct: []
+  };
+
+  // The build, however the log happened to say it. `3.0.317` is the shape; the words around it vary.
+  const version = text.match(/\b(?:v|version\s*|Star System Explorer\s*)?(\d+\.\d+\.\d+(?:-[a-z0-9.]+)?)\b/i);
+  if (version) out.appVersion = version[1];
+
+  const ua = lines.find((l) => /Mozilla\/5\.0|user[- ]?agent/i.test(l));
+  if (ua) out.userAgent = ua.trim().slice(0, 300);
+
+  const seen = new Set<string>();
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (!line.trim()) continue;
+    if (ERROR_LINE.test(line)) {
+      out.errors++;
+      const trimmed = line.trim().slice(0, 300);
+      if (!seen.has(trimmed)) { seen.add(trimmed); out.distinct.push(trimmed); }
+      if (!out.firstError) {
+        out.firstError = trimmed;
+        // The frames directly under it. The FIRST error is the cause; what follows is usually its
+        // echo, so the stack that matters is this one.
+        for (let j = i + 1; j < lines.length && out.stack.length < 12; j++) {
+          if (!STACK_LINE.test(lines[j])) break;
+          out.stack.push(lines[j].trim().slice(0, 300));
+        }
+      }
+    } else if (WARN_LINE.test(line)) {
+      out.warnings++;
+    }
+  }
+  out.distinct = out.distinct.slice(0, 20);
+  return out;
+}
+
 export function inspectBytes(bytes: Uint8Array): InspectReport {
   const report: InspectReport = {
-    bytes: bytes.length, container: 'unknown', zip: null, doc: null,
+    bytes: bytes.length, container: 'unknown', zip: null, doc: null, log: null,
     requires: [], missing: [], unreferenced: [], warnings: []
   };
   if (!bytes.length) { report.warnings.push('The file is empty.'); return report; }
@@ -201,11 +310,24 @@ export function inspectBytes(bytes: Uint8Array): InspectReport {
     if (zip.docPath) text = new TextDecoder().decode(entries[zip.docPath]);
   } else {
     const head = new TextDecoder().decode(bytes.subarray(0, 64)).trimStart();
-    if (head.startsWith('{') || head.startsWith('[')) {
+    // A `{` IS A SAVE, INCLUDING A BROKEN ONE - the whole point of this page is to report on JSON
+    // that does not parse. A `[` IS ALMOST NEVER: no save the hub reads is an array at the top
+    // level, and `[holo] scene ready` is what a console log's first line looks like. So a leading
+    // bracket has to earn "JSON" by actually parsing; otherwise it is read as a log. Caught by a
+    // test rather than by reasoning - the first log written for one started with `[holo]`.
+    const bracketedJson = head.startsWith('[') && parsesAsJson(bytes);
+    if (head.startsWith('{') || bracketedJson) {
       report.container = 'json';
       text = new TextDecoder().decode(bytes);
+    } else if (looksLikeText(bytes)) {
+      // A crash log, a console dump, an error report: text somebody pasted out of the browser.
+      report.container = 'text';
+      report.log = logReport(new TextDecoder().decode(bytes.subarray(0, MAX_LOG)));
+      if (bytes.length > MAX_LOG) report.warnings.push('Only the first megabyte of the log was read.');
+      if (!report.log.errors) report.warnings.push('No error lines found: this reads as a log, but nothing in it looks like a failure.');
+      return report;
     } else {
-      report.warnings.push('Neither a zip nor JSON: the first bytes are ' + JSON.stringify(head.slice(0, 24)) + '.');
+      report.warnings.push('Neither a zip, JSON nor text: the first bytes are ' + JSON.stringify(head.slice(0, 24)) + '.');
       return report;
     }
   }
