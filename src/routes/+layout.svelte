@@ -106,6 +106,10 @@
     </p>
     <a class="cta" href={SSE_PROD_ORIGIN} target="_blank" rel="noopener">Open Star System Explorer</a>
   </div>
+  <!-- THE BOTTOM LINE, both halves of it on ONE row where there is width for it (owner, 2026-09-07:
+       "so it is a slimmer banner at the bottom of each page"). Two full-width rows for a legal note
+       and five links was two rows of mostly empty space. -->
+  <div class="foot-bottom">
   <!-- ON EVERY PAGE (owner, 2026-09-06; D-61): "we need to ensure everyone knows this is fan made
        content and no liability of ownership is made by the user or SSE." The per-map notice names
        the setting; this one is the floor, and it is here so that no page anywhere is without it. -->
@@ -119,5 +123,6 @@
     <a href="/takedown">Report a copyright problem</a>
     <!-- Which build this is, from package.json (svelte.config.js). Ops, not decoration. -->
     <span title="hub version">v{version}</span>
+  </div>
   </div>
 </footer>

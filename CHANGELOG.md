@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.46.0 - 2026-09-07
+
+### The footer is a banner rather than a block
+
+It was four stacked full-width rows on every page - heading, paragraph, button, note, links - which
+is a lot of vertical space spent on something nobody came for. The pitch now sits beside its button
+and the fan-work note beside the links: two rows instead of four, about a third less height, and not
+a word lost. Both rows stack on a phone.
+
+
 ## 0.45.3 - 2026-09-07
 
 Footer spacing: the fan-work line sat hard against the "Open Star System Explorer" button. The button

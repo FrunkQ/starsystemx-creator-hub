@@ -113,22 +113,51 @@ main { max-width: var(--max); margin: 0 auto; padding: 20px 32px 56px; }
 /* Prose pages (the terms, the takedown page) keep a readable measure however wide the screen. */
 .prose { max-width: 78ch; }
 
+/* ============================================================================================
+ * A BANNER, NOT A BLOCK (owner, 2026-09-07: "maybe have button to right - so it is a slimmer banner
+ * at the bottom of each page").
+ *
+ * It was four stacked full-width rows - heading, paragraph, button, note, links - on every page on
+ * the site, which is a lot of vertical space spent on something nobody came for. Two flex rows put
+ * the pitch beside its button and the legal note beside the links, and the whole thing loses about
+ * a third of its height without losing a word.
+ *
+ * BOTH ROWS STACK ON A PHONE. `flex-wrap` does it with no media query: below the width where the
+ * two halves fit side by side they simply fall under each other, in reading order.
+ * ============================================================================================ */
 footer {
   border-top: 1px solid var(--edge); background: var(--panel);
-  padding: 32px 20px;
+  padding: 22px 20px;
 }
-footer .what { max-width: var(--max); margin: 0 auto; }
-footer .what h2 { margin: 0 0 6px; font-size: 1.05rem; }
-footer .what p { margin: 0 0 14px; color: var(--ink-dim); max-width: 62ch; }
-/* The fan-work line (D-61). Above the links, quieter than the body, on every page there is.
-   It sat hard against the button before the rule above gave that button a real box; the top margin
-   is what separates a legal note from the thing it is not part of. */
+footer .what {
+  max-width: var(--max); margin: 0 auto;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 14px 28px;
+}
+/* The words take the room that is going; the button keeps its own size at the far end. */
+footer .what h2 { margin: 0 0 4px; font-size: 1.05rem; }
+footer .what p { margin: 0; color: var(--ink-dim); max-width: 62ch; }
+footer .what h2, footer .what p { flex-basis: 100%; }
+/* NARROW: everything stacks and the button sits where the text starts. `margin-left: auto` lives
+   in the wide rule below ONLY - a lone button shoved to the right edge of a phone reads as a
+   mistake, and there is no bar for it to be at the end of. */
+@media (min-width: 900px) {
+  footer .what h2 { flex-basis: 100%; }
+  footer .what p { flex: 1; flex-basis: auto; }
+  footer .what .cta { margin-left: auto; }
+}
+/* The bottom line: legal note on the left, links on the right, one row where there is width. */
+footer .foot-bottom {
+  max-width: var(--max); margin: 18px auto 0;
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 28px;
+  border-top: 1px solid var(--edge); padding-top: 14px;
+}
+/* The fan-work line (D-61). Quieter than the body, on every page there is. */
 footer .fan {
-  max-width: var(--max); margin: 22px auto 0; color: var(--ink-faint);
-  font-size: 0.8rem; line-height: 1.5;
+  margin: 0; color: var(--ink-faint);
+  font-size: 0.8rem; line-height: 1.5; flex: 1 1 30ch;
 }
 footer .small {
-  max-width: var(--max); margin: 14px auto 0; display: flex; gap: 18px; flex-wrap: wrap;
+  margin: 0; display: flex; gap: 8px 18px; flex-wrap: wrap;
   color: var(--ink-faint); font-size: 0.9rem;
 }
 footer .small a { color: var(--ink-faint); }
