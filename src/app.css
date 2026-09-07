@@ -78,6 +78,10 @@ header nav a.join {
 header nav a.join:hover { background: var(--accent); color: var(--accent-ink); text-decoration: none; }
 
 .cta {
+  /* INLINE-BLOCK, not inline: an inline element's vertical padding paints outside the line box and
+     takes up no layout space, so whatever follows a button sits against it however much padding it
+     has. This is the same trap the banner links had (D-65). */
+  display: inline-block;
   background: var(--accent); color: var(--accent-ink);
   padding: 8px 14px; border-radius: var(--radius); font-weight: 600;
 }
@@ -116,13 +120,15 @@ footer {
 footer .what { max-width: var(--max); margin: 0 auto; }
 footer .what h2 { margin: 0 0 6px; font-size: 1.05rem; }
 footer .what p { margin: 0 0 14px; color: var(--ink-dim); max-width: 62ch; }
-/* The fan-work line (D-61). Above the links, quieter than the body, on every page there is. */
+/* The fan-work line (D-61). Above the links, quieter than the body, on every page there is.
+   It sat hard against the button before the rule above gave that button a real box; the top margin
+   is what separates a legal note from the thing it is not part of. */
 footer .fan {
-  max-width: var(--max); margin: 0 auto 10px; color: var(--ink-faint);
+  max-width: var(--max); margin: 22px auto 0; color: var(--ink-faint);
   font-size: 0.8rem; line-height: 1.5;
 }
 footer .small {
-  max-width: var(--max); margin: 24px auto 0; display: flex; gap: 18px; flex-wrap: wrap;
+  max-width: var(--max); margin: 14px auto 0; display: flex; gap: 18px; flex-wrap: wrap;
   color: var(--ink-faint); font-size: 0.9rem;
 }
 footer .small a { color: var(--ink-faint); }

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.45.3 - 2026-09-07
+
+Footer spacing: the fan-work line sat hard against the "Open Star System Explorer" button. The button
+was an inline element, so its padding painted outside the line box and took up no room - it has a
+real box now, and the note below it has somewhere to be.
+
+
 ## 0.45.2 - 2026-09-07
 
 The explorers list tags moderators as well as admins - it only ever knew about admins, so the one
