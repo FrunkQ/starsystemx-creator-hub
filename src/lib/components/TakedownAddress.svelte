@@ -10,20 +10,24 @@
   // runs the page's JavaScript and looks - and nothing rendered client-side ever could. This is a
   // spam-volume measure, not a secret.
   //
-  // WHY NOT A CONTACT FORM: it would need a mail-sending backend the hub does not have, and a form
-  // that silently fails is far worse than an address, because a copyright claim that never arrives
-  // is the one message here that must not go missing.
-  // The site link in the hint below - from the one file that holds an address (D-37).
-  import { SSE_PROD_ORIGIN } from '$lib/addresses';
+  // WHY NOT A CONTACT FORM was the note here for weeks - the hub could not send mail. It can now,
+  // so there IS one (D-49), offered BESIDE this and never instead: if the form is broken or the hub
+  // cannot send today, the person still leaves with somewhere to write.
+  //
+  // THE ADDRESS IS NO LONGER WRITTEN HERE. It used to be a character-code array holding a second
+  // copy of an address, and that is precisely how it came to be wrong: the hub's mail moved to
+  // `keeper@` and this file - the one page carrying a legal address - kept pointing somewhere else
+  // for a day. It comes from `addresses.ts` now, assembled from parts that never sit together in
+  // the bundle, which is the same protection the character codes gave and one copy instead of two.
+  import { SSE_PROD_ORIGIN, TAKEDOWN_ADDRESS } from '$lib/addresses';
 
-  const PARTS = [102, 114, 117, 110, 107, 64, 102, 114, 117, 110, 107, 46, 110, 101, 116];
   const SUBJECT = 'SSE TAKEDOWN REQUEST: ';
 
   let revealed = $state<string | null>(null);
   let copied = $state(false);
 
   function reveal() {
-    revealed = String.fromCharCode(...PARTS);
+    revealed = TAKEDOWN_ADDRESS;
   }
 
   async function copy() {

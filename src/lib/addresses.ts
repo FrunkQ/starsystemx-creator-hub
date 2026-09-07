@@ -76,12 +76,31 @@ export const MAIL_DOMAIN = 'starsystemx.com';
  * badge for the person running the place: *"Keeps the lights on and the celestial bodies
  * clothed."* The site had already named the role; the mailbox may as well use its name.
  *
- * SENDING ONLY. The Resend domain has receiving switched off, so nothing arrives at this address -
- * which is fine for everything the hub sends: a notice to an admin needs no reply, and the takedown
- * form sets `reply_to` to the person who wrote it, so pressing reply reaches THEM. The public
- * address for writing TO a person is the one on the takedown page, and it is somewhere else.
+ * THIS IS ALSO THE ADDRESS THE TAKEDOWN PAGE GIVES OUT, as of 2026-09-07 - the owner: *"we should
+ * go to keeper@starsystemx.com (it gets to the same place)."* It used to be a personal address
+ * written into `TakedownAddress.svelte` as a second copy, which is exactly how it came to be wrong:
+ * the hub's mail moved and the one page carrying a legal address did not move with it.
+ *
+ * (An earlier note here said nothing arrives at this address. That was true when the Resend domain
+ * was send-only and it is no longer the owner's arrangement - a stale comment about where copyright
+ * claims go is worse than no comment, so it is corrected rather than left.)
  */
 export const DEFAULT_MAIL_FROM = 'keeper@' + MAIL_DOMAIN;
+
+/**
+ * THE ADDRESS ON THE TAKEDOWN PAGE (D-16, corrected 2026-09-07). One source of truth with the
+ * sender above, because two copies of an address is the bug this replaces.
+ *
+ * ASSEMBLED, NEVER WRITTEN WHOLE. D-16's rule is that the address must not appear as text in
+ * anything the hub serves, and the page still reveals it only on a click - so it is never in the
+ * HTML at all. This keeps the other half true as well: the JavaScript bundle contains `keeper@` and
+ * `starsystemx.com` as separate strings, and the pattern a harvester looks for matches neither.
+ *
+ * Be honest about the limit, as the component always has been: this defeats crawlers that regex
+ * page source, which is the actual volume threat. It does not defeat a person who runs the script
+ * and looks, and nothing rendered client-side ever could.
+ */
+export const TAKEDOWN_ADDRESS = 'keeper' + '@' + MAIL_DOMAIN;
 
 /** An address a link may be built from. `"off"` in a config row is therefore a working off switch. */
 export const isHttpUrl = (value: unknown): value is string =>
