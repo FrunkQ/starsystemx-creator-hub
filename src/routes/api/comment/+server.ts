@@ -8,7 +8,7 @@
 import type { RequestHandler } from './$types';
 import { error, redirect } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
-import { mayContribute } from '$lib/server/auth';
+import { whyNotContributing } from '$lib/server/auth';
 import * as audit from '$lib/server/audit';
 import * as badges from '$lib/server/integrations/badges';
 import { loadGates } from '$lib/server/config';
@@ -26,7 +26,8 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 
   const viewer = locals.viewer;
   if (!viewer) redirect(303, '/login?next=' + encodeURIComponent('/s/' + slug + '#comments'));
-  if (!mayContribute(viewer)) throw error(403, 'This account cannot comment.');
+  const blocked = whyNotContributing(viewer);
+  if (blocked) throw error(403, blocked);
 
   const sb = db(env);
   const { data: system } = await sb.from('systems')

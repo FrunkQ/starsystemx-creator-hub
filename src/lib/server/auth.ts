@@ -15,7 +15,11 @@ export interface Viewer {
   id: string;
   handle: string;
   role: Role;
-  state: 'active' | 'suspended' | 'banned';
+  /**
+   * `pending` until the email is confirmed (0035, D-67). It is NOT a punishment and not the same
+   * thing as suspended: a suspended account did something, a pending one has done nothing yet.
+   */
+  state: 'pending' | 'active' | 'suspended' | 'banned';
   /**
    * When they last looked at the comments on their maps (D-33). Carried on the viewer because the
    * chrome puts a number circle on their own name, and this row is already being read - one more
@@ -55,7 +59,37 @@ export function isAdmin<T extends { role?: string }>(v: T | null | undefined): v
   return v?.role === 'admin';
 }
 
-/** A suspended or banned creator may still read; they may not upload, heart or report. */
+/**
+ * A suspended, banned or UNCONFIRMED creator may still read; they may not upload, heart or report.
+ *
+ * This one line is the whole of D-67's enforcement, and that is not luck - it has always been
+ * `state === 'active'` and every upload, comment, star, report and Discord link already asks it. A
+ * fourth state therefore needed no new guard anywhere; what it needed was `whyNotContributing`.
+ */
 export function mayContribute(v: Viewer | null): boolean {
   return !!v && v.state === 'active';
+}
+
+/**
+ * WHY THEY CANNOT, in words for the person reading it - or null when they can.
+ *
+ * ONE SENTENCE IN ONE PLACE, because there are six guards and the owner's rule is that a control
+ * which will not do the thing says so where it is: *"if you click a button and it wont do the thing
+ * you expect it should tell you there."* Before this, every one of those guards said "Sign in to
+ * share a map" - which is actively misleading to somebody who IS signed in and is waiting on an
+ * email, and which would have been the first thing anybody hit after joining.
+ *
+ * Deliberately says nothing about suspension beyond the fact of it: the reason is a matter between
+ * that person and whoever suspended them, and an API response is not where that conversation goes.
+ */
+export function whyNotContributing(v: Viewer | null): string | null {
+  if (!v) return 'Sign in first.';
+  switch (v.state) {
+    case 'active': return null;
+    case 'pending':
+      return 'Confirm your email first - we sent you a link when you joined. '
+        + 'You can send yourself a fresh one from your account page.';
+    default:
+      return 'This account cannot do that at the moment.';
+  }
 }

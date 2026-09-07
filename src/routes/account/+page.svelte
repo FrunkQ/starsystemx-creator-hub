@@ -20,6 +20,24 @@
   {#if data.me?.account_tier === 'pro'}<span class="tag">Pro</span>{/if}
 </p>
 
+<!-- THE FIRST THING A NEW ACCOUNT SEES, and the reason a pending account is allowed to sign in at
+     all (D-67). Somebody whose confirmation went astray needs one button, not a support address. -->
+{#if data.me?.state === 'pending'}
+  <div class="panel notice">
+    <h3>Confirm your email to finish setting up</h3>
+    <p>
+      We sent you a link when you joined. Until it is clicked you can look around and download
+      anything you like - <strong>sharing a map, starring one and commenting wait for it</strong>.
+    </p>
+    {#if form?.resent}<p class="ok">{form.resent}</p>{/if}
+    {#if form?.message}<p class="bad">{form.message}</p>{/if}
+    <form method="POST" action="?/resendConfirmation">
+      <button class="primary" type="submit">Send me another link</button>
+    </form>
+    <p class="muted small">Check the spam folder first - it is usually there.</p>
+  </div>
+{/if}
+
 <!-- A map the creator just deleted from its manage page (D-45): say so, because the page they
      were on is gone and silence would read as a failure. -->
 {#if page.url.searchParams.get('deleted')}
@@ -227,4 +245,6 @@
     background: var(--panel-2); color: var(--ink); border: 1px solid var(--edge); border-radius: 8px; padding: 8px;
   }
   .danger-zone code { background: var(--panel-2); border: 1px solid var(--edge); border-radius: 4px; padding: 1px 5px; }
+  .ok { color: var(--accent); margin: 8px 0 0; }
+  .small { font-size: 0.85rem; }
 </style>

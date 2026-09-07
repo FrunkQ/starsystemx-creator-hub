@@ -4,14 +4,15 @@ import { redirect, error } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import { loadGates } from '$lib/server/config';
 import { exchangeCode, linkIdentity } from '$lib/server/integrations/discord';
-import { mayContribute } from '$lib/server/auth';
+import { whyNotContributing } from '$lib/server/auth';
 import * as badges from '$lib/server/integrations/badges';
 import * as audit from '$lib/server/audit';
 
 export const GET: RequestHandler = async ({ platform, locals, cookies, url }) => {
   const env = platform?.env;
   if (!env) throw error(500, 'not configured');
-  if (!mayContribute(locals.viewer)) throw error(401, 'Sign in first.');
+  const blocked = whyNotContributing(locals.viewer);
+  if (blocked) throw error(401, blocked);
 
   const sb = db(env);
   const gates = await loadGates(sb);

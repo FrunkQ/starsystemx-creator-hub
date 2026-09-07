@@ -5,15 +5,18 @@
 import type { RequestHandler } from './$types';
 import { json, error } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
-import { mayContribute } from '$lib/server/auth';
+import { whyNotContributing } from '$lib/server/auth';
 
 export const POST: RequestHandler = async ({ request, platform, locals }) => {
   const env = platform?.env;
   if (!env) throw error(500, 'not configured');
 
   const viewer = locals.viewer;
-  if (!mayContribute(viewer)) {
-    return json({ ok: false, code: 'sign-in', message: 'Sign in to heart a map.' }, { status: 401 });
+  // ONE SENTENCE, ONE PLACE (D-67): a signed-in person waiting on their confirmation email must
+  // not be told to sign in - that is the first thing a new account hits.
+  const blocked = whyNotContributing(viewer);
+  if (blocked) {
+    return json({ ok: false, code: 'sign-in', message: blocked }, { status: 401 });
   }
 
   type HeartBody = { slug?: unknown; on?: unknown };

@@ -45,6 +45,19 @@ export const actions: Actions = {
       return fail(403, { email, message: 'That account cannot sign in.' });
     }
 
+    // CONFIRMING THE EMAIL IS WHAT MAKES AN ACCOUNT REAL (0035, D-67). Signing in is the moment the
+    // hub can see whether Supabase has confirmed the address, so it is the moment `pending` becomes
+    // `active` - one write, on the sign-in after the link is clicked, and never again.
+    //
+    // A PENDING ACCOUNT MAY STILL SIGN IN, deliberately. Their account page is where the "send me
+    // another" button lives, and locking them out of it would leave somebody whose confirmation
+    // went astray with nowhere to go but a form that will not tell them whether they exist.
+    const confirmed = !!(data.user.email_confirmed_at ?? data.user.confirmed_at);
+    if (creator.state === 'pending' && confirmed) {
+      // Not fatal if it fails: they are signed in either way and the next sign-in tries again.
+      await db(env).from('creators').update({ state: 'active' }).eq('id', data.user.id);
+    }
+
     setSession(cookies, data.session.access_token, data.session.refresh_token, {
       secure: url.protocol === 'https:'
     });

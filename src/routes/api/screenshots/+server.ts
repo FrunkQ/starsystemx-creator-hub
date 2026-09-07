@@ -13,7 +13,7 @@ import type { RequestHandler } from './$types';
 import { json, error } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import { loadGates } from '$lib/server/config';
-import { mayContribute } from '$lib/server/auth';
+import { whyNotContributing } from '$lib/server/auth';
 import { sha256Hex } from '$lib/bundle/hash';
 import { ALLOWED_IMAGE_EXT, MIME_BY_EXT, extOf } from '$lib/bundle/contract';
 import * as ledger from '$lib/server/ledger';
@@ -24,8 +24,11 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
   if (!env) throw error(500, 'not configured');
 
   const viewer = locals.viewer;
-  if (!mayContribute(viewer)) {
-    return json({ ok: false, code: 'sign-in', message: 'Sign in to add a screenshot.' }, { status: 401 });
+  // ONE SENTENCE, ONE PLACE (D-67): a signed-in person waiting on their confirmation email must
+  // not be told to sign in - that is the first thing a new account hits.
+  const blocked = whyNotContributing(viewer);
+  if (blocked) {
+    return json({ ok: false, code: 'sign-in', message: blocked }, { status: 401 });
   }
 
   const sb = db(env);
@@ -107,7 +110,8 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 export const DELETE: RequestHandler = async ({ request, platform, locals }) => {
   const env = platform?.env;
   if (!env) throw error(500, 'not configured');
-  if (!mayContribute(locals.viewer)) throw error(401, 'sign in');
+  const stopped = whyNotContributing(locals.viewer);
+  if (stopped) throw error(401, stopped);
 
   const body = (await request.json().catch(() => null)) as { systemId?: unknown; sha256?: unknown } | null;
   const systemId = String(body?.systemId ?? '');

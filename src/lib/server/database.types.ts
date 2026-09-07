@@ -22,7 +22,9 @@ export type SystemState = 'draft' | 'public' | 'hidden' | 'removed';
 export type BundleKindDb = 'starmap' | 'system';
 export type Visibility = 'public' | 'unlisted' | 'private';
 export type CreatorRole = 'user' | 'moderator' | 'admin';
-export type CreatorState = 'active' | 'suspended' | 'banned';
+// 0035 adds `pending`: joined, email not confirmed yet (D-67). NOT a punishment and not the same
+// thing as suspended - a suspended account did something, a pending one has done nothing yet.
+export type CreatorState = 'pending' | 'active' | 'suspended' | 'banned';
 export type ReportTarget = 'system' | 'asset' | 'comment';
 export type ReportState = 'open' | 'actioned' | 'dismissed';
 export type AccountTier = 'free' | 'pro';

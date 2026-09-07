@@ -115,8 +115,15 @@ export const actions: Actions = {
     // of joining - the second person becomes `name-2`.
     let chosen = handle;
     for (let attempt = 2; attempt <= 6; attempt++) {
-      const { error: insertError } = await sb.from('creators')
-        .insert({ id: data.user.id, handle: chosen, display_name: null });
+      const { error: insertError } = await sb.from('creators').insert({
+        id: data.user.id,
+        handle: chosen,
+        display_name: null,
+        // PENDING UNTIL THE EMAIL IS CONFIRMED (0035, D-67). The row would otherwise say `active`
+        // for somebody who has confirmed nothing, and the hub reads this row to decide what a
+        // person may do. Flipped to `active` by the sign-in that follows a confirmed address.
+        state: 'pending'
+      });
       if (!insertError) break;
       if (!/duplicate|unique/i.test(insertError.message)) {
         // The auth user exists and the profile does not. Say so rather than pretending it worked -
@@ -133,6 +140,11 @@ export const actions: Actions = {
     // somebody sign in again straight after joining would be a needless step - so if there is a
     // session, use it. If there is not, the account is waiting on the email.
     if (data.session) {
+      // CONFIRMATION IS OFF IN THIS PROJECT, or Supabase would not hand back a session here. There
+      // is then no email to wait for and leaving the row `pending` would lock somebody out of the
+      // hub for a confirmation that is never coming - so the state follows the project's setting
+      // rather than an assumption about it.
+      await sb.from('creators').update({ state: 'active' }).eq('id', data.user.id);
       setSession(cookies, data.session.access_token, data.session.refresh_token, {
         secure: url.protocol === 'https:'
       });

@@ -8,12 +8,13 @@ import { redirect, error } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import { loadGates } from '$lib/server/config';
 import { authorizeUrl } from '$lib/server/integrations/discord';
-import { mayContribute } from '$lib/server/auth';
+import { whyNotContributing } from '$lib/server/auth';
 
 export const GET: RequestHandler = async ({ platform, locals, cookies, url }) => {
   const env = platform?.env;
   if (!env) throw error(500, 'not configured');
-  if (!mayContribute(locals.viewer)) throw error(401, 'Sign in first.');
+  const blocked = whyNotContributing(locals.viewer);
+  if (blocked) throw error(401, blocked);
 
   const gates = await loadGates(db(env));
   if (!gates.discord_enabled) throw error(404, 'Not found');

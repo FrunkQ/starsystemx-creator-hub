@@ -1,0 +1,28 @@
+-- An account is PENDING until the email is confirmed (owner, 2026-09-07; D-67).
+-- Run after 0034. Safe to run twice.
+--
+-- The owner, on the sign-up built an hour earlier: "a user gets a test mail - should they be in a
+-- different state until they have confirmed - probably not able to comment/upload until their
+-- account is confirmed by the email."
+--
+-- Yes, and the shape of the answer was already sitting in `auth.ts`: `mayContribute` has always
+-- been `state === 'active'`, and every upload, comment, star, report and Discord link asks it. So a
+-- fourth state costs no new guard anywhere - the whole feature is this line plus telling people
+-- honestly why they cannot do the thing yet.
+--
+-- WHY IT IS NOT ENOUGH TO LEAVE IT TO SUPABASE. If "Confirm email" is on in the dashboard, an
+-- unconfirmed person cannot sign in at all and the question is moot. But that is a setting in
+-- somebody else's console that no test here can see, and if it is ever off - or turned off for an
+-- afternoon to debug something - every new account is instantly able to upload. A row that says
+-- `active` when nobody has confirmed anything is also simply untrue, and the hub reads that row to
+-- decide what a person may do.
+--
+-- PENDING IS NOT SUSPENDED. A suspended account did something; a pending one has done nothing at
+-- all yet. They are separate values so that `/admin/explorers` can tell the two apart at a glance,
+-- and so that reinstating somebody never accidentally means confirming their email for them.
+--
+-- POSTGRES NOTE, the same one as 0028: a value added to an enum cannot be USED in the same
+-- transaction that adds it, so this migration does one thing and nothing else. Existing rows keep
+-- whatever state they have - nobody who is already here is put back behind a confirmation they were
+-- never asked for.
+alter type creator_state add value if not exists 'pending';

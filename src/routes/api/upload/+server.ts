@@ -8,7 +8,7 @@ import { json, error } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import { loadGates } from '$lib/server/config';
 import { checkPreflight } from '$lib/server/gates';
-import { mayContribute } from '$lib/server/auth';
+import { whyNotContributing } from '$lib/server/auth';
 import { ingest } from '$lib/server/ingest';
 import { loadSite } from '$lib/server/site';
 import { gatesForTier } from '$lib/server/entitlements';
@@ -42,7 +42,11 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
     return json({ ok: false, ...body }, { status });
   };
 
-  if (!mayContribute(viewer)) return refuse(401, { code: 'sign-in', message: 'Sign in to share a map.' });
+  // The SENTENCE comes from one place (D-67): "Sign in to share a map" is actively misleading to
+  // somebody who is signed in and waiting on a confirmation email, which is the first thing a new
+  // account hits.
+  const blocked = whyNotContributing(viewer);
+  if (blocked) return refuse(401, { code: 'sign-in', message: blocked });
 
   const baseGates = await loadGates(sb);
 

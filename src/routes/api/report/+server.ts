@@ -7,7 +7,7 @@
 import type { RequestHandler } from './$types';
 import { json, error, redirect } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
-import { mayContribute } from '$lib/server/auth';
+import { whyNotContributing } from '$lib/server/auth';
 
 const REASONS = ['content', 'copyright', 'spam', 'other'];
 
@@ -16,8 +16,11 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
   if (!env) throw error(500, 'not configured');
 
   const viewer = locals.viewer;
-  if (!mayContribute(viewer)) {
-    return json({ ok: false, code: 'sign-in', message: 'Sign in to report something.' }, { status: 401 });
+  // ONE SENTENCE, ONE PLACE (D-67): a signed-in person waiting on their confirmation email must
+  // not be told to sign in - that is the first thing a new account hits.
+  const blocked = whyNotContributing(viewer);
+  if (blocked) {
+    return json({ ok: false, code: 'sign-in', message: blocked }, { status: 401 });
   }
 
   const form = await request.formData();

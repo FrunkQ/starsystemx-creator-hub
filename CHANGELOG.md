@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.43.0 - 2026-09-07
+
+### An account waits for its email before it can contribute
+
+A new account is `pending` until the confirmation link is clicked. Until then you can sign in, look
+around and download anything - sharing a map, starring one and commenting all wait. It becomes
+active on the first sign-in after the address is confirmed.
+
+Every one of those refusals used to say "Sign in to share a map", which is nonsense to somebody who
+is signed in and waiting on an email. They now say what is actually true and what to do about it,
+from one sentence in one place. The account page carries a "send me another link" button, which is
+why a pending account is allowed to sign in at all - a confirmation that goes astray must not leave
+somebody with nowhere to go.
+
+**Migration 0035 adds the state and is the owner's to run.** Nobody already here is affected.
+
+
 ## 0.42.0 - 2026-09-07
 
 ### People can join
