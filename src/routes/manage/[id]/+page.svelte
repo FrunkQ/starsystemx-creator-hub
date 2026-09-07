@@ -780,7 +780,6 @@
     background: var(--panel-2); color: var(--ink); border: 1px solid var(--edge);
     border-radius: 6px; padding: 6px 8px;
   }
-  @media (max-width: 640px) { .credit { grid-template-columns: 1fr; } }
   .slide input { display: block; width: 100%; margin-top: 4px; }
   .designer { display: grid; grid-template-columns: minmax(0, 1fr) 250px; gap: 16px; align-items: start; }
   @media (max-width: 720px) { .designer { grid-template-columns: 1fr; } }
@@ -794,4 +793,26 @@
   .check { display: flex; align-items: center; gap: 8px; margin: 0; color: var(--ink); }
   .check input { margin: 0; }
   .small { font-size: 0.85rem; margin-top: 8px; }
+
+  /* ============================================================================================
+     THIS PAGE ON A PHONE (D-65). Not admin - this is where a creator names their map, tags it,
+     fixes a credit and picks a cover, so it is squarely the user-facing side the owner asked about.
+
+     AT THE END OF THE BLOCK ON PURPOSE: a media query adds no specificity, so an override written
+     above the rule it overrides loses silently. That cost a shipped-and-called-done fix once.
+     ============================================================================================ */
+  @media (max-width: 720px) {
+    /* Tagging is the main thing done on this page and the pills were 25px tall. */
+    .pick { padding: 8px 13px; }
+    .add { padding: 7px 13px; }
+
+    /* The credit fields stack here rather than 80px narrower, so the picture and its four boxes
+       fold at the same width as every other two-column block on the site. */
+    .credit { grid-template-columns: 1fr; }
+
+    /* A RANGE SLIDER IS A DRAG TARGET, and the native thumb is about 20px. This is how the creator
+       chooses which part of their picture becomes the cover (D-54), so it wants a thumb's worth of
+       room to be grabbed in - height on the control, and the padding to keep the track centred. */
+    .slide input { height: 40px; padding: 0; }
+  }
 </style>

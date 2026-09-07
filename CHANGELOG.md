@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.41.4 - 2026-09-07
+
+The map's own page - where you tag it, fix a credit and pick a cover - is the last user-facing thing
+that needed a phone pass. Tag pills and the "+" were 25px tall and are 39px; the crop slider is a
+40px drag target rather than a 20px one; the credit fields fold to one column at the same width as
+every other two-column block instead of 80px narrower.
+
+
 ## 0.41.3 - 2026-09-07
 
 The tree's sort and expand controls really are bigger now. The override had been written above the
