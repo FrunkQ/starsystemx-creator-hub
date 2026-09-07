@@ -407,6 +407,12 @@
     font: inherit; font-size: 0.8rem; padding: 2px 9px; cursor: pointer;
     background: var(--panel-2); color: var(--ink-dim); border: 1px solid var(--edge); border-radius: 999px;
   }
+  /* 25px is a fine target for a mouse and a poor one for a thumb, and these filter chips are how
+     a 178-object map is made readable on the small screen that needs it most (D-65). */
+  @media (max-width: 720px) {
+    .chip { padding: 8px 12px; }
+    .tags .tag { padding: 7px 11px; }
+  }
   .chip:hover { color: var(--ink); border-color: var(--ink-faint); }
   .chip.on { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); }
   .chip.on :global(.role-icon) { color: var(--accent-ink); }
@@ -456,6 +462,14 @@
     opacity: 0.55;
   }
   summary:hover .acts button, .acts button:focus-visible, .acts button.on, .acts button.done { opacity: 1; }
+  /* NO HOVER MEANS NEVER (D-65). On a touch screen the line above can never fire, so the quiet
+     0.55 becomes permanent and the copy button - the point of the row - reads as disabled. A
+     capability query rather than a width: a touch laptop has the same problem, a narrow desktop
+     window does not. The actions also get a thumb's worth of height while we are here. */
+  @media (hover: none) {
+    .acts button { opacity: 1; padding: 8px 10px; }
+    .acts { gap: 2px; }
+  }
   .acts button:hover, .acts button.on { color: var(--ink); border-color: var(--edge); background: var(--panel); }
   .acts button.done { color: var(--accent); }
   .acts svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }

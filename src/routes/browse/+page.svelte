@@ -37,14 +37,18 @@
 </p>
 
 <div class="layout">
-  <aside>
-    <form method="GET" class="search">
-      <input name="q" value={data.q} placeholder="Search titles" aria-label="Search titles" />
-      {#each data.selected as t}<input type="hidden" name="tag" value={t} />{/each}
-      {#if data.kind}<input type="hidden" name="kind" value={data.kind} />{/if}
-      <button type="submit">Go</button>
-    </form>
+  <!-- SEARCH IS ITS OWN GRID AREA, not the first thing in the sidebar. On a phone the sidebar drops
+       BELOW the results (see the grid areas in the styles) and the search box must not go with it -
+       looking for a map by name is the one thing somebody arrives on this page already wanting. -->
+  <form method="GET" class="search">
+    <input name="q" value={data.q} placeholder="Search titles" aria-label="Search titles" />
+    {#each data.selected as t}<input type="hidden" name="tag" value={t} />{/each}
+    {#if data.kind}<input type="hidden" name="kind" value={data.kind} />{/if}
+    <button type="submit">Go</button>
+  </form>
 
+  <aside class="filters">
+    <h2 class="filters-head">Narrow it down</h2>
     <section>
       <h2>Kind</h2>
       <div class="pills">
@@ -141,8 +145,34 @@
 <style>
   h1 { margin: 0 0 6px; }
   .lede { color: var(--ink-dim); margin: 0 0 22px; max-width: 62ch; }
-  .layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 26px; }
-  @media (max-width: 760px) { .layout { grid-template-columns: 1fr; } }
+  /* ============================================================================================
+     THE FILTERS GO UNDER THE MAPS ON A PHONE (D-65), and this was the worst thing on the site at
+     375px. The sidebar is 924px tall with the library as small as it is today, so a reader on a
+     phone scrolled ONE AND A HALF SCREENS of tag pills before the first map appeared - and that
+     block grows as the hub succeeds, so it was getting worse on its own.
+
+     Grid AREAS rather than `order`, because the search box has to stay at the top while the rest
+     of the sidebar moves to the bottom, and order alone cannot split a single element in two.
+     ============================================================================================ */
+  .layout {
+    display: grid; gap: 0 26px; align-items: start;
+    grid-template-columns: 220px minmax(0, 1fr);
+    grid-template-areas: "search results" "filters results";
+  }
+  .search { grid-area: search; }
+  .filters { grid-area: filters; }
+  .results { grid-area: results; }
+  /* The sidebar says what it is on a desktop by sitting where sidebars sit. Under the maps on a
+     phone it needs the words, or it reads as a stray heap of pills at the end of the page. */
+  .filters-head { display: none; }
+  @media (max-width: 760px) {
+    .layout { grid-template-columns: 1fr; grid-template-areas: "search" "results" "filters"; }
+    .filters { margin-top: 28px; border-top: 1px solid var(--edge); padding-top: 20px; }
+    .filters-head {
+      display: block; margin: 0 0 14px; font-size: 1rem; text-transform: none; letter-spacing: 0;
+      color: var(--ink);
+    }
+  }
   aside section { margin-bottom: 18px; }
   aside h2 { font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.06em;
              color: var(--ink-faint); margin: 0 0 8px; }
@@ -161,6 +191,13 @@
          color: var(--ink-faint); font-size: 0.9rem; }
   .bar .spacer { flex: 1; }
   .bar a.on { color: var(--ink); font-weight: 600; }
+  /* The sort links were 22px of tappable height sitting 14px apart - two thumb-sized mistakes in a
+     row. Padding and a wrap, so "Most loved / Newest / Most detailed" is usable rather than lucky. */
+  @media (max-width: 720px) {
+    .bar { flex-wrap: wrap; gap: 4px 14px; }
+    .bar a { padding: 8px 0; }
+    .bar .spacer { flex-basis: 100%; height: 0; }
+  }
   .narrow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 14px;
             color: var(--ink-faint); font-size: 0.9rem; }
 </style>

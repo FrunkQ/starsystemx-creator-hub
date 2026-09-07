@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.41.0 - 2026-09-07
+
+### A pass over the whole site on a phone
+
+Measured at 375px rather than guessed at. Nothing overflowed sideways, which was the good news;
+what was wrong was smaller and more annoying.
+
+**Browse put the maps first.** The filter sidebar is 924 pixels tall with the library as small as it
+is today, so on a phone you scrolled one and a half screens of tag pills before the first map - and
+that block grows as the hub fills up. The maps now come first and the filters sit under them with a
+heading. The search box stays at the top, where somebody arriving to look for a map by name needs it.
+
+**Tapping a field no longer zooms the page.** iOS Safari zooms in on any field whose text is under
+16px and does not zoom back out; the map page's search box was 14.4px.
+
+**Things you tap are big enough to tap.** Filter chips, tag pills, row actions, sort links and the
+banner links were between 22 and 27 pixels tall. The download button is full width.
+
+**Row actions in the tree are visible on a touch screen.** They were dimmed until hovered, and a
+touch screen never hovers - so the copy button that is the point of the row read as disabled.
+
+Also: tables scroll themselves rather than stretching the page, long URLs wrap instead of pushing
+the page sideways, and turning a phone to landscape no longer inflates the text.
+
+
 ## 0.40.2 - 2026-09-06
 
 ### A row that does not exist can no longer be saved successfully

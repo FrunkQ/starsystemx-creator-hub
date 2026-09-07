@@ -31,7 +31,17 @@ html, body {
   background: var(--bg);
   color: var(--ink);
   font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  /* iOS INFLATES TEXT IN LANDSCAPE unless told not to, which throws a carefully sized page out by
+     a third the moment somebody turns their phone. */
+  -webkit-text-size-adjust: 100%;
+  /* A pasted source url or a hash is one unbreakable word, and one of those is all it takes to push
+     a 375px screen sideways. Breaking is always better than a page that scrolls both ways. */
+  overflow-wrap: break-word;
 }
+
+/* A picture with no rule of its own must still not be wider than its column. One line, and it
+   means a future <img> cannot be the thing that breaks a phone layout. */
+img, svg, video { max-width: 100%; }
 
 a { color: var(--accent); text-decoration: none; }
 a:hover { text-decoration: underline; }
@@ -88,7 +98,6 @@ header .staff-link .badge {
 .staff-strip { border-top: 1px solid var(--edge); background: var(--bg); }
 
 main { max-width: var(--max); margin: 0 auto; padding: 20px 32px 56px; }
-@media (max-width: 720px) { main { padding: 16px 16px 48px; } }
 /* Prose pages (the terms, the takedown page) keep a readable measure however wide the screen. */
 .prose { max-width: 78ch; }
 
@@ -183,3 +192,45 @@ header nav form { display: inline; }
   background: var(--panel-2); border: 1px solid var(--edge);
   font-size: 0.8rem; color: var(--ink-dim);
 }
+
+
+/* ============================================================================================
+ * ON A PHONE (D-65). Measured on a 375px viewport rather than guessed at.
+ *
+ * The layout was already fluid and nothing overflowed sideways - what was wrong was smaller and
+ * more annoying: fields that made iOS zoom the page, controls too small to hit with a thumb, and
+ * affordances that only appear on hover, which on a touch screen means never.
+ *
+ * SCOPED TO ONE BREAKPOINT AND ONE CAPABILITY QUERY, not sprinkled through the components, so the
+ * desktop design is untouched and the mobile behaviour is in one place to read.
+ * ============================================================================================ */
+@media (max-width: 720px) {
+  main { padding: 16px 16px 48px; }
+
+  /* iOS SAFARI ZOOMS THE WHOLE PAGE when a field it is focusing has text under 16px - and it does
+     not zoom back out. The map page's search box was 14.4px, so tapping it threw the reader into a
+     scaled-up page they then had to pinch their way out of. 16px is the threshold, exactly. */
+  input, select, textarea { font-size: 16px; }
+
+  /* A table wider than the screen scrolls ITSELF rather than stretching the page. The admin lists
+     are the ones this is for - a moderator reading reports on a phone is a real Tuesday. */
+  table { display: block; overflow-x: auto; }
+
+  /* THE PRIMARY ACTION IS A THUMB TARGET. "Download for Star System Explorer" is the point of the
+     whole site, and an inline-flex button sized to its text is a smaller target than it deserves. */
+  .download { display: flex; justify-content: center; width: 100%; padding: 16px 18px; }
+
+  /* Banner links were 25px tall. The bar is the only navigation there is on a phone. */
+  header nav { gap: 10px 16px; padding: 10px 16px; }
+  header nav a, header nav button.linkish { padding: 6px 0; }
+
+  /* A pill you can TAP is a control and needs a control's height; a pill that is only a label can
+     stay small. Hence the element selectors - `span.tag` on a card is left alone. */
+  a.tag, button.tag { padding: 7px 12px; }
+
+  footer { padding: 24px 16px; }
+}
+
+/* THE COMPANION RULE to the above lives in `NodeTree.svelte`, beside the hover it undoes:
+ * `@media (hover: none)` rather than a width, deliberately, because a touch laptop has the same
+ * problem as a phone and a narrow desktop window does not have it at all. */
