@@ -49,11 +49,14 @@ export interface AdminArea {
 export interface AdminCounts {
   review: number | null;
   reports: number | null;
+  /** Takedown claims still open (D-69). A LEGAL queue, so it counts in the banner. */
+  takedowns: number | null;
   debug: number | null;
   tags: number | null;
 }
 
-export const EMPTY_COUNTS: AdminCounts = { review: null, reports: null, debug: null, tags: null };
+export const EMPTY_COUNTS: AdminCounts =
+  { review: null, reports: null, debug: null, tags: null, takedowns: null };
 
 /**
  * The areas, in the order they are worth looking at within their group.
@@ -66,6 +69,10 @@ export const ADMIN_AREAS: AdminArea[] = [
   { href: '/admin/tags', label: 'Tag review', group: 'Moderation', tier: 'moderator', count: 'tags', countNoun: 'tags waiting to be reviewed' },
   { href: '/admin/review', label: 'Review', group: 'Moderation', tier: 'moderator', count: 'review', countNoun: 'pictures waiting to be reviewed' },
   { href: '/admin/reports', label: 'Reports', group: 'Moderation', tier: 'moderator', count: 'reports', countNoun: 'reports still open' },
+  // A takedown is a claim from OUTSIDE the hub with a legal edge, and the owner asked for it in
+  // moderation rather than in Discord: "a moderator page to see incoming requests and whether the
+  // info was removed or the request ignored" (D-69).
+  { href: '/admin/takedowns', label: 'Takedowns', group: 'Moderation', tier: 'moderator', count: 'takedowns', countNoun: 'takedown claims still open' },
   { href: '/admin/comments', label: 'Comments', group: 'Moderation', tier: 'moderator' },
   { href: '/admin/explorers', label: 'Explorers', group: 'Moderation', tier: 'moderator' },
 
@@ -116,7 +123,7 @@ export function badgeFor(area: AdminArea, counts: AdminCounts): number | null {
  * Only the real queues count - tags and pictures waiting, and reports still open.
  */
 export function outstanding(counts: AdminCounts): number {
-  return (counts.review ?? 0) + (counts.reports ?? 0) + (counts.tags ?? 0);
+  return (counts.review ?? 0) + (counts.reports ?? 0) + (counts.tags ?? 0) + (counts.takedowns ?? 0);
 }
 
 /** Badges over this are shown as "99+": the exact number stops mattering long before then. */

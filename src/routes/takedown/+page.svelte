@@ -25,19 +25,32 @@
   {#if data.canSend}
     {#if form?.sent}
       <div class="panel notice">
-        <h3>Sent - a person will read it</h3>
+        <h3>Logged - a person will read it</h3>
         <p>
-          It went to the address below, and a reply comes back to the one you gave. If you would
-          rather have a copy of what you sent, write to us directly as well; we do not mind hearing
-          the same thing twice.
+          {#if form.unmailed}
+            It is in the queue a moderator works through. We could not send the notice email just
+            now, so please also write to the address below - the claim is recorded either way.
+          {:else}
+            It is in the queue a moderator works through, and a notice has gone to us by email. A
+            reply comes back to the address you gave.
+          {/if}
+        </p>
+        <p>
+          It stays on that queue until somebody closes it one way or the other, and the record of
+          what you asked and what we did is kept.
         </p>
       </div>
     {:else}
       <form class="panel" method="POST" action="?/send">
         <h2 class="tight">Tell us here</h2>
+        <!-- THIS USED TO SAY "nothing is kept beyond the message itself", which stopped being true
+             the moment claims were catalogued (D-69). A page about other people's rights is the
+             last place to be vague about what happens to what they type. -->
         <p class="muted">
-          Everything here goes to the same inbox as the address below. Nothing is published, and
-          nothing is kept beyond the message itself.
+          Everything here goes to the same inbox as the address below. Nothing is published. Your
+          name, your address and what you write are <strong>kept as a record of the claim</strong>
+          and read by the people who moderate the hub - that is how we make sure it is dealt with
+          and can say later what was done.
         </p>
         {#if form?.message}<p class="bad">{form.message}</p>{/if}
         <label>Your name <input name="name" maxlength="120" value={form?.name ?? ''} autocomplete="name" /></label>

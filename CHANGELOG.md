@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.45.0 - 2026-09-07
+
+### Takedown claims are catalogued and kept
+
+The takedown form only sent an email, so a copyright claim existed as a message in an inbox with no
+state, no owner and no way to ask what happened to it. Claims are recorded now - before anything is
+sent - and `/admin/takedowns` is the queue: open ones at the top with the claimant and what they
+asked, and underneath, everything already dealt with and what was done about it.
+
+Closing one asks what happened - taken down, rejected, or withdrawn - and requires a line saying
+what you did, because that note is the whole point of keeping the record. Nothing is ever deleted;
+resolving moves a claim out of the queue and no further. It shows in the moderation nav with the
+number waiting, and every decision lands in the audit log.
+
+A claim now survives the email failing. It used to be that no admin address meant the form refused
+outright and sent a copyright holder away with nothing.
+
+The page used to say "nothing is kept beyond the message itself", which stopped being true; it now
+says plainly what is kept and who reads it.
+
+**Migration 0036 is the owner's to run.**
+
+
 ## 0.44.1 - 2026-09-07
 
 The explorers list shows the address each person signed up with, and marks the ones that have never

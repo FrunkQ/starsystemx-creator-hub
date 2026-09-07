@@ -211,6 +211,28 @@ export type SystemAssetRow = {
   node_ref: string | null;
 }
 
+// 0036. A takedown claim from outside the hub (D-69). KEPT FOREVER - resolving one moves it out of
+// the open queue and never deletes it. `system_id` is set null when a map goes, because taking the
+// map down is usually the OUTCOME and the record of why must outlive it; `url` and `system_title`
+// are copied in as text so the row still reads once the map is gone.
+export type TakedownState = 'open' | 'actioned' | 'rejected' | 'withdrawn';
+
+export type TakedownRow = {
+  id: string;
+  created_at: string;
+  claimant_name: string | null;
+  claimant_email: string;
+  url: string | null;
+  system_id: string | null;
+  system_title: string | null;
+  detail: string;
+  state: TakedownState;
+  resolved_at: string | null;
+  resolved_by: string | null;
+  outcome: string | null;
+  mailed: boolean;
+}
+
 export type AssetClaimRow = {
   system_id: string;
   sha256: string;
@@ -402,6 +424,7 @@ export interface Database {
         [Rel<'system_assets_system_id_fkey', 'system_id', 'systems', 'id'>]
       >;
       asset_claims: Table<AssetClaimRow>;
+      takedowns: Table<TakedownRow>;
       bodies: Table<NodeRow>;
       constructs: Table<ConstructRow>;
       hearts: Table<HeartRow>;

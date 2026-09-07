@@ -38,6 +38,12 @@ const LABELS: Record<string, { verb: string; group: ActionGroup }> = {
   'comments.remove-all': { verb: 'removed every comment by', group: 'Moderation' },
   // Reports
   'report.dismiss': { verb: 'dismissed a report', group: 'Moderation' },
+  // Takedowns (D-69). Moderation, so "only what a moderator can do" on /admin/log includes them -
+  // which is the filter an admin uses to read what was decided on their behalf.
+  'takedown.actioned': { verb: 'took material down after a claim', group: 'Moderation' },
+  'takedown.rejected': { verb: 'rejected a takedown claim', group: 'Moderation' },
+  'takedown.withdrawn': { verb: 'recorded a takedown claim as withdrawn', group: 'Moderation' },
+  'takedown.reopen': { verb: 'reopened a takedown claim', group: 'Moderation' },
   // Maps
   'system.takedown': { verb: 'took down', group: 'Moderation' },
   'system.restore': { verb: 'restored', group: 'Moderation' },
@@ -78,7 +84,8 @@ export function describeAction(action: string): { verb: string; group: ActionGro
   return { verb: action.replace(/[.\-_]/g, ' '), group: 'Other' };
 }
 
-export type TargetKind = 'creator' | 'system' | 'asset' | 'report' | 'config' | 'tag' | 'comment' | 'unknown';
+export type TargetKind =
+  'creator' | 'system' | 'asset' | 'report' | 'takedown' | 'config' | 'tag' | 'comment' | 'unknown';
 
 /**
  * What the action was done TO.
@@ -96,6 +103,7 @@ export function parseTarget(action: string, target: string): { kind: TargetKind;
     if (prefix === 'system') return { kind: 'system', id };
     if (prefix === 'sha256') return { kind: 'asset', id };
     if (prefix === 'report') return { kind: 'report', id };
+    if (prefix === 'takedown') return { kind: 'takedown', id };
     if (prefix === 'config') return { kind: 'config', id };
     if (prefix === 'tag') return { kind: 'tag', id };
   }

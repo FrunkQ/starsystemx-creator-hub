@@ -15,8 +15,13 @@ describe('who can reach what', () => {
 
   it('gives a moderator the moderation work and none of the running of the place', () => {
     const seen = visibleTo('moderator');
+    // THE OWNER'S OWN LIST, pinned so it cannot drift by accident. It was five areas from D-39
+    // ("Tag Review, Review, Comments, Explorers, Reports") and Takedowns joined it on 2026-09-07 at
+    // his word: *"a moderator page to see incoming requests and whether the info was removed or the
+    // request ignored"* (D-69). Anything else appearing here should have to argue with this line.
     expect(seen.map((a) => a.href)).toEqual([
-      '/admin/tags', '/admin/review', '/admin/reports', '/admin/comments', '/admin/explorers'
+      '/admin/tags', '/admin/review', '/admin/reports', '/admin/takedowns',
+      '/admin/comments', '/admin/explorers'
     ]);
     expect(seen.every((a) => a.group === 'Moderation')).toBe(true);
   });
@@ -38,7 +43,7 @@ describe('who can reach what', () => {
 });
 
 describe('the number circles', () => {
-  const counts = { review: 3, reports: 1, debug: 12, tags: 2 };
+  const counts = { review: 3, reports: 1, debug: 12, tags: 2, takedowns: 0 };
 
   it('shows a count where there is one', () => {
     expect(badgeFor(ADMIN_AREAS.find((a) => a.href === '/admin/review')!, counts)).toBe(3);
@@ -64,14 +69,14 @@ describe('the number circles', () => {
 });
 
 describe('the one number in the banner', () => {
-  it('is the three real queues added up', () => {
-    expect(outstanding({ review: 3, reports: 1, debug: 12, tags: 2 })).toBe(6);
+  it('is the real queues added up', () => {
+    expect(outstanding({ review: 3, reports: 1, debug: 12, tags: 2, takedowns: 4 })).toBe(10);
   });
 
   // Debug uploads are kept files, not a queue. A badge that never reaches zero teaches people to
   // stop reading badges, which costs the two that mean something.
   it('leaves the debug uploads out', () => {
-    expect(outstanding({ review: 0, reports: 0, debug: 40, tags: 0 })).toBe(0);
+    expect(outstanding({ review: 0, reports: 0, debug: 40, tags: 0, takedowns: 0 })).toBe(0);
   });
 
   it('is zero when nothing could be counted', () => {

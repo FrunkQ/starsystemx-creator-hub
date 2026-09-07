@@ -1,10 +1,13 @@
 import type { PageServerLoad, Actions } from './$types';
 import { error, fail } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
+import type { Db } from '$lib/server/database.types';
 import { loadGates } from '$lib/server/config';
 import { mailReady, looksLikeEmail, adminAddresses } from '$lib/server/mail';
 import { enqueue } from '$lib/server/integrations/outbox';
 import { drainOutbox } from '$lib/server/integrations/deliver';
+import { loadSite } from '$lib/server/site';
+import { slugOfUrl } from '$lib/bundle/clip';
 
 // THE CONTACT FORM D-16 REFUSED TO BUILD, now that the refusal's reason has gone (D-49).
 //
@@ -25,22 +28,24 @@ export const load: PageServerLoad = async ({ platform }) => {
   if (!env?.SUPABASE_URL) return { canSend: false };
   try {
     const sb = db(env);
-    const gates = await loadGates(sb);
-    // Both halves: the hub can send, AND there is somebody to send to. Either missing means the
-    // form is not offered - the address below is the whole point of it still being there.
-    const to = mailReady(env, gates) ? await adminAddresses(sb, gates) : [];
-    return { canSend: to.length > 0 };
+    // OFFERED WHENEVER THE CLAIM CAN BE LOGGED, which is a change (D-69). It used to need mail to
+    // be configured AND an admin address to exist, because mailing was the only thing the form did.
+    // Now the RECORD is the promise and the email is the nudge, so a hub that cannot send today
+    // still takes the claim - and says so when it lands.
+    await loadGates(sb);
+    return { canSend: true };
   } catch {
     return { canSend: false };
   }
 };
 
 export const actions: Actions = {
-  send: async ({ request, platform }) => {
+  send: async ({ request, platform, url: pageUrl }) => {
     const env = platform?.env;
     if (!env) throw error(500, 'not configured');
     const sb = db(env);
     const gates = await loadGates(sb);
+    const site = await loadSite(sb, pageUrl);
 
     const form = await request.formData();
     const name = String(form.get('name') ?? '').trim().slice(0, MAX.name);
@@ -51,18 +56,54 @@ export const actions: Actions = {
     // form people abandon, and this is the message that must not go missing.
     const typed = { name, email, url, detail };
 
-    const to = mailReady(env, gates) ? await adminAddresses(sb, gates) : [];
-    if (!to.length) {
-      return fail(503, { ...typed, message: 'The hub cannot send mail at the moment. Please write to the address below instead.' });
-    }
     if (!looksLikeEmail(email)) return fail(400, { ...typed, message: 'We need an address to reply to.' });
     if (detail.length < 20) return fail(400, { ...typed, message: 'Please say what the problem is - a sentence or two is enough.' });
+
+    // ============================================================================================
+    // THE CLAIM IS RECORDED BEFORE ANYTHING IS SENT (D-69). The owner: *"a moderator page to see
+    // incoming requests and whether the info was removed or the request ignored. Stored forever
+    // alongside who the takedown came from - just so we can track these for good."*
+    //
+    // BEFORE, and that ordering is the point. Until today this form only MAILED, so a claim existed
+    // as a message in somebody's inbox with no state, no owner and no way to ask what happened to
+    // it. Writing the row first means a claim survives the mail failing, the queue being full, or
+    // the admin address being unset - all of which used to REFUSE THE WHOLE FORM and send a
+    // copyright holder away with nothing.
+    // ============================================================================================
+    const linked = await resolveSystem(sb, url);
+    const to = mailReady(env, gates) ? await adminAddresses(sb, gates) : [];
+
+    const id = crypto.randomUUID();
+    const { error: writeError } = await sb.from('takedowns').insert({
+      id,
+      claimant_name: name || null,
+      claimant_email: email,
+      url: url || null,
+      // The map if the url pointed at one, and its title as TEXT - so the row still says what it
+      // was about after the map is gone, which is usually what acting on the claim means.
+      system_id: linked?.id ?? null,
+      system_title: linked?.title ?? null,
+      detail,
+      state: 'open',
+      mailed: to.length > 0
+    });
+    if (writeError) {
+      // The record is the promise. If it cannot be written, say so rather than mailing a claim that
+      // nothing is tracking - an inbox message with no row is exactly what this replaced.
+      return fail(500, { ...typed, message: 'We could not log that. Please write to the address below instead.' });
+    }
+
+    if (!to.length) {
+      // LOGGED BUT NOT MAILED, and both halves are true. The queue has it; nobody has been nudged.
+      return { sent: true, unmailed: true };
+    }
 
     const text = [
       'A copyright report was sent from the hub.',
       '',
       'From:   ' + (name || '(no name given)') + ' <' + email + '>',
       'Page:   ' + (url || '(none given)'),
+      'Queue:  ' + site.url + '/admin/takedowns',
       '',
       detail,
       '',
@@ -102,4 +143,19 @@ async function sha256Hex(text: string): Promise<string> {
   const bytes = new TextEncoder().encode(text);
   const digest = await crypto.subtle.digest('SHA-256', bytes);
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+
+/**
+ * The map a claim points at, if the hub can tell.
+ *
+ * BEST EFFORT AND NEVER A REFUSAL. A claim about a work the hub cannot resolve to a row is still a
+ * claim, and a form that demanded a valid map URL from a rights holder would be a form that turned
+ * away the people it exists for. A null here just means a moderator does the linking by eye.
+ */
+async function resolveSystem(sb: Db, url: string): Promise<{ id: string; title: string } | null> {
+  const slug = slugOfUrl(url);
+  if (!slug) return null;
+  const { data } = await sb.from('systems').select('id, title').eq('slug', slug).maybeSingle();
+  return data ? { id: data.id as string, title: data.title as string } : null;
 }
