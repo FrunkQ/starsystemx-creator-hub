@@ -10,7 +10,7 @@
 <h1>
   {p.handle}
   {#if p.display_name}<span class="muted">· {p.display_name}</span>{/if}
-  {#if p.role === 'admin'}<span class="tag">admin</span>{/if}
+  {#if p.role !== 'user'}<span class="role" class:mod={p.role === 'moderator'}>{p.role}</span>{/if}
   {#if p.role === 'moderator'}<span class="tag mod">moderator</span>{/if}
   {#if p.account_tier === 'pro'}<span class="tag">Pro</span>{/if}
 </h1>
@@ -181,4 +181,13 @@
   .danger-zone { border-color: var(--bad); margin-top: 32px; }
   .tag.mod { background: var(--accent); color: var(--accent-ink); }
   code { background: var(--panel-2); border: 1px solid var(--edge); border-radius: 4px; padding: 1px 5px; }
+  /* THE SAME TWO COLOURS AS THE BANNER (app.css `header .role`): admin amber, moderator blue.
+     A role badge that reads differently here from the one over somebody's own name is a small way
+     to make people doubt both of them. */
+  .role {
+    font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.07em; font-weight: 700;
+    padding: 1px 6px; border-radius: 999px; margin-left: 6px;
+    background: var(--warn); color: var(--accent-ink); border: 0;
+  }
+  .role.mod { background: var(--accent); }
 </style>

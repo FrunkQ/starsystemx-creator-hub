@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.45.2 - 2026-09-07
+
+The explorers list tags moderators as well as admins - it only ever knew about admins, so the one
+page you would look at to find out who holds the role showed a moderator as an ordinary explorer.
+Both use the same two colours as the banner.
+
+And an account waiting on its confirmation email is no longer painted the same red as a banned one.
+It says "email not confirmed" beside the state, because "pending" on its own invites a guess.
+
+
 ## 0.45.1 - 2026-09-07
 
 Emailed links - the sign-up confirmation and the password reset - are built from the hub's canonical

@@ -41,8 +41,19 @@
     </tr></thead>
     <tbody>
       {#each data.people as p (p.id)}
-        <tr class:off={p.state !== 'active'}>
-          <td><a href="/admin/explorers/{p.handle}">{p.handle}</a>{#if p.role === 'admin'} <span class="tag">admin</span>{/if}</td>
+        <!-- RED IS FOR AN ACCOUNT SOMEBODY ACTED ON, and `pending` arrived after this line was
+             written (D-67): a brand-new member who has not clicked their link yet was being painted
+             the same colour as a banned one. Pending is quiet, not alarming. -->
+        <tr class:off={p.state === 'suspended' || p.state === 'banned'} class:waiting={p.state === 'pending'}>
+          <td>
+            <a href="/admin/explorers/{p.handle}">{p.handle}</a>
+            <!-- BOTH STAFF ROLES, not just admin. This said `admin` only, so a moderator was
+                 indistinguishable from an ordinary explorer on the one page you would look at to
+                 find out who has the role (owner, 2026-09-07). -->
+            {#if p.role !== 'user'}
+              <span class="role" class:mod={p.role === 'moderator'}>{p.role}</span>
+            {/if}
+          </td>
           <td>{p.display_name ?? ''}</td>
           {#if data.showEmails}
             <!-- The address, and whether it has been answered. Marked rather than merely shown:
@@ -56,7 +67,10 @@
               {/if}
             </td>
           {/if}
-          <td>{p.state}</td>
+          <td>
+            {p.state}
+            {#if p.state === 'pending'}<span class="muted small">email not confirmed</span>{/if}
+          </td>
           <td class="when">{p.created_at.slice(0, 10)}</td>
           <td>{p.maps.pub} public <span class="muted">of {p.maps.all}</span></td>
           <td>{p.comments}</td>
@@ -77,8 +91,19 @@
   .when { color: var(--ink-faint); white-space: nowrap; }
   .muted { color: var(--ink-faint); }
   tr.off td { color: var(--bad); }
+  tr.waiting td { color: var(--ink-faint); }
   tr.off td a { color: var(--bad); }
   /* An address is long and the column it sits in is not the point of the page. */
   .email { font-size: 0.85rem; word-break: break-all; max-width: 22ch; }
   .tag.warn { border-color: var(--warn); color: var(--warn); margin-left: 4px; }
+  /* THE SAME TWO COLOURS AS THE BANNER (app.css `header .role`): admin amber, moderator blue.
+     A role badge that reads differently here from the one over somebody's own name is a small way
+     to make people doubt both of them. */
+  .role {
+    font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.07em; font-weight: 700;
+    padding: 1px 6px; border-radius: 999px; margin-left: 6px;
+    background: var(--warn); color: var(--accent-ink); border: 0;
+  }
+  .role.mod { background: var(--accent); }
+  .small { font-size: 0.82rem; display: block; }
 </style>
