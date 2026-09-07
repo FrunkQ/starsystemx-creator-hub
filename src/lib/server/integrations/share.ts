@@ -18,6 +18,13 @@ export interface SharePayload {
   kind: string;
   by: string | null;
   blurb: string | null;
+  /**
+   * The creator's full write-up (D-70). The Discord post prints it under the blurb so somebody in
+   * the channel can decide whether to download without leaving it. Truncated at the far end by
+   * `shareBody` - Discord refuses an over-long embed outright, so a good long description must not
+   * be the reason a map goes unannounced.
+   */
+  description: string | null;
   /** Absolute URL of a servable cover, or null. */
   cover: string | null;
   counts: { systems: number; bodies: number; constructs: number };
@@ -38,7 +45,7 @@ export function shareDedupeKey(systemId: string, event: ShareEvent, at: Date = n
 }
 
 export function buildShare(
-  system: Pick<SystemRow, 'slug' | 'title' | 'kind' | 'blurb' | 'summary' | 'cover_sha256' | 'system_count' | 'body_count' | 'construct_count' | 'hearts_count' | 'download_count'>,
+  system: Pick<SystemRow, 'slug' | 'title' | 'kind' | 'blurb' | 'summary' | 'description' | 'cover_sha256' | 'system_count' | 'body_count' | 'construct_count' | 'hearts_count' | 'download_count'>,
   by: string | null, siteUrl: string, coverServable: boolean, event: ShareEvent
 ): SharePayload {
   return {
@@ -49,6 +56,7 @@ export function buildShare(
     kind: system.kind,
     by,
     blurb: system.blurb ?? system.summary ?? null,
+    description: system.description ?? null,
     cover: coverServable && system.cover_sha256 ? siteUrl + '/asset/' + system.cover_sha256 : null,
     counts: { systems: system.system_count ?? 0, bodies: system.body_count ?? 0, constructs: system.construct_count ?? 0 },
     stars: system.hearts_count ?? 0,

@@ -109,6 +109,10 @@ export const actions: Actions = {
         event: 'published', slug: '', url: site.url, title: 'A test from the hub', kind: 'system',
         by: me.handle,
         blurb: 'If you can read this, the sharing channel is wired up. Newly published and updated maps will appear here.',
+        // A real map's write-up goes here too now (D-70), so the test post shows the shape a real
+        // one takes rather than a shorter, tidier thing that would not have caught a layout problem.
+        description: 'A map post carries the whole write-up under this line, so somebody reading '
+          + 'the channel can decide whether to download it without leaving Discord.',
         cover: null, counts: { systems: 1, bodies: 0, constructs: 0 }, stars: 0, downloads: 0
       }, site.name);
     } catch (e) {

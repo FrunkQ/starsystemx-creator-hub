@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.47.0 - 2026-09-07
+
+### Discord posts carry the whole write-up
+
+They carried the one-line blurb, which is the right thing on a card in a grid of twenty and the
+wrong thing in a channel where one map arrives at a time. The post now has the hook and then the
+description under it, so somebody reading the channel can decide whether to download without
+leaving Discord.
+
+Discord refuses an embed whose description runs past 4096 characters - it would not have posted an
+ugly announcement, it would have posted none at all, and the maps it silently dropped would have
+been the ones with the most written about them. Long write-ups are cut at a paragraph, then a
+sentence, then a word, in that order of preference. A blurb repeated as the first line of the
+description is not printed twice.
+
+
 ## 0.46.0 - 2026-09-07
 
 ### The footer is a banner rather than a block

@@ -19,6 +19,7 @@
 import type { Db } from './../database.types';
 import type { Gates } from './../config';
 import type { SharePayload } from './share';
+import { shareBody } from '$lib/shareText';
 
 const API = 'https://discord.com/api/v10';
 
@@ -170,7 +171,11 @@ export async function postShare(webhookUrl: string, share: SharePayload, siteNam
       author: { name: (share.event === 'published' ? 'New ' : 'Updated ') + what },
       title: share.title,
       url: share.url,
-      description: share.blurb ?? 'Free to download. Opens in Star System Explorer.',
+      // THE HOOK AND THE WRITE-UP (D-70), not just the hook. The owner: "it should post the whole
+      // description too - to give users background on what was published." `shareBody` keeps it
+      // inside Discord's 4096-character limit, because an over-long embed is REFUSED and the map
+      // would simply not be announced at all.
+      description: shareBody(share.blurb, share.description),
       color: 0x6fb3ff,
       fields: [
         { name: 'By', value: share.by ?? 'an explorer', inline: true },

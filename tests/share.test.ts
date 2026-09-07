@@ -3,7 +3,9 @@ import { describe, it, expect } from 'vitest';
 import { buildShare, shareDedupeKey, isDiscordWebhook } from '../src/lib/server/integrations/share';
 
 const system = {
-  slug: 'local-neighbourhood', title: 'Local Neighbourhood', kind: 'starmap' as const, blurb: null, summary: 'Near stars.',
+  slug: 'local-neighbourhood', title: 'Local Neighbourhood', kind: 'starmap' as const, blurb: null,
+  summary: 'Near stars.',
+  description: 'Every known star system within about 13 light years, from real astrometry.',
   cover_sha256: 'abc', system_count: 42, body_count: 161, construct_count: 11, hearts_count: 3, download_count: 9
 };
 
@@ -13,6 +15,8 @@ describe('a share', () => {
     expect(s.url).toBe('https://x.test/s/local-neighbourhood');
     expect(s.cover).toBe('https://x.test/asset/abc');
     expect(s.blurb).toBe('Near stars.');
+    // The write-up rides along too, so the Discord post can carry it (D-70).
+    expect(s.description).toContain('13 light years');
     expect(s.counts).toEqual({ systems: 42, bodies: 161, constructs: 11 });
   });
 
