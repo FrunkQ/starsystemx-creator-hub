@@ -409,14 +409,6 @@
     font: inherit; font-size: 0.8rem; padding: 2px 9px; cursor: pointer;
     background: var(--panel-2); color: var(--ink-dim); border: 1px solid var(--edge); border-radius: 999px;
   }
-  /* 25px is a fine target for a mouse and a poor one for a thumb, and these filter chips are how
-     a 178-object map is made readable on the small screen that needs it most (D-65). */
-  @media (max-width: 720px) {
-    .chip { padding: 8px 12px; }
-    .tags .tag { padding: 7px 11px; }
-    /* Sort, expand, collapse: the controls that make a 178-object tree usable were 31px tall. */
-    .seg button, .ghost { padding: 10px 12px; }
-  }
   .chip:hover { color: var(--ink); border-color: var(--ink-faint); }
   .chip.on { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); }
   .chip.on :global(.role-icon) { color: var(--accent-ink); }
@@ -494,5 +486,19 @@
     padding: 10px 12px; max-height: 360px; overflow: auto;
     background: var(--bg); border: 1px solid var(--edge); border-radius: 8px;
     font-size: 0.8rem; line-height: 1.45;
+  }
+
+  /* ============================================================================================
+     TAP TARGETS (D-65). At the END of the block on purpose: a media query adds NO specificity, so
+     an override written above the rule it overrides simply loses - which is exactly what happened
+     to `.seg button` on the first attempt, measured live at 31px after the change had shipped.
+
+     25px is a fine target for a mouse and a poor one for a thumb, and these are the controls that
+     make a 178-object map readable on the screen that needs it most.
+     ============================================================================================ */
+  @media (max-width: 720px) {
+    .chip { padding: 8px 12px; }
+    .tags .tag { padding: 7px 11px; }
+    .seg button, .ghost { padding: 10px 12px; }
   }
 </style>

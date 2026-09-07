@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.41.3 - 2026-09-07
+
+The tree's sort and expand controls really are bigger now. The override had been written above the
+rule it was overriding, and a media query adds no specificity, so it lost silently - visible only by
+measuring the live page after the change had shipped.
+
+
 ## 0.41.2 - 2026-09-07
 
 Banner links and the tree's sort and expand controls are a proper size to tap. The banner links had
