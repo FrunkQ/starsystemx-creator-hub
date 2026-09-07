@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.44.1 - 2026-09-07
+
+The explorers list shows the address each person signed up with, and marks the ones that have never
+been confirmed. Admin only - the rest of that page is staff, but an email address is not content,
+and a moderator needs to see what somebody posted rather than who they are.
+
+
 ## 0.44.0 - 2026-09-07
 
 ### Forgotten passwords

@@ -34,12 +34,28 @@
   <div class="panel"><p>Nobody matches.</p></div>
 {:else}
   <table>
-    <thead><tr><th>Handle</th><th>Name</th><th>State</th><th>Joined</th><th>Maps</th><th>Comments</th></tr></thead>
+    <thead><tr>
+      <th>Handle</th><th>Name</th>
+      {#if data.showEmails}<th>Email</th>{/if}
+      <th>State</th><th>Joined</th><th>Maps</th><th>Comments</th>
+    </tr></thead>
     <tbody>
       {#each data.people as p (p.id)}
         <tr class:off={p.state !== 'active'}>
           <td><a href="/admin/explorers/{p.handle}">{p.handle}</a>{#if p.role === 'admin'} <span class="tag">admin</span>{/if}</td>
           <td>{p.display_name ?? ''}</td>
+          {#if data.showEmails}
+            <!-- The address, and whether it has been answered. Marked rather than merely shown:
+                 an unconfirmed address is the difference between a real person and a typo. -->
+            <td class="email">
+              {#if p.email}
+                {p.email}
+                {#if !p.confirmed}<span class="tag warn">unconfirmed</span>{/if}
+              {:else}
+                <span class="muted">not found</span>
+              {/if}
+            </td>
+          {/if}
           <td>{p.state}</td>
           <td class="when">{p.created_at.slice(0, 10)}</td>
           <td>{p.maps.pub} public <span class="muted">of {p.maps.all}</span></td>
@@ -62,4 +78,7 @@
   .muted { color: var(--ink-faint); }
   tr.off td { color: var(--bad); }
   tr.off td a { color: var(--bad); }
+  /* An address is long and the column it sits in is not the point of the page. */
+  .email { font-size: 0.85rem; word-break: break-all; max-width: 22ch; }
+  .tag.warn { border-color: var(--warn); color: var(--warn); margin-left: 4px; }
 </style>
