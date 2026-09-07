@@ -38,6 +38,7 @@ import { loadGates } from '$lib/server/config';
 import { setSession } from '$lib/server/session';
 import { cleanHandle, handleProblem, suffixed } from '$lib/handles';
 import { looksLikeEmail } from '$lib/server/mail';
+import { loadSite } from '$lib/server/site';
 
 /** Long enough to matter, short enough that nobody reaches for a note. Supabase's own floor is 6. */
 const PASSWORD_MIN = 8;
@@ -62,6 +63,7 @@ export const actions: Actions = {
 
     const sb = db(env);
     const gates = await loadGates(sb);
+    const site = await loadSite(sb, url);
 
     const form = await request.formData();
     const email = String(form.get('email') ?? '').trim().slice(0, 254);
@@ -93,7 +95,12 @@ export const actions: Actions = {
       options: {
         // Where the confirmation link lands. Supabase only honours it if the URL is on its allowed
         // redirect list - a per-hostname setting the owner keeps, like the Discord OAuth redirect.
-        emailRedirectTo: url.origin + '/login?joined=1',
+        // THE CANONICAL ADDRESS, NOT THE ONE THIS REQUEST ARRIVED ON. workers.dev still answers
+        // (D-41), and a person who joined there would get a link built from that origin - which is
+        // not on Supabase's allow-list, so it would silently fall back to the Site URL root and
+        // drop the path. `site.url` is the address the hub gives out everywhere else: the cover QR,
+        // the sitemap, the feed. One address, one behaviour, whichever door they came in by.
+        emailRedirectTo: site.url + '/login?joined=1',
         // The handle rides along so it is recorded against the auth user too. The `creators` row
         // below is the one that MATTERS; this is for anybody reading the auth table later.
         data: { handle }

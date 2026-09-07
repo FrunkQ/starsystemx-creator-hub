@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.45.1 - 2026-09-07
+
+Emailed links - the sign-up confirmation and the password reset - are built from the hub's canonical
+address rather than whichever hostname the request arrived on. workers.dev still answers, and a link
+built from it is not on Supabase's allow-list, so it would have silently fallen back to the site root
+and dropped the path. No change for anybody arriving at explorers.starsystemx.com.
+
+
 ## 0.45.0 - 2026-09-07
 
 ### Takedown claims are catalogued and kept

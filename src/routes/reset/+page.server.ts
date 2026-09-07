@@ -19,13 +19,16 @@
 // ============================================================================================
 import type { Actions } from './$types';
 import { fail, error } from '@sveltejs/kit';
-import { linkClient } from '$lib/server/db';
+import { db, linkClient } from '$lib/server/db';
 import { looksLikeEmail } from '$lib/server/mail';
+import { loadSite } from '$lib/server/site';
 
 export const actions: Actions = {
   default: async ({ request, platform, url }) => {
     const env = platform?.env;
     if (!env?.SUPABASE_PUBLISHABLE_KEY) throw error(500, 'not configured');
+
+    const site = await loadSite(db(env), url);
 
     const form = await request.formData();
     const email = String(form.get('email') ?? '').trim().slice(0, 254);
@@ -35,7 +38,9 @@ export const actions: Actions = {
     // all produce the same answer, because the difference between them is exactly what an attacker
     // is asking for. A person who genuinely gets no email has the address on the page to write to.
     await linkClient(env).auth.resetPasswordForEmail(email, {
-      redirectTo: url.origin + '/reset/new'
+      // The canonical address, not the origin this request arrived on - workers.dev still
+      // answers and a link built from it is not on Supabase's allow-list (D-41).
+      redirectTo: site.url + '/reset/new'
     });
 
     return { asked: true };
