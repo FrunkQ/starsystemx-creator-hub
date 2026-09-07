@@ -74,7 +74,11 @@
       {/if}
       <form method="POST" action="/logout"><button class="linkish" type="submit">Sign out</button></form>
     {:else}
+      <!-- A DOOR, VISIBLE FROM EVERY PAGE (D-66). The hub had no sign-up at all until 2026-09-07,
+           so there was nothing to link to; a front door nobody can find is the same problem with
+           extra steps. `Sign in` stays first for the people who already have an account. -->
       <a href="/login">Sign in</a>
+      <a class="join" href="/join">Join</a>
     {/if}
     <!-- NO "Open Star System Explorer" HERE (owner, 2026-09-06: "we have it at the bottom and on
          every map"). The banner's job is to get out of the way; a general link to the app competes

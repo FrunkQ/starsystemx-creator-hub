@@ -69,6 +69,14 @@ header nav {
 .wordmark span { color: var(--ink-faint); font-weight: 500; }
 .spacer { flex: 1; }
 
+/* The join link: an outline, not a filled button. `Share a map` is the hub's actual call to
+   action and a second solid block beside it would compete with it for the same attention. */
+header nav a.join {
+  border: 1px solid var(--accent); border-radius: var(--radius);
+  padding: 5px 12px; line-height: 1.3;
+}
+header nav a.join:hover { background: var(--accent); color: var(--accent-ink); text-decoration: none; }
+
 .cta {
   background: var(--accent); color: var(--accent-ink);
   padding: 8px 14px; border-radius: var(--radius); font-weight: 600;

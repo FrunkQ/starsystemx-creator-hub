@@ -30,6 +30,7 @@ export interface Gates {
   max_screenshots_per_system: number;
   max_screenshot_bytes: number;
   max_screenshot_edge: number;
+  signups_open: boolean;
 
   // Tier benefits. A tier is a set of config rows, not a branch in code - same reasoning as the
   // gates themselves: what Pro is worth will be tuned, and tuning it should not need a deploy.
@@ -126,6 +127,10 @@ export const GATE_FALLBACKS: Gates = {
   // storage one. Raise either from the Config page; neither needs a deploy.
   max_screenshot_bytes: 8 * 1024 * 1024,
   max_screenshot_edge: 2048,
+  // THE FRONT DOOR (D-66). A row rather than a deploy, because "close the door for a bit" is a
+  // thing an owner needs at two in the morning when something is going wrong, not a thing that
+  // should wait for a build. Open by default: a hub nobody can join is the state this replaced.
+  signups_open: true,
 
   pro_uploads_per_user_per_day: 10,
   pro_max_bundle_bytes: 200 * 1024 * 1024,

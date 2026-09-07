@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.42.0 - 2026-09-07
+
+### People can join
+
+There was no sign-up. An account existed only if somebody made the Supabase user by hand and
+inserted the matching row by hand - which is why the sign-in page has a message for the half-state
+where one exists without the other. `/join` asks for a name, an email and a password, sends a
+confirmation through Supabase's own mail, and there is a Join link in the banner.
+
+The name is held at sign-up rather than at first sign-in, so two people cannot both be told a handle
+is free and the second one discover a week later that they are somebody-2. Handles are tidied before
+they are judged - "The Star Keeper" and "Renee" both work - and the reasons for refusing one are
+sentences rather than codes.
+
+`signups_open` on the Config page closes the door without a deploy.
+
+### The takedown address is keeper@starsystemx.com
+
+It was a second copy of an address held as character codes, which is how it came to be wrong when
+the hub's mail moved. It comes from `addresses.ts` now. It is still assembled rather than written,
+and still never appears in the served HTML.
+
+
 ## 0.41.4 - 2026-09-07
 
 The map's own page - where you tag it, fix a credit and pick a cover - is the last user-facing thing

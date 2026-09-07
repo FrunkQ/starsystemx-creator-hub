@@ -1,5 +1,9 @@
 <script lang="ts">
+  import { page } from '$app/state';
   let { data, form } = $props();
+  // Where the confirmation link lands (D-66). Somebody who has just clicked it needs telling that
+  // the click worked, or the sign-in form reads as though nothing happened.
+  const justJoined = $derived(page.url.searchParams.get('joined') === '1');
 </script>
 
 <svelte:head>
@@ -12,6 +16,13 @@
   You only need an account to share a map, star one, or report a problem.
   <strong>Downloading never needs one.</strong>
 </p>
+
+{#if justJoined && !form?.message}
+  <div class="panel notice">
+    <h3>That is your email confirmed</h3>
+    <p>Sign in below and you are away. <a href="/upload">Share a map</a> whenever you like.</p>
+  </div>
+{/if}
 
 {#if form?.message}
   <div class="panel notice bad"><p>{form.message}</p></div>
@@ -28,6 +39,8 @@
   </label>
   <button class="primary" type="submit">Sign in</button>
 </form>
+
+<p class="muted">No account? <a href="/join">Join</a> - it takes a minute and downloading never needs one.</p>
 
 <style>
   h1 { margin: 0 0 6px; }
