@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.41.2 - 2026-09-07
+
+Banner links and the tree's sort and expand controls are a proper size to tap. The banner links had
+padding, which on an inline link paints outside the line box and leaves the target exactly as small
+as it was - they get a real box now.
+
+
 ## 0.41.1 - 2026-09-07
 
 The 16px floor for form fields now actually wins - a component's own rule outranked it, so the map

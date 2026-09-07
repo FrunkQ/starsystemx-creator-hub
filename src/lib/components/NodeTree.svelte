@@ -414,6 +414,8 @@
   @media (max-width: 720px) {
     .chip { padding: 8px 12px; }
     .tags .tag { padding: 7px 11px; }
+    /* Sort, expand, collapse: the controls that make a 178-object tree usable were 31px tall. */
+    .seg button, .ghost { padding: 10px 12px; }
   }
   .chip:hover { color: var(--ink); border-color: var(--ink-faint); }
   .chip.on { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); }

@@ -226,8 +226,12 @@ header nav form { display: inline; }
   .download { display: flex; justify-content: center; width: 100%; padding: 16px 18px; }
 
   /* Banner links were 25px tall. The bar is the only navigation there is on a phone. */
-  header nav { gap: 10px 16px; padding: 10px 16px; }
-  header nav a, header nav button.linkish { padding: 6px 0; }
+  header nav { gap: 4px 16px; padding: 6px 16px; }
+  /* A MIN-HEIGHT, not padding: vertical padding on an inline link paints outside the line box and
+     leaves the thing you actually hit the same size it was. inline-flex gives it a real box. */
+  header nav a, header nav button.linkish {
+    display: inline-flex; align-items: center; min-height: 40px;
+  }
 
   /* A pill you can TAP is a control and needs a control's height; a pill that is only a label can
      stay small. Hence the element selectors - `span.tag` on a card is left alone. */
