@@ -1759,6 +1759,69 @@ matching row as *"not a tracked asset: these always travel"* - that is how the d
 **unconditionally**, which is the exact opposite of what the button says. Binning would have to be an
 explicit withholding, with a row saying so, and the reviewer's view would need to show it.
 
+### D-65. The phone pass: measured at 375px, and the good news was the boring part
+
+The owner, 2026-09-07: *"Is this hub site fully mobile friendly? Give it a refresh to make it work
+well on mobile - we have it feature full now - so good time to tweak."*
+
+**Measured on a 375px viewport against the live site, not read off the stylesheets.** The answer to
+the question was "nearly": **nothing overflowed sideways on any page**, at 375px or at 320px, which
+is the failure everybody looks for and the one this site did not have. The layout was already fluid
+- `auto-fill minmax()` grids, `flex-wrap` everywhere, one `min-width` query on the map page.
+
+What was wrong was smaller and more annoying, and none of it is visible on a desktop.
+
+**1. BROWSE PUT A SCREEN AND A HALF OF FILTERS BEFORE THE FIRST MAP.** The sidebar measures **924px
+tall with one map in the library**, and the mobile rule was `grid-template-columns: 1fr` - which
+stacks the sidebar first because it is first in the DOM. The first card sat at y=1272 on an 812px
+screen. **And it was getting worse on its own**: that block grows with every tag anybody adds.
+
+Fixed with grid AREAS rather than `order`, because the search box lives in the sidebar and had to
+stay at the top while the rest of it went to the bottom - and `order` cannot split one element in
+two. So the search form came out of the `<aside>` and became its own area. First card now at y=441.
+
+**2. TAPPING A FIELD ZOOMED THE PAGE AND LEFT IT THERE.** iOS Safari zooms in on any field it
+focuses whose text is under **16px, exactly**, and does not zoom back out. The map page's tree
+search was `0.9rem` = 14.4px. The reader taps a search box and has to pinch their way out of a
+scaled-up page.
+
+`src/app.css` carries a 16px floor - **with the only `!important` in the file, on purpose**: Svelte
+scopes a component's rules with a class, so `.q.svelte-1i18ra0` outranks a bare `input` selector no
+matter how the global sheet is written, and **a floor any component can silently drop below is not a
+floor**. `tests/mobile.test.ts` works out which classes land on a form field and refuses a
+`font-size` under 16px on any of them. **It found a second one immediately** - `.row input` at
+0.85rem on `/admin/reports`, which is exactly the page a moderator would clear from a phone.
+
+**3. NO HOVER MEANS NEVER.** The tree's row actions sit at `opacity: 0.55` until the row is hovered.
+On a touch screen that hover never happens, so the dimming is permanent and **the copy button - the
+entire point of the row - reads as disabled**. `@media (hover: none)` rather than a width,
+deliberately: a touch laptop has the same problem and a narrow desktop window does not.
+
+**4. TAP TARGETS BETWEEN 21 AND 33 PIXELS.** Filter chips 25px, row actions 27px, the card's "Open
+in SSE" chip 27px sitting **on top of a picture that is itself a link to the map**, sort links 22px,
+footer links 22px (one of which is "Report a copyright problem"), banner links 25px. The download
+button - the point of the entire site - was `inline-flex` sized to its text.
+
+**TWO MISTAKES WORTH KEEPING, both caught by measuring the live page after shipping:**
+
+- **Vertical padding on an INLINE link does not change what you can hit.** `header nav a
+  { padding: 6px 0 }` shipped and the link stayed 21px. It needs a box: `inline-flex` with a
+  `min-height`.
+- **A media query adds NO specificity.** The mobile padding for `.seg button` was written near the
+  top of the component's style block and the `5px 10px` it replaces is defined further down, so the
+  later rule won and the buttons stayed 31px - after the change had shipped and been called done.
+  **Every mobile override in a component now sits at the END of its style block**, with the reason
+  written there.
+
+**WHAT WAS NOT CHECKED, and it is a real gap:** the manage page, the account page and the admin
+pages all need a sign-in, which an agent does not have. They were read rather than measured, and
+`/admin/reports` proves reading is not the same thing - the test caught what the eye did not.
+**Somebody signed in should walk those three on a phone.**
+
+**NOT CHANGED, deliberately:** the map page still puts the download above the cover picture on a
+phone. That is design 2 and the owner's own ordering - the download is the point - and a share link
+arriving from Discord has already shown the picture in the embed.
+
 ### D-16. The takedown address is assembled at runtime, never served as text
 
 The owner's instruction was explicit: keep it off the page as scrapable text. It is stored as
