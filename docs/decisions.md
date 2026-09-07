@@ -1813,10 +1813,20 @@ button - the point of the entire site - was `inline-flex` sized to its text.
   **Every mobile override in a component now sits at the END of its style block**, with the reason
   written there.
 
-**WHAT WAS NOT CHECKED, and it is a real gap:** the manage page, the account page and the admin
-pages all need a sign-in, which an agent does not have. They were read rather than measured, and
-`/admin/reports` proves reading is not the same thing - the test caught what the eye did not.
-**Somebody signed in should walk those three on a phone.**
+**SCOPED BY THE OWNER once the first pass landed:** *"admin stuff will be done on PC anyway - just
+as long as the user facing side works well."* So the admin pages are out. **But `/manage/[id]` and
+`/account` are user-facing AND signed-in** - the manage page is where a creator tags a map, fixes a
+credit and picks a cover - so they stayed in, and 0.41.4 did them: tag pills and the "+" 25px to
+39px, the crop slider a 40px drag target rather than a 20px one, the credit block folding at 720
+like everything else instead of 640.
+
+**HOW A SIGNED-IN PAGE WAS VERIFIED WITHOUT A SIGN-IN**, because reasoning about CSS is exactly what
+had already failed twice on this job: build, take the page's CSS chunk out of the client build, grep
+its scope class, inline that CSS into a scratch page carrying the real markup and the same class,
+serve it from `static/` through the dev server and measure at 375px. Pills 39, add 39, slider 40,
+credit one column, fields 16px. **Then delete it from `static/` - anything left there deploys
+publicly.** A `file://` page will not do: the browser pane renders anything outside the project as a
+static snapshot with no script context.
 
 **NOT CHANGED, deliberately:** the map page still puts the download above the cover picture on a
 phone. That is design 2 and the owner's own ordering - the download is the point - and a share link
