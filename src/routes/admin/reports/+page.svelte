@@ -76,8 +76,10 @@
   .acts { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
   .acts form { margin: 0; }
   .row { display: flex; gap: 6px; align-items: center; }
+  /* 16px, not 0.85rem: below that iOS zooms the page in on focus and stays there (D-65). A
+     moderator clearing reports on a phone is exactly who this page is for. */
   .row input {
-    font: inherit; font-size: 0.85rem; width: 180px;
+    font: inherit; width: min(180px, 100%);
     background: var(--panel-2); color: var(--ink); border: 1px solid var(--edge); border-radius: 8px; padding: 5px 8px;
   }
 </style>

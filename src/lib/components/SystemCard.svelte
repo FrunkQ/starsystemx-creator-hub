@@ -147,6 +147,9 @@
     border-radius: 6px; padding: 4px 9px; opacity: 0.92;
   }
   .open:hover { opacity: 1; text-decoration: none; filter: brightness(1.08); }
+  /* On a phone this is a 27px target sitting on top of a picture that is itself a link to the map -
+     so a near miss opens the wrong thing. Give it a thumb's height (D-65). */
+  @media (max-width: 720px) { .open { padding: 9px 12px; opacity: 1; } }
   /* Quieter than the counts: a fact about the map, not a warning about it. */
   .fan {
     margin: 2px 0 0; font-size: 0.72rem; color: var(--ink-faint);

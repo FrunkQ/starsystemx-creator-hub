@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.41.1 - 2026-09-07
+
+The 16px floor for form fields now actually wins - a component's own rule outranked it, so the map
+page's search box was still zooming iOS on focus. Fixed at its source too, and a test scans every
+component for the next one: it immediately found a second, on the reports page a moderator would be
+clearing from a phone.
+
+The "Open in SSE" chip on a card and the footer links are big enough to tap.
+
+
 ## 0.41.0 - 2026-09-07
 
 ### A pass over the whole site on a phone

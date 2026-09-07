@@ -209,8 +209,13 @@ header nav form { display: inline; }
 
   /* iOS SAFARI ZOOMS THE WHOLE PAGE when a field it is focusing has text under 16px - and it does
      not zoom back out. The map page's search box was 14.4px, so tapping it threw the reader into a
-     scaled-up page they then had to pinch their way out of. 16px is the threshold, exactly. */
-  input, select, textarea { font-size: 16px; }
+     scaled-up page they then had to pinch their way out of. 16px is the threshold, exactly.
+     `!important` ON PURPOSE, and it is the only one in this file. Svelte scopes a component's rules
+     with a class, so a bare element selector here can never outrank `.q.svelte-1i18ra0` however it
+     is written - and a floor that any component can silently drop below is not a floor. The one
+     field that was under the line is fixed at its source as well, so this is a net and not a
+     load-bearing hack. */
+  input, select, textarea { font-size: 16px !important; }
 
   /* A table wider than the screen scrolls ITSELF rather than stretching the page. The admin lists
      are the ones this is for - a moderator reading reports on a phone is a real Tuesday. */
@@ -229,6 +234,10 @@ header nav form { display: inline; }
   a.tag, button.tag { padding: 7px 12px; }
 
   footer { padding: 24px 16px; }
+  /* Terms, Acceptable use, Report a copyright problem - the last of those especially should not
+     need a careful thumb. */
+  footer .small { gap: 4px 18px; }
+  footer .small a { padding: 8px 0; }
 }
 
 /* THE COMPANION RULE to the above lives in `NodeTree.svelte`, beside the hover it undoes:

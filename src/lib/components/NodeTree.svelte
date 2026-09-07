@@ -390,8 +390,10 @@
 
 <style>
   .filters { display: flex; flex-direction: column; gap: 6px; margin: 0 0 10px; }
+  /* 16px, not 0.9rem: iOS Safari zooms the page in on a focused field whose text is smaller and
+     never zooms back out (D-65). This is the only field in the hub that was under the line. */
   .q {
-    font: inherit; font-size: 0.9rem; width: min(100%, 360px);
+    font: inherit; width: min(100%, 360px);
     background: var(--panel-2); color: var(--ink); border: 1px solid var(--edge); border-radius: 8px; padding: 6px 10px;
   }
   .chips { display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; }
