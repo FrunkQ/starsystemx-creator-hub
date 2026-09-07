@@ -33,7 +33,7 @@
 // If confirmations stop arriving, it is the Supabase SMTP settings to look at, not `RESEND_API_KEY`.
 import type { Actions, PageServerLoad } from './$types';
 import { fail, redirect, error } from '@sveltejs/kit';
-import { authClient, db } from '$lib/server/db';
+import { db, linkClient } from '$lib/server/db';
 import { loadGates } from '$lib/server/config';
 import { setSession } from '$lib/server/session';
 import { cleanHandle, handleProblem, suffixed } from '$lib/handles';
@@ -87,7 +87,7 @@ export const actions: Actions = {
     const { data: clash } = await sb.from('creators').select('id').eq('handle', handle).maybeSingle();
     if (clash) return fail(400, { ...typed, message: 'Somebody is already called that. Try another.' });
 
-    const { data, error: authError } = await authClient(env).auth.signUp({
+    const { data, error: authError } = await linkClient(env).auth.signUp({
       email,
       password,
       options: {

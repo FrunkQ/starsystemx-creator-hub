@@ -52,3 +52,24 @@ export function authClient(env: HubEnv) {
     auth: { persistSession: false, autoRefreshToken: false }
   });
 }
+
+/**
+ * THE CLIENT THAT ASKS FOR A PASSWORD-RESET OR CONFIRMATION LINK, and the `flowType` is the whole
+ * reason it is separate (D-68).
+ *
+ * supabase-js defaults to **PKCE**, which puts a `?code=` on the emailed link and requires the
+ * matching verifier to be in the storage of the client that ASKED. The hub asks from a Worker and
+ * then throws that client away, so the verifier is gone before the person opens their email - and
+ * the exchange fails with a message about a missing code verifier that says nothing useful to
+ * anybody. **Implicit** puts the tokens in the URL fragment instead, which the browser can consume
+ * on its own with nothing kept from earlier.
+ *
+ * Not a weakening of PKCE: PKCE protects an authorisation code from being intercepted between two
+ * halves of the same client. There are no two halves here - the request is made on a server and
+ * completed in a browser that never met it, which is the one shape PKCE cannot span.
+ */
+export function linkClient(env: HubEnv) {
+  return createClient(env.SUPABASE_URL, env.SUPABASE_PUBLISHABLE_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false, flowType: 'implicit' }
+  });
+}

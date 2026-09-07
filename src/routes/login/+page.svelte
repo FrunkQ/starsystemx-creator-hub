@@ -4,6 +4,7 @@
   // Where the confirmation link lands (D-66). Somebody who has just clicked it needs telling that
   // the click worked, or the sign-in form reads as though nothing happened.
   const justJoined = $derived(page.url.searchParams.get('joined') === '1');
+  const justReset = $derived(page.url.searchParams.get('reset') === '1');
 </script>
 
 <svelte:head>
@@ -24,8 +25,19 @@
   </div>
 {/if}
 
+{#if justReset && !form?.message}
+  <div class="panel notice"><p>Password changed. Sign in with the new one.</p></div>
+{/if}
+
 {#if form?.message}
-  <div class="panel notice bad"><p>{form.message}</p></div>
+  <!-- THE WAY OUT SITS WITH THE REFUSAL (owner, 2026-09-07: "no reset password option on failure
+       to log in - perhaps a reset option after 'That email and password do not match an account'").
+       The same rule as the publish button: a control that will not do the thing says so, and says
+       what to do instead, where the person is looking. -->
+  <div class="panel notice bad">
+    <p>{form.message}</p>
+    <p><a href="/reset">Forgotten your password?</a> We will email you a link to set a new one.</p>
+  </div>
 {/if}
 
 <form class="panel" method="POST">
@@ -40,6 +52,9 @@
   <button class="primary" type="submit">Sign in</button>
 </form>
 
+<p class="muted">
+  <a href="/reset">Forgotten your password?</a>
+</p>
 <p class="muted">No account? <a href="/join">Join</a> - it takes a minute and downloading never needs one.</p>
 
 <style>

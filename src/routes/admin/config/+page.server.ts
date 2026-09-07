@@ -1,6 +1,6 @@
 import type { PageServerLoad, Actions } from './$types';
 import { error, fail } from '@sveltejs/kit';
-import { db, authClient } from '$lib/server/db';
+import { db, linkClient } from '$lib/server/db';
 import { loadGates, setConfigRow } from '$lib/server/config';
 import { loadSite } from '$lib/server/site';
 import * as audit from '$lib/server/audit';
@@ -210,7 +210,7 @@ export const actions: Actions = {
     const email = data?.user?.email;
     if (!email) return fail(400, { message: 'Your sign-in has no email address to send to.' });
     const site = await loadSite(sb, url);
-    const { error: e } = await authClient(env).auth.resetPasswordForEmail(email, { redirectTo: site.url + '/login' });
+    const { error: e } = await linkClient(env).auth.resetPasswordForEmail(email, { redirectTo: site.url + '/reset/new' });
     if (e) return fail(502, { message: 'Supabase could not send it: ' + e.message });
     await audit.record(sb, me.id, 'mail.test', 'creator:' + me.id);
     return { tested: 'A password-reset email is on its way to ' + email + '. If it arrives, SMTP works; ignore the link.' };

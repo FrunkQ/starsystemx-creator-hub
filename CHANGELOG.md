@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.44.0 - 2026-09-07
+
+### Forgotten passwords
+
+There was no way back in. `resetPasswordForEmail` existed in exactly one place - the admin test-mail
+button - so the only person who could trigger a reset was the owner, on himself, from a page nobody
+else can reach. Anyone who forgot a password was locked out for good.
+
+`/reset` asks for a link and `/reset/new` sets the new password, and the link to it sits with the
+sign-in failure where you would look for it, as well as under the form.
+
+It also fixes a trap nobody had hit yet: the emailed link was being asked for in PKCE mode, which
+needs a verifier held by whatever asked - and the hub asks from a Worker it then throws away, so the
+link would have failed on opening with a message about a missing code verifier. Links are asked for
+in implicit mode now, which the browser can finish on its own. The admin test button was pointing at
+the sign-in page rather than anywhere that could set a password; it points at the right place.
+
+
 ## 0.43.0 - 2026-09-07
 
 ### An account waits for its email before it can contribute
