@@ -1832,6 +1832,117 @@ static snapshot with no script context.
 phone. That is design 2 and the owner's own ordering - the download is the point - and a share link
 arriving from Discord has already shown the picture in the embed.
 
+### D-66. Joining. Until 2026-09-07 nobody could
+
+The owner: *"one query - how does a new user sign up?"* The honest answer was that they cannot.
+There was no `signUp` call in the hub and nothing that ever inserted a `creators` row - an account
+existed only if somebody made the Supabase auth user by hand AND inserted the row by hand, which is
+why `/login` carries a message for the half-state where one exists without the other.
+
+**The row is created at sign-up, not at first sign-in**, and that is the decision worth arguing
+with. Creating it on first sign-in cannot RESERVE the handle: two people choose `nomad`, both are
+told it is free, and the second discovers a week later that they are `nomad-2`. Supabase returns a
+user id from `signUp` even when confirmation is pending, so the unique index holds the name from the
+moment the button is pressed. An account that never confirms leaves a tidy-up row, not a fault.
+
+**Handles are tidied and THEN judged**, as two pure functions in `src/lib/handles.ts`. The form shows
+what you will be called before it tells you what is wrong with it, and tidying RESCUES what it can -
+"The Star Keeper" and an accented name both work - rather than refusing them. The test caught `me`
+and `you` sitting in the reserved list doing nothing (both two characters, already refused by the
+length rule) and caught my own first draft asserting that a 40-character name should be refused when
+truncating it is the entire point.
+
+`signups_open` is a config row: closing the door is a thing an owner needs at two in the morning.
+
+### D-67. An account is `pending` until its email is confirmed
+
+The owner, an hour after D-66: *"a user gets a test mail - should they be in a different state until
+they have confirmed - probably not able to comment/upload until their account is confirmed by the
+e-mail."*
+
+Yes - and **the shape of the answer was already in `auth.ts`**. `mayContribute` has always been
+`state === 'active'`, and every upload, comment, star, report and Discord link asks it. So migration
+0035 adding one enum value bought the whole feature with **no new guard anywhere**.
+
+**Why not leave it to Supabase.** If "Confirm email" is on in the dashboard an unconfirmed person
+cannot sign in at all and the question is moot - but that is a setting in a console no test here can
+see, and if it is ever off, every new account can upload at once. A row saying `active` when nobody
+confirmed anything is also simply untrue, and the hub reads that row to decide what a person may do.
+
+**What DID need writing was the sentence.** All six guards said *"Sign in to share a map"*, which is
+actively misleading to somebody who is signed in and waiting on an email - and it is the first thing
+a new account would have hit. `whyNotContributing()` is one sentence in one place.
+
+**A pending account may still sign in, deliberately**: their account page is where "send me another
+link" lives, and locking them out would leave somebody whose confirmation went astray with nowhere
+to go but a form that correctly refuses to say whether they exist. **`pending` is not `suspended`** -
+a suspended account did something, a pending one has done nothing yet - so the explorers list can
+tell them apart and reinstating somebody never means confirming their email for them.
+
+### D-68. Forgotten passwords, and the PKCE trap nobody had hit yet
+
+The owner: *"no reset password option on failure to log in - perhaps a reset option after 'That
+email and password do not match an account.'"* The placement is right and the gap was worse than the
+placement: **there was no reset flow at all**. `resetPasswordForEmail` existed in exactly one place,
+the admin test-mail button, so the only person who could trigger a reset was the owner, on himself,
+from a page nobody else can reach.
+
+**Two pages, because a reset is two moments separated by an email** - and the second cannot be a
+server action. The recovery token arrives in the URL **fragment**, which browsers never send to a
+server. `/reset/new` is therefore the only page in the hub that talks to Supabase from the browser;
+it hands the resulting session back to `POST /reset/new`, which **verifies the token** with the
+service role before setting the ordinary cookie. Without that check the endpoint would be a way to
+mint a session out of nothing. One page borrows the browser flow; the hub keeps its session model.
+
+**THE TRAP, found by reasoning rather than by a failure, which is the only luck in this entry.**
+supabase-js defaults to **PKCE**, which puts `?code=` on the emailed link and requires the matching
+verifier to be in the storage of the client that ASKED. The hub asks from a Worker and throws that
+client away, so the verifier is gone before the person opens their email, and the exchange fails
+with a message about a missing code verifier that helps nobody. **`linkClient()` asks in `implicit`
+mode**, which puts tokens in the fragment the browser can consume alone. This applied to D-66's
+confirmation mail too, which had the same fault and had not been walked yet.
+
+Not a weakening of PKCE: PKCE protects a code between two halves of the same client, and there are
+no two halves here - the request is made on a server and completed in a browser that never met it,
+which is the one shape PKCE cannot span.
+
+### D-69. Takedown claims are catalogued and kept
+
+The owner: *"takedowns should be catalogued and managed in the moderation stuff. eg: it is listed
+there and will stay there until resolved one way or another"*, and when asked whether any of it
+should be routed to Discord: *"It stays in the hub - a moderator page to see incoming requests and
+whether the info was removed or the request ignored. Stored forever alongside who the takedown came
+from - just so we can track these for good."*
+
+The form only **mailed**. A copyright claim existed as a message in an inbox with no state, no owner
+and no way to ask what happened to it.
+
+**A new table, not a `reports` row**, and the reasons are structural rather than aesthetic:
+`reports.reporter_id` is `not null references creators`, so a stranger with no account cannot be a
+reporter; its check constraint demands a `system_id` or `sha256` a claim often has neither of; and a
+report is a nudge from a member while a takedown is a legal claim from outside with a different
+lifecycle and a different retention.
+
+**`system_id` is `on delete SET NULL`, never cascade, and this is the one that must not be got
+wrong.** Taking the map down is very often the OUTCOME - on a cascade, acting on a claim would
+delete the record of the claim, so the hub would destroy its own evidence at the moment it most
+needs it. The url and title are copied in as TEXT for the same reason: the row still reads after the
+map is gone. `tests/takedowns.test.ts` pins both against the migration text.
+
+**The row is written BEFORE anything is sent.** A claim now survives the mail failing, the queue
+being full, or the admin address being unset - all of which used to refuse the whole form and send a
+copyright holder away with nothing.
+
+**Closing one requires a note.** "Actioned" on its own is the kind of record that looks complete and
+answers nothing six months later. **Nothing is ever deleted**: resolving moves a claim out of the
+open queue and no further, so a second claim about the same work a year later arrives with a history.
+
+**Staff, not admin**, at the owner's word - it is the one place a moderator sees an outsider's name
+and address, which widens D-39, but a claim cannot be answered by somebody who cannot see who made
+it. **And a sentence that stopped being true was corrected**: the page said *"nothing is kept beyond
+the message itself"*. A page about other people's rights is the last place to be vague about what
+happens to what they type.
+
 ### D-16. The takedown address is assembled at runtime, never served as text
 
 The owner's instruction was explicit: keep it off the page as scrapable text. It is stored as
