@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.51.1 - 2026-09-08
+
+The re-index button says whether anything is behind rather than printing a date and asking you to
+work it out. The hub knows what today is.
+
+
 ## 0.51.0 - 2026-09-08
 
 ### Re-index from the Config page

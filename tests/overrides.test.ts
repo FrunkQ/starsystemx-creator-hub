@@ -7,9 +7,11 @@
 import { describe, it, expect } from 'vitest';
 import {
   readOverrides, overridesFrom, overrideId, describeOverrides, KIND_LABEL,
-  sameDefinition, groupOverrides, customCalendars, calendarCaveat
+  sameDefinition, groupOverrides, customCalendars, calendarCaveat, rulePackOverridesOf
 } from '../src/lib/bundle/overrides';
 import { buildClip, buildRulesClip } from '../src/lib/bundle/clip';
+import { openBundle } from '../src/lib/bundle/open';
+import { readFileSync } from 'node:fs';
 
 const SOURCE = { site: 'the hub', url: 'https://hub.test/s/m', title: 'A Map', creator: 'FrunkQ' };
 
@@ -286,5 +288,37 @@ describe('the calendar, which is the one thing a clip cannot carry (D-72)', () =
     // their download was incomplete when it is not would be a worse bug than the one warned about.
     expect(calendarCaveat(['X'])).toMatch(/full\s+download does/);
     expect(calendarCaveat(['X'])).toMatch(/copying something from here does not bring it/);
+  });
+});
+
+describe('against a real save, not a shape I invented', () => {
+  // The engine's own fixture. Everything above tests documents written for the test; this checks
+  // the reader against a file Star System Explorer actually produced.
+  const bundle = readFileSync('tests/fixtures/creator-hub-bundle.sse.zip');
+  const opened = openBundle(new Uint8Array(bundle));
+  if (!opened.ok) throw new Error('fixture will not open: ' + opened.message);
+
+  it('says a map with no customisations has none - and says it as NULL', () => {
+    // Verified against three real starmaps from the engine repo on 2026-09-08: all three have no
+    // `rulePackOverrides` key at all and an EMPTY `temporal_registry`. That is B112 working as
+    // intended - a save carries what the GM made - and it is why /rules is legitimately empty
+    // rather than broken.
+    expect(rulePackOverridesOf(opened.doc)).toBeNull();
+    expect(readOverrides((opened.doc as Record<string, unknown>).rulePackOverrides)).toEqual([]);
+  });
+
+  it('finds them on the same document once a GM has made some', () => {
+    // THE KEY PATH, pinned: top level of the starmap document, under this exact name. If the engine
+    // ever moves it, this fails here rather than showing an empty library nobody can explain.
+    const withRules = { ...(opened.doc as Record<string, unknown>), rulePackOverrides: overrides };
+    const found = rulePackOverridesOf(withRules);
+    expect(found).not.toBeNull();
+    expect(readOverrides(found).map((i) => i.key)).toContain('unobtainium');
+  });
+
+  it('an empty overrides object is null, not an empty library entry', () => {
+    // `{}` in the column would say every map was checked and customises nothing, which nobody
+    // recorded. The engine writes its own registries by the same rule (saveRegistries.ts).
+    expect(rulePackOverridesOf({ ...(opened.doc as object), rulePackOverrides: {} })).toBeNull();
   });
 });

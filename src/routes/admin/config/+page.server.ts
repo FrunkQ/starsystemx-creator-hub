@@ -57,6 +57,21 @@ function admin(platform: App.Platform | undefined, locals: App.Locals) {
   return { env, me: locals.viewer };
 }
 
+/**
+ * Whether the library still has reading to do, in words rather than a date to compare.
+ *
+ * A batch takes the oldest first, so "everything was read today" is the same statement as "there is
+ * nothing left behind" - and it is one the hub can make on the reader's behalf.
+ */
+function staleness(oldest: string | null): string {
+  if (!oldest) return 'Every map has been read at least once.';
+  const today = new Date().toISOString().slice(0, 10);
+  const when = oldest.slice(0, 10);
+  return when >= today
+    ? 'Every map on the hub has now been read today - nothing is behind.'
+    : 'The oldest reading on the hub is ' + when + ', so there is more to do. Press again.';
+}
+
 export const actions: Actions = {
   /**
    * A gate an admin relaxes takes effect on the next request. That is the whole point of putting
@@ -149,12 +164,11 @@ export const actions: Actions = {
     const said = [
       result.done + ' map' + (result.done === 1 ? '' : 's') + ' re-indexed from the stored file.',
       result.failed ? result.failed + ' could not be read (' + result.firstProblem + ').' : '',
-      // THE DATE, NOT A COUNT. Staleness has no definition without knowing when the reader last
-      // changed, so the honest signal is when the oldest map on the hub was last read: still old
-      // means press again.
-      result.oldest
-        ? 'The oldest reading on the hub is now ' + result.oldest.slice(0, 10) + ' - press again if that is behind.'
-        : 'Every map has been read at least once.'
+      // THE DATE, NOT A COUNT - staleness has no definition without knowing when the reader last
+      // changed. But the hub knows today, so it does the comparison rather than printing a date and
+      // "press again if that is behind", which asks the reader to work out something the machine
+      // already knows. It said exactly that to the owner and he had to check the date himself.
+      staleness(result.oldest)
     ].filter(Boolean).join(' ');
     return { tested: said };
   },
