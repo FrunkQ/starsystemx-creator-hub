@@ -120,8 +120,15 @@
                 <button onclick={() => copy(i.token!)}>
                   {copied === i.token ? 'Copied' : 'Copy'}
                 </button>
-              {:else if live(i) && !data.canRecopy}
-                <span class="muted">—</span>
+              {:else if live(i)}
+                <!-- LIVE BUT NOT RE-COPYABLE, which needs saying rather than leaving blank. A link
+                     made before 0038 has no stored token and never will: the hub only kept the
+                     fingerprint at the time, so there is nothing to hand back. An empty cell here
+                     reads as broken, and this is the first thing the owner will see against the
+                     link he already had. -->
+                <span class="muted" title="Made before the hub kept the token, so it cannot be shown again. New links can.">
+                  not kept
+                </span>
               {/if}
             </td>
           </tr>

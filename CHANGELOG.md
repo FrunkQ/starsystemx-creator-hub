@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.52.1 - 2026-09-09
+
+A debug link made before the hub started keeping tokens now says "not kept" rather than showing an
+empty cell where the Copy button goes. There is genuinely nothing to hand back for those - only the
+fingerprint was stored at the time - and a blank space reads as a broken button.
+
+
 ## 0.52.0 - 2026-09-09
 
 ### A debug link you can actually paste
