@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.49.0 - 2026-09-08
+
+### A library of everybody's custom rules
+
+`/rules` lists every custom liquid, gas, atmosphere mix, pigment, biosphere form, fuel, engine and
+sensor that anybody has published a map with - one row per thing, whichever map it came from, with
+a Copy that puts it on your clipboard for Star System Explorer.
+
+It is the same clip a map page's Copy makes, carrying rules and no objects, so pasting one is the
+same thing the app already does with a copied planet. Where two cartographers have different takes
+on the same name, both are listed with the maps they came from - copying "ammonia" without saying
+whose would be a choice made on somebody's behalf. You can read a definition before you paste it.
+
+Linked from Browse and the footer.
+
+
 ## 0.48.0 - 2026-09-08
 
 ### A copied body brings the custom rules it needs

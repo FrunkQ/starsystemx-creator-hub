@@ -34,6 +34,9 @@
 <p class="lede">
   Every map here is free to download in one click, no account needed. The first pills are worked
   out from the file itself; the rest are what each cartographer says their map is.
+  <!-- The rules library sits here rather than in the banner (D-71): it is a second thing to browse,
+       and it belongs beside the first rather than competing with it for a nav slot. -->
+  Looking for a custom liquid or engine rather than a map? <a href="/rules">Custom rules</a>.
 </p>
 
 <div class="layout">

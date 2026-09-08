@@ -25,7 +25,7 @@ export const GET: RequestHandler = async ({ platform, url, setHeaders }) => {
     }
   }
 
-  const statics = ['/', '/browse', '/terms'].map((p) => '<url><loc>' + esc(base + p) + '</loc></url>');
+  const statics = ['/', '/browse', '/rules', '/terms'].map((p) => '<url><loc>' + esc(base + p) + '</loc></url>');
   const xml = '<?xml version="1.0" encoding="UTF-8"?>\n'
     + '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
     + [...statics, ...maps].join('\n') + '\n</urlset>\n';

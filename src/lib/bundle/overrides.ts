@@ -294,24 +294,61 @@ export function sameDefinition(a: unknown, b: unknown): boolean {
  * differently tuned "Liquid Ammonia" belong side by side under one name - a reader is looking for
  * the liquid, and being told there are two versions of it is the useful part, not a filing error.
  */
-export function groupOverrides(
-  items: Array<OverrideItem & { systemId: string }>
-): Array<{ id: string; kind: OverrideKind; key: string; label: string; versions: number; systems: string[] }> {
-  const by = new Map<string, { item: OverrideItem; shapes: Set<string>; systems: Set<string> }>();
+export interface OverrideVersion {
+  /** The definition, exactly as some map's save carried it. This is what a Copy puts on a clipboard. */
+  def: unknown;
+  /** The maps that carry THIS version of it. */
+  systems: string[];
+}
+
+export interface OverrideRow {
+  id: string;
+  kind: OverrideKind;
+  key: string;
+  label: string;
+  /** Whole definitions somebody wrote, as opposed to a few changed fields on a shipped one. */
+  whole: boolean;
+  /**
+   * ONE ENTRY WHEN EVERYBODY AGREES, more when they do not.
+   *
+   * Two GMs with a differently tuned "Liquid Ammonia" belong under one name with two versions
+   * beneath it. A reader is looking for the liquid; being told there are two takes on it is the
+   * useful part, not a filing error - and it is the only honest way to offer a Copy, because
+   * copying "ammonia" without saying whose is a choice made on somebody's behalf.
+   */
+  versions: OverrideVersion[];
+}
+
+/**
+ * Group items into one row per customisation, with a version per distinct definition.
+ *
+ * KIND AND KEY GROUP; the canonical form (key order ignored) separates versions within a row.
+ */
+export function groupOverrides(items: Array<OverrideItem & { systemId: string }>): OverrideRow[] {
+  const rows = new Map<string, OverrideRow & { byShape: Map<string, OverrideVersion> }>();
+
   for (const item of items) {
     const id = overrideId(item.kind, item.key);
-    const seen = by.get(id) ?? { item, shapes: new Set<string>(), systems: new Set<string>() };
-    seen.shapes.add(canonical(item.def));
-    seen.systems.add(item.systemId);
-    by.set(id, seen);
+    const row = rows.get(id) ?? {
+      id, kind: item.kind, key: item.key, label: item.label,
+      whole: item.whole, versions: [], byShape: new Map<string, OverrideVersion>()
+    };
+    // A label from any map that has one beats a bare key from one that does not.
+    if (item.label !== item.key) row.label = item.label;
+    // If ANY map carries it whole, the thing exists as a definition somewhere.
+    row.whole = row.whole || item.whole;
+
+    const shape = canonical(item.def);
+    const version = row.byShape.get(shape) ?? { def: item.def, systems: [] };
+    if (!version.systems.includes(item.systemId)) version.systems.push(item.systemId);
+    row.byShape.set(shape, version);
+    rows.set(id, row);
   }
-  return [...by.entries()].map(([id, v]) => ({
-    id,
-    kind: v.item.kind,
-    key: v.item.key,
-    label: v.item.label,
-    versions: v.shapes.size,
-    systems: [...v.systems]
+
+  return [...rows.values()].map(({ byShape, ...row }) => ({
+    ...row,
+    // The most widely used version first: it is the one a reader most likely wants.
+    versions: [...byShape.values()].sort((a, b) => b.systems.length - a.systems.length)
   }));
 }
 

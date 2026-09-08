@@ -117,6 +117,7 @@
   <div class="small">
     <!-- Written and owner-signed-off 2026-08-28. `acceptable-use` is a 308 to the relevant section
          of the terms: there is deliberately no separate AUP document. -->
+    <a href="/rules">Custom rules</a>
     <a href="/terms">Terms</a>
     <a href="/terms#fan-work">Fan work</a>
     <a href="/acceptable-use">Acceptable use</a>

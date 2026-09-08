@@ -223,8 +223,8 @@ describe('grouping them for a library', () => {
     const items = ['m1', 'm2', 'm3', 'm4'].flatMap((id) => withMap(id, { liquids: overrides.liquids }));
     const rows = groupOverrides(items);
     expect(rows).toHaveLength(1);
-    expect(rows[0].systems).toHaveLength(4);
-    expect(rows[0].versions).toBe(1);
+    expect(rows[0].versions).toHaveLength(1);
+    expect(rows[0].versions[0].systems).toEqual(['m1', 'm2', 'm3', 'm4']);
   });
 
   it('counts the versions when two maps disagree about the same name', () => {
@@ -235,7 +235,10 @@ describe('grouping them for a library', () => {
       ...withMap('m2', { liquids: [{ name: 'ammonia', boilK: 239 }] })
     ]);
     expect(rows).toHaveLength(1);
-    expect(rows[0].versions).toBe(2);
+    expect(rows[0].versions).toHaveLength(2);
+    // Each version knows whose it is, because copying "ammonia" without saying whose would be a
+    // choice made on somebody's behalf.
+    expect(rows[0].versions.flatMap((v) => v.systems).sort()).toEqual(['m1', 'm2']);
   });
 
   it('keeps different kinds apart even when they share a name', () => {
