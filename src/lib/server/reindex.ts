@@ -90,3 +90,77 @@ export async function reindexSystem(
   await regenerateGeneratedCover(env, sb, systemId, site, gates);
   return { ok: true };
 }
+
+// ============================================================================================
+// RE-INDEXING SEVERAL AT ONCE, from the Config page (D-73).
+//
+// The owner, 2026-09-08: *"Is there a reindex button on the config admin screen like the test
+// buttons?"* There was not - re-index was per-map, on the creator's own manage page, which is the
+// right place for a creator and the wrong place for the owner after the READER has improved.
+//
+// That happens often enough to deserve a button: 0015 taught the hub about distances, 0023 about
+// information density, D-48 about what a bare `.json` really is, and 0037 about custom rules. Each
+// time, every map already stored needs reading again - and the standing rule (D-26) is that the hub
+// re-reads its own files rather than asking anybody to upload theirs a second time.
+//
+// A FEW AT A TIME, AND THE NUMBER IS THE WHOLE DESIGN. Re-indexing one map fetches a bundle from
+// R2, unzips it, parses the document and rewrites its rows. A Worker gets 10ms of CPU (D-53), and
+// "re-index everything" on a library of any size is a 1102 rather than a long wait. So this does a
+// bounded batch, says exactly what it did, and is meant to be pressed again - a button that reports
+// "8 done, 12 to go" is honest about being a loop, where a spinner that dies at 30 seconds is not.
+//
+// OLDEST FIRST, by `reindexed_at`, so pressing it repeatedly always advances and never re-does the
+// map it just did.
+// ============================================================================================
+
+export interface BatchResult {
+  done: number;
+  failed: number;
+  /**
+   * WHEN THE OLDEST MAP ON THE HUB WAS LAST READ, which is the honest signal for "press it again".
+   *
+   * A plain "N remaining" cannot be computed: staleness has no definition without knowing when the
+   * READER last changed, and after one batch every map has a timestamp so a null-count reads zero
+   * while half the library is still behind. The oldest date says what is true - if it is still old,
+   * there is more to do.
+   */
+  oldest: string | null;
+  /** The first thing that went wrong, if anything did. One example beats a list nobody reads. */
+  firstProblem?: string;
+}
+
+export async function reindexBatch(
+  env: HubEnv, sb: Db, site: Site, gates: Gates, limit = 8
+): Promise<BatchResult> {
+  // `nullsFirst` matters: a map indexed before `reindexed_at` existed has null, and those are
+  // exactly the ones furthest behind the current reader.
+  const { data: rows } = await sb.from('systems')
+    .select('id')
+    .order('reindexed_at', { ascending: true, nullsFirst: true })
+    .limit(limit);
+
+  let done = 0;
+  let failed = 0;
+  let firstProblem: string | undefined;
+
+  for (const row of rows ?? []) {
+    // NEVER THROWS OUT OF THE LOOP. One map with a missing or unreadable bundle must not stop the
+    // other seven - the whole point of a batch is that it makes progress.
+    try {
+      const result = await reindexSystem(env, sb, row.id as string, site, gates);
+      if (result.ok) done++;
+      else { failed++; firstProblem ??= result.message; }
+    } catch (e) {
+      failed++;
+      firstProblem ??= (e as Error)?.message ?? 'unknown';
+    }
+  }
+
+  // One row, not a count: after this batch, what is the oldest reading left on the hub?
+  const { data: next } = await sb.from('systems')
+    .select('reindexed_at')
+    .order('reindexed_at', { ascending: true, nullsFirst: true })
+    .limit(1).maybeSingle();
+
+  return { done, failed, oldest: (next?.reindexed_at as string | null) ?? null, firstProblem };
+}

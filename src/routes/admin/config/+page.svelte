@@ -36,6 +36,11 @@
     <form method="POST" action="?/refreshShipped">
       <button type="submit">Ask the engine what it ships</button>
     </form>
+    <!-- For the moment after the READER improves: the hub learns to see something new in a save and
+         every stored map needs reading again (D-73). A few at a time - a Worker has 10ms of CPU. -->
+    <form method="POST" action="?/reindexBatch">
+      <button type="submit" title="Re-read the oldest few maps from the files the hub already holds. Press again to keep going.">Re-index the oldest maps</button>
+    </form>
   </div>
   {#if form?.tested}<p class="ok">{form.tested}</p>{/if}
   <p class="muted foot">

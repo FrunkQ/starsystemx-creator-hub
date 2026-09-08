@@ -1,6 +1,7 @@
 import type { PageServerLoad, Actions } from './$types';
 import { error, fail } from '@sveltejs/kit';
 import { db, linkClient } from '$lib/server/db';
+import { reindexBatch } from '$lib/server/reindex';
 import { loadGates, setConfigRow } from '$lib/server/config';
 import { loadSite } from '$lib/server/site';
 import * as audit from '$lib/server/audit';
@@ -120,6 +121,42 @@ export const actions: Actions = {
     }
     await audit.record(sb, me.id, 'discord.test-share', 'config:discord_share_webhook');
     return { tested: 'A test post went to the sharing channel.' };
+  },
+
+  /**
+   * RE-INDEX A FEW MAPS FROM THE FILES THE HUB ALREADY HOLDS (D-73).
+   *
+   * The owner asked for this beside the test buttons, and it belongs there: those are "do the real
+   * thing once", and so is this. It exists for the moment after the READER improves - the hub
+   * learns to see something new in a save, and every map already stored needs reading again. The
+   * standing rule is that the hub re-reads its own files rather than asking anybody to upload
+   * theirs a second time (D-26).
+   *
+   * A FEW AT A TIME, because a Worker gets 10ms of CPU and each map means fetching a bundle from
+   * R2, unzipping it and parsing the document (D-53). Press it again; it always takes the oldest.
+   */
+  reindexBatch: async ({ platform, locals, url }) => {
+    const { env, me } = admin(platform, locals);
+    const sb = db(env);
+    const [gates, site] = await Promise.all([loadGates(sb), loadSite(sb, url)]);
+
+    const result = await reindexBatch(env, sb, site, gates);
+    if (!result.done && !result.failed) return { tested: 'There are no maps to re-index.' };
+
+    await audit.record(sb, me.id, 'reindex.batch', 'config:reindex', undefined,
+      { done: result.done, failed: result.failed });
+
+    const said = [
+      result.done + ' map' + (result.done === 1 ? '' : 's') + ' re-indexed from the stored file.',
+      result.failed ? result.failed + ' could not be read (' + result.firstProblem + ').' : '',
+      // THE DATE, NOT A COUNT. Staleness has no definition without knowing when the reader last
+      // changed, so the honest signal is when the oldest map on the hub was last read: still old
+      // means press again.
+      result.oldest
+        ? 'The oldest reading on the hub is now ' + result.oldest.slice(0, 10) + ' - press again if that is behind.'
+        : 'Every map has been read at least once.'
+    ].filter(Boolean).join(' ');
+    return { tested: said };
   },
 
   /**

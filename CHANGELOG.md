@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.51.0 - 2026-09-08
+
+### Re-index from the Config page
+
+There was a Re-index button on each map's own manage page and nowhere for the owner to say "the hub
+learned to read something new - go over the library again". Now there is one beside the test
+buttons: it re-reads the oldest few maps from the files the hub already holds, says what it did, and
+tells you when the oldest reading on the hub is, so you know whether to press it again.
+
+A few at a time on purpose - each map means fetching a bundle, unzipping it and parsing the
+document, and a Worker has ten milliseconds of CPU.
+
+
 ## 0.50.0 - 2026-09-08
 
 ### A map that keeps its own time says so where the copying happens
