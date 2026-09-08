@@ -907,3 +907,34 @@ Recorded so nobody builds them by mistake:
 - **No provenance parsing from `ATTRIBUTIONS.md`.** It is a human document and the hub treats it as a
   claim. The gate is computed from the node fields. Do not add machine-readable structure to it on
   the hub's behalf.
+
+## R-19. A clip carries the custom rules its objects need
+
+**Asked 2026-09-08. Prompt: `docs/prompt-for-sse-2026-09-08-clip-rules.md`.**
+
+**HUB-SIDE STATUS: SET.** `SseClip.rulePackOverrides` goes out on every clip from a map that has
+custom rules, from v0.48.0. `/rules` produces rules-only clips (`nodes: []`, no `root`) from v0.49.0.
+Migration 0037 stores them; older maps come right with Re-index.
+
+**NOT VERIFIED, and it cannot be from this side:** nothing consumes the key yet, so no clip carrying
+custom rules has ever been pasted successfully. That is R-19's whole point.
+
+**The engine's half**, in one line each:
+
+1. Narrow `rulePackOverrides` to what the pasted nodes reference, and merge. Merging the lot is an
+   acceptable version one.
+2. Three outcomes: absent → add; present and identical → **discard silently** (the ordinary case -
+   paste a star, then one of its planets); present and different → **never overwrite**, rename the
+   incoming one and repoint the pasted nodes.
+3. Compare CANONICAL form - object keys sorted recursively, array order untouched. Raw text
+   comparison reports an ordinary duplicate as a conflict and renames something that needed no
+   renaming. The hub's `canonical()` is the same four lines; no hash is shipped to be trusted.
+4. Report what arrived and what was renamed.
+5. Accept a clip with `nodes: []` and no `root` as a rules-only paste rather than refusing it.
+
+**WHY THE HUB DOES NOT NARROW:** which node field references which definition is engine knowledge
+that changes whenever a field is added. Same reasoning that declined `rootKind` (D-58).
+
+**Ready for STREAM N once both halves are in:** copy a body with a custom liquid into a fresh
+campaign, check the liquid arrived and the body's phase is right; paste the same clip again and
+check nothing is duplicated or renamed.
