@@ -1943,6 +1943,104 @@ it. **And a sentence that stopped being true was corrected**: the page said *"no
 the message itself"*. A page about other people's rights is the last place to be vague about what
 happens to what they type.
 
+### D-71. A clip carries the custom rules its objects need, and there is a library of them
+
+The owner asked, 2026-09-08, how the hub should handle a copied planet or construct that needs a
+custom engine, fuel, gas, liquid or biosphere, and offered four options. He chose two of them
+joined: *"1 and 2 should ride on the back... i.e. the site has a browse option for all these custom
+overrides... and they can be copied and pasted in using the mechanism from 1. the rest is not
+needed."*
+
+**WHAT WAS WRONG WAS NOT A MISSING FEATURE BUT A QUIET WRONG ANSWER**, and it was found by reading
+the engine rather than reasoning about it. Custom definitions do not live on the node; they live on
+the starmap in `rulePackOverrides`, and the app builds an effective pack of shipped-plus-overrides.
+A clip carries nodes only. And the lookup on the far side is:
+
+```ts
+liquidDef(name, pack) -> allLiquids(pack).find((l) => l.name === name)   // undefined
+```
+
+**The paste reported success.** The body arrived, the lookup missed, and its phase, appearance and
+climate quietly fell back. Not a crash: a planet subtly wrong in a way the person pasting it cannot
+see. That is what ruled out "just tell them" as the whole answer - somebody dragging a planet across
+does not know what a pigment morphology is and should not have to.
+
+**THE HUB CARRIES THEM WHOLE AND THE ENGINE NARROWS.** Working out which node field references which
+definition is engine knowledge that changes whenever a field is added, and a hub that guessed would
+quietly stop carrying a liquid the day somebody named one a new way. The same reasoning that
+declined `rootKind` on the envelope (D-58): the app must check a claim against the nodes anyway, so
+a second answer is the fault rather than the convenience.
+
+**ONE ENVELOPE, TWO PRODUCERS.** A map clip carries the map's rules; `/rules` carries one rule with
+`nodes: []` and no `root`. That absence is how a reader tells them apart - deliberately not a second
+marker, because a second marker is a second thing to keep in step.
+
+**THE MERGE RULE IS THE OWNER'S**, added while this was being built: *"the receiving end needs to
+identify duplicates to what it had and discard (i.e. a related object pasted before)."* Three
+outcomes - absent, add; identical, **discard silently**; same name but different, **never
+overwrite**, rename and repoint. The middle one is the ordinary case, not the edge: paste a star,
+then one of its planets, and every rule the second clip carries is one the first already brought.
+The last one is the dangerous one: replacing somebody's "Liquid Unobtainium" with a different one
+of the same name would silently change bodies they already had.
+
+**AND "IDENTICAL" HAS A TRAP: KEY ORDER.** `{a,b}` and `{b,a}` are one definition and two strings,
+and JSON key order is decided by whatever built the object. Comparing raw text would report an
+ordinary duplicate as a conflict and rename something that needed no renaming. Both sides compare
+canonical form - keys sorted recursively, **array order left alone**, because a pigment's `bands`
+are a sequence while the fields of a band are a set. The hub publishes the rule rather than shipping
+a hash for the engine to trust.
+
+**ONE COLUMN, NOT AN INDEX TABLE** (0037). A library wants a row per customisation across every map,
+which looks like a job for a `system_overrides` table - but that table would be derived from this
+column, and a derived table is a second thing to keep in step on every upload, re-index and takedown.
+Tens of maps; derive at read time; index it at thousands.
+
+**A DELTA IS NOT A NEW THING.** `pigments` and `morphologies` are stored as `PackListDelta`, where an
+entry may be a whole record or only the fields that differ from the shipped one. **The hub cannot
+tell those apart without the base pack**, so it does not pretend to - a partial entry is labelled "a
+change" rather than presented as something somebody invented.
+
+**AND A TRAP RE-LEARNED THE HARD WAY, LIVE, FOR FOUR MINUTES.** The standing rule "a push deploys
+before the owner runs the migration" is written down for WRITES, and `/rules` proved it is exactly
+as true of READS: it named `rule_overrides` in a plain select and 500'd for everybody until 0037 was
+run. **Worse, a `.not(col, is, null)` FILTER cannot be rescued at all** - `tolerantSelect` drops a
+column from the projection and re-runs, but it cannot unpick a predicate. `tests/tolerantPages.test.ts`
+now scans every route for both shapes, and contains no regular expressions on purpose: the first
+draft's regex was mangled on the way into the file and threw instead of checking anything.
+
+R-19 carries the engine's half. `tagVocab` is on `RulePack` but not on `RulePackOverrides`, so a
+custom tag's definition cannot travel even though the tag on a node does - flagged, not fixed.
+
+### D-72. A custom calendar is called out, not carried
+
+The owner, immediately after D-71: *"Custom calendars are the only weird outlier. We just need to
+tag a map as using a custom calendar. That does not work on the same mechanism so be called out."*
+
+**THE TAGGING ALREADY EXISTED AND WAS LEFT ALONE.** `custom-calendars` is a rule-driven facet
+(`facetRules.ts`) counting the keys of `temporal.temporal_registry` that are not in the engine's
+shipped list, which arrives in R-13's manifest; it produces a filterable pill only when the count is
+real. That machinery exists because **the hub hit this in August 2026 and the engine fixed the FILE
+in response** - B112, after the hub's facet fired on every map ever made and the engine's own spec
+concluded *"the fault is in the file, not the facet"*. A save now writes only the calendars the GM
+made. Checking before building saved building it twice.
+
+**WHY IT IS GENUINELY AN OUTLIER, and structurally rather than by oversight:** a calendar is not in
+`rulePackOverrides` at all. It is in `temporal` - `{ masterTimeSec, displayTimeSec,
+activeCalendarKey, temporal_registry }` - which is the campaign's CLOCK, not its rules.
+
+**AND IT MUST NOT RIDE ALONG EVEN THOUGH IT COULD.** `epoch_offset_t` is a calendar's zero as a real
+instant, so merging somebody else's into a running campaign would **re-date every event in it**.
+Carrying the object and saying what did not come with it is the right answer here, not a lesser one.
+
+**WHAT WAS ADDED IS THE NAME.** `countKeysAt` recorded a count and nothing else; `values` already
+existed on `FacetResult` for the tag rules and costs nothing here. A count cannot be spoken: *"this
+map keeps time on the Thousand Suns Reckoning"* is a sentence, *"1 custom calendar"* is a statistic.
+
+**THE PLACEMENT IS THE CARE.** The note sits beside the COPY controls and deliberately nowhere near
+the download button, and it says the full download **does** bring the calendar - because it does,
+the calendar is in the save. Telling somebody their download was incomplete when it is not would be
+a worse bug than the one being warned about.
+
 ### D-16. The takedown address is assembled at runtime, never served as text
 
 The owner's instruction was explicit: keep it off the page as scrapable text. It is stored as
