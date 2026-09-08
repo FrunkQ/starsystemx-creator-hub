@@ -46,8 +46,11 @@
     distance?: number | null;
   }
 
-  let { nodes, source, credits = [], openDepth = 1 }: {
-    nodes: Node[]; source: ClipSource; credits?: CreditLike[]; openDepth?: number
+  let { nodes, source, credits = [], ruleOverrides = null, openDepth = 1 }: {
+    nodes: Node[]; source: ClipSource; credits?: CreditLike[];
+    /** The map's custom rules, carried with EVERY row's copy (D-71) - the engine narrows them. */
+    ruleOverrides?: Record<string, unknown> | null;
+    openDepth?: number
   } = $props();
 
   // The row a deep link (#node=<id>) points at: its branch is opened, it is scrolled to and lit.
@@ -212,7 +215,10 @@
   }
 
   async function copy(id: string) {
-    const clip = buildClip(nodes, id, source, credits);
+    // Every row's copy carries the map's custom rules (D-71). Not narrowed to this subtree here:
+    // which node field references which definition is engine knowledge, and a hub that guessed at
+    // it would quietly stop carrying a liquid the day somebody named one a new way (D-58).
+    const clip = buildClip(nodes, id, source, credits, ruleOverrides);
     if (!clip) return;
     try {
       await navigator.clipboard.writeText(clipText(clip));

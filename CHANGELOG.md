@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.48.0 - 2026-09-08
+
+### A copied body brings the custom rules it needs
+
+Custom liquids, gases, atmosphere mixes, pigments, biosphere forms, fuels, engines and sensors do
+not live on the object - they live on the starmap. So copying a planet that used one gave you a
+planet in a campaign that had never heard of it, and the lookup returned nothing *without
+complaining*: the body pasted, and its phase, appearance and climate quietly fell back.
+
+A clip now carries the map's custom rules with it, whole and unmodified. The engine narrows them to
+what the pasted objects need and merges what is missing - that half is theirs, and a prompt is
+going over. Older versions ignore the new key and behave exactly as they do today.
+
+**Migration 0037 is the owner's to run.** Maps published before it come right with Re-index; nobody
+needs to upload anything again.
+
+
 ## 0.47.0 - 2026-09-07
 
 ### Discord posts carry the whole write-up

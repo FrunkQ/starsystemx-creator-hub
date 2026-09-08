@@ -51,7 +51,9 @@
     const clip = buildClip(nodes as never, wholeRoot, {
       site: data.site.name, url: data.site.url + '/s/' + s.slug, title: s.title,
       creator: data.creator?.display_name ?? data.creator?.handle ?? null
-    }, credits as never);
+      // THE MAP'S CUSTOM RULES RIDE ALONG (D-71). Without them a pasted body names a liquid the
+      // destination has never heard of and the lookup returns undefined without complaining.
+    }, credits as never, (s as { rule_overrides?: Record<string, unknown> }).rule_overrides ?? null);
     if (!clip) return;
     try {
       await navigator.clipboard.writeText(clipText(clip));
@@ -319,6 +321,7 @@
     nodes={[...data.bodies, ...data.constructs]}
     openDepth={s.kind === 'starmap' ? 0 : 1}
     {credits}
+    ruleOverrides={(s as { rule_overrides?: Record<string, unknown> }).rule_overrides ?? null}
     source={{
       site: data.site.name, url: data.site.url + '/s/' + s.slug, title: s.title,
       creator: data.creator?.display_name ?? data.creator?.handle ?? null

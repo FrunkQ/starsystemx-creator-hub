@@ -121,6 +121,10 @@ export type SystemRow = {
   // 0034: the existing universe this map is unofficial fan work OF, as the creator typed it (D-61).
   // Null means they did not name one - the blanket notice applies to every map either way.
   fan_setting: string | null;
+  // 0037: `starmap.rulePackOverrides` from the save - the GM's custom liquids, gases, atmosphere
+  // mixes, pigments, biosphere forms, fuels, engines and sensors (D-71). Whole and unmodified, so a
+  // clip can carry them to a paste and the browse page can list them. Null for most maps.
+  rule_overrides: unknown;
   // 0023: how much of the map is written about (bundle/density.ts): the raw 0..1 score, and the
   // detail behind it {total, described, avgLength}. Null until measured.
   info_density: number | null;

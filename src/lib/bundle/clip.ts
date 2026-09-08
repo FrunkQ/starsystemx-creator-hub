@@ -104,10 +104,27 @@ export interface ClipSource {
 export interface SseClip {
   sseClip: 1;
   source: ClipSource;
-  /** The id of the first node in `nodes`; everything else descends from it. */
-  root: string;
-  /** Depth-first, parents first. The root's `parentId` is null. */
+  /**
+   * The id of the first node in `nodes`; everything else descends from it. ABSENT on a rules-only
+   * clip, which carries customisations and no objects at all (D-71).
+   */
+  root?: string;
+  /** Depth-first, parents first. The root's `parentId` is null. EMPTY on a rules-only clip. */
   nodes: Record<string, unknown>[];
+  /**
+   * THE CUSTOM RULES THE SOURCE MAP CARRIES (D-71) - `starmap.rulePackOverrides`, whole and
+   * unmodified, in the engine's own shape and under the engine's own name so nothing has to be
+   * translated on arrival.
+   *
+   * WHY WHOLE RATHER THAN NARROWED TO WHAT THESE NODES NEED: which node field references which
+   * definition is engine knowledge that changes whenever a field is added, and a hub that guessed
+   * it would quietly stop carrying a liquid the day somebody invented a new way to name one. The
+   * engine narrows on the way in. Same reasoning that declined `rootKind` (D-58).
+   *
+   * Absent when the map has none, which is most of them. An older engine ignores the key and
+   * behaves exactly as it did before it existed.
+   */
+  rulePackOverrides?: Record<string, unknown>;
 }
 
 export const CLIP_FORMAT = 1 as const;
@@ -147,7 +164,9 @@ export function subtreeOf(nodes: ClipNode[], rootId: string): ClipNode[] {
 }
 
 export function buildClip(
-  nodes: ClipNode[], rootId: string, source: ClipSource, credits: CreditLike[] = []
+  nodes: ClipNode[], rootId: string, source: ClipSource, credits: CreditLike[] = [],
+  /** `starmap.rulePackOverrides` from the source save, when it has any (D-71). */
+  rulePackOverrides?: Record<string, unknown> | null
 ): SseClip | null {
   const subtree = subtreeOf(nodes, rootId);
   if (!subtree.length) return null;
@@ -168,7 +187,22 @@ export function buildClip(
   }
   if (!out.length) return null;
 
-  return { sseClip: CLIP_FORMAT, source, root: rootId, nodes: out };
+  const rules = rulePackOverrides && Object.keys(rulePackOverrides).length ? rulePackOverrides : null;
+  return { sseClip: CLIP_FORMAT, source, root: rootId, nodes: out, ...(rules ? { rulePackOverrides: rules } : {}) };
+}
+
+/**
+ * A clip carrying customisations and NO objects (D-71) - what the browse page's Copy produces.
+ *
+ * THE SAME ENVELOPE ON PURPOSE. The owner: *"they can be copied and pasted in using the mechanism
+ * from 1."* One format and one paste path; the only difference is that `nodes` is empty and there
+ * is no `root`, which is how a reader tells the two apart without a second marker to keep in step.
+ */
+export function buildRulesClip(
+  source: ClipSource, rulePackOverrides: Record<string, unknown>
+): SseClip | null {
+  if (!rulePackOverrides || !Object.keys(rulePackOverrides).length) return null;
+  return { sseClip: CLIP_FORMAT, source, nodes: [], rulePackOverrides };
 }
 
 /** The text that goes on the clipboard. Pretty-printed: people do read these before pasting. */

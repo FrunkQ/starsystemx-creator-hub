@@ -28,6 +28,7 @@ import { shippedManifest } from './shippedContent';
 import { informationDensity } from '$lib/bundle/density';
 import { detectGmContent } from '$lib/bundle/gmContent';
 import { tolerantWrite } from './tolerant';
+import { rulePackOverridesOf } from '$lib/bundle/overrides';
 import { writeNodeRows } from './ingest';
 import { regenerateGeneratedCover } from './cover';
 
@@ -76,6 +77,11 @@ export async function reindexSystem(
     content_credit_slugs: creditSlugs(shaped.contentCredits),
     info_density: density.raw,
     info_detail: { total: density.total, described: density.described, avgLength: density.avgLength },
+    // The GM's custom rules (0037, D-71). RE-READ here as well as on upload, because every map
+    // published before this column existed has null in it - and the standing rule is that when the
+    // reader improves the hub re-indexes rather than asking anybody to upload their file again
+    // (D-26). The stored bundle already holds them; nothing else has to happen.
+    rule_overrides: rulePackOverridesOf(doc),
     reindexed_at: new Date().toISOString()
   }, (row) => Promise.resolve(sb.from('systems').update(row as Partial<SystemRow>).eq('id', systemId)));
   if (error) return { ok: false, message: 'could not update the map: ' + error.message };

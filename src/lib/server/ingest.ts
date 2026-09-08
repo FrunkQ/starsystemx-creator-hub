@@ -20,6 +20,7 @@ import { checkBundleFormat } from '$lib/bundle/format';
 import { checkProvenance, noProvenance, breachesCcBy } from '$lib/bundle/attribution';
 import { tolerantWrite, tolerantWriteMany } from './tolerant';
 import { cleanSetting } from '$lib/fanWork';
+import { rulePackOverridesOf } from '$lib/bundle/overrides';
 import { readProvenance } from '$lib/bundle/provenance';
 import { detectGmContent } from '$lib/bundle/gmContent';
 import { computeFacets, deriveTags } from '$lib/bundle/facets';
@@ -360,7 +361,10 @@ export async function ingest(
     createdWith: madeWith.createdWith, legacyStamped: format.legacyStamped,
     revision: madeWith.revision, exportMode: madeWith.exportMode,
     attestation: opts.attestation, facets, autoTags, density,
-    fanSetting: cleanSetting(opts.fanSetting)
+    fanSetting: cleanSetting(opts.fanSetting),
+    // Read off the DOCUMENT, not off anything the uploader tells us separately - it is part of the
+    // save. Absent on most maps and on every single-system save.
+    ruleOverrides: rulePackOverridesOf(doc)
   });
 
   // The original zip is kept for provenance and re-packing, NEVER served raw - serving it would
@@ -452,6 +456,7 @@ interface WriteArgs {
   density: Density;
   attestation: { accepted: boolean; textVersion: number; textShown: string };
   fanSetting: string | null;
+  ruleOverrides: unknown;
 }
 
 async function writeRows(sb: Db, a: WriteArgs): Promise<string> {
@@ -500,6 +505,9 @@ async function writeRows(sb: Db, a: WriteArgs): Promise<string> {
     // rest of this row: the column arrives when the owner runs the migration, and the upload works
     // in the meantime.
     fan_setting: a.fanSetting,
+    // The GM's custom rules (0037, D-71). Stored whole so a clip can carry them and the browse page
+    // can list them; a map that customises nothing stores null rather than an empty object.
+    rule_overrides: a.ruleOverrides,
     // The derived rows are current as of now (0020); the page's one-shot re-index skips this map.
     reindexed_at: new Date().toISOString()
   }, (row) => Promise.resolve(sb.from('systems').upsert(row as Partial<SystemRow>)));
