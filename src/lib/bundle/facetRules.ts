@@ -149,7 +149,13 @@ export function applyFacetRules(
     if (rule.countKeysAt) {
       const obj = at(doc, rule.countKeysAt);
       if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
-        count = Object.keys(obj).filter((k) => !baseline.has(norm(k))).length;
+        // THE NAMES, not only the number (D-72). `values` already existed for the tag rules and
+        // costs nothing here, and a count on its own cannot be spoken: "this map keeps time on a
+        // custom calendar" is a sentence, "1 custom calendar" is a statistic. The call-out on the
+        // map page needs the name, because a calendar is the ONE customisation a clip cannot carry.
+        const own = Object.keys(obj).filter((k) => !baseline.has(norm(k)));
+        count = own.length;
+        if (own.length) values = own.sort().slice(0, 12);
       }
     }
 

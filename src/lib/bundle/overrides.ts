@@ -368,3 +368,65 @@ export function rulePackOverridesOf(doc: unknown): Record<string, unknown> | nul
   // newer engine key is not a reason to drop the lot, and the paste side may well understand it.
   return overrides;
 }
+
+// ============================================================================================
+// THE ONE CUSTOMISATION A CLIP CANNOT CARRY (D-72).
+//
+// The owner, 2026-09-08: *"Custom calendars are the only weird outlier. We just need to tag a map as
+// using a custom calendar. That does not work on the same mechanism so be called out."*
+//
+// He is right that it is an outlier, and the reason is structural rather than an oversight: a
+// calendar is not in `rulePackOverrides` at all. It lives in `temporal` -
+// `{ masterTimeSec, displayTimeSec, activeCalendarKey, temporal_registry }` - which is the
+// campaign's CLOCK, not its rules. A campaign has exactly one, it is running, and everything dated
+// in that campaign is dated against it.
+//
+// SO IT MUST NOT RIDE ALONG, and that is the interesting part. Merging somebody else's calendar
+// into a running campaign is not like adding a liquid nobody was using: `epoch_offset_t` is that
+// calendar's zero as a real instant, so adopting one would re-date every event in the destination
+// campaign. The right answer for a clip is to carry the object and say plainly what did not come
+// with it - which is what the map page does with this.
+//
+// THE FILE IS FINE. A DOWNLOAD carries the calendar, because the calendar is in the save. This is a
+// caveat about COPYING one object, and the page says it beside the copy controls and nowhere near
+// the download button - telling somebody their download is incomplete when it is not would be a
+// worse bug than the one being warned about.
+//
+// FINDING THEM IS ALREADY SOLVED and not by this file: `facetRules.ts` counts the keys of
+// `temporal.temporal_registry` that are not in the engine's shipped list, which arrives in R-13's
+// manifest. That machinery exists because the hub hit this in August 2026 and the engine FIXED THE
+// FILE in response (B112: a save now writes only the calendars the GM made). This reads the answer.
+// ============================================================================================
+
+/** Just enough of a stored facet result to read a rule's findings. */
+interface FacetLike { id: string; count: number; values?: string[] }
+
+/**
+ * The custom calendars a map keeps time on, from its stored facet results.
+ *
+ * Empty when there are none, when the facet could not be evaluated, or when the engine's shipped
+ * list was unavailable - and all three mean the same thing to a reader: say nothing. A hub that
+ * warned about a calendar it was not sure existed would train people to ignore the warning.
+ */
+export function customCalendars(facetResults: unknown): string[] {
+  if (!Array.isArray(facetResults)) return [];
+  const rule = (facetResults as FacetLike[]).find((r) => r?.id === 'custom-calendars');
+  if (!rule || !(rule.count > 0)) return [];
+  return Array.isArray(rule.values) ? rule.values.filter((v) => typeof v === 'string' && v.trim()) : [];
+}
+
+/**
+ * What to tell somebody about to copy an object out of a map that keeps its own time.
+ *
+ * NAMES IT WHEN IT CAN. "a custom calendar" is a shrug; "the Thousand Suns Reckoning" is a thing
+ * they can go and look at. Older maps stored a count with no names, so both readings are handled.
+ */
+export function calendarCaveat(names: string[], count = names.length): string {
+  if (!count) return '';
+  const which = names.length === 1 ? '"' + names[0] + '"'
+    : names.length > 1 ? names.map((n) => '"' + n + '"').join(' and ')
+    : count === 1 ? 'its own calendar' : String(count) + ' calendars of its own';
+  return 'This map keeps time on ' + which + '. A calendar belongs to a whole campaign rather than '
+    + 'to any object in it, so copying something from here does not bring it with you - the full '
+    + 'download does.';
+}

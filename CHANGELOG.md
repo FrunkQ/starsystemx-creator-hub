@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.50.0 - 2026-09-08
+
+### A map that keeps its own time says so where the copying happens
+
+A custom calendar is the one customisation a clip cannot carry, and for a good reason: it is the
+campaign's clock rather than one of its rules, so adopting somebody else's would re-date everything
+in the campaign it landed in. A map that keeps its own time now says so beside the copy controls,
+naming the calendar - and says plainly that the full download does bring it, because it does.
+
+Maps with a custom calendar were already tagged and filterable; the facet now records which
+calendars rather than only how many, because a count cannot be spoken.
+
+
 ## 0.49.1 - 2026-09-08
 
 The custom rules page returned a 500 until migration 0037 had been run - it named a column the

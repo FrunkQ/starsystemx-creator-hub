@@ -2,6 +2,7 @@
 // staying honest under odd input.
 import { describe, it, expect } from 'vitest';
 import { computeFacets, deriveTags, formatBytes } from '../src/lib/bundle/facets';
+import { applyFacetRules, DEFAULT_FACET_RULES } from '../src/lib/bundle/facetRules';
 
 const campaign = (systems: number, nodes: any[]) => ({
   systems: Array.from({ length: systems }, (_, i) => ({
@@ -120,5 +121,33 @@ describe('sizes', () => {
     expect(formatBytes(512)).toBe('512 B');
     expect(formatBytes(2048)).toBe('2 KB');
     expect(formatBytes(1024 * 1024 * 3.5)).toBe('3.5 MB');
+  });
+});
+
+describe('a countKeysAt rule names what it found (D-72)', () => {
+  it('records the custom calendars, not only how many', () => {
+    // A count cannot be spoken. "This map keeps time on the Thousand Suns Reckoning" is a sentence;
+    // "1 custom calendar" is a statistic, and the map page needs the first one.
+    const doc = {
+      nodes: [],
+      temporal: {
+        activeCalendarKey: 'Thousand Suns Reckoning',
+        temporal_registry: { 'Thousand Suns Reckoning': { id: 'TS' }, Gregorian: { id: 'G' } }
+      }
+    };
+    const shipped = { calendars: ['Gregorian'], appAssetPrefixes: [] } as never;
+    const found = applyFacetRules(doc, DEFAULT_FACET_RULES, shipped)
+      .find((r) => r.id === 'custom-calendars')!;
+    expect(found.count).toBe(1);
+    expect(found.values).toEqual(['Thousand Suns Reckoning']);
+  });
+
+  it('still says nothing when every calendar in the file is one the app ships', () => {
+    // THE FAULT THAT STARTED ALL THIS: before B112 a save wrote the shipped calendars too, and a
+    // naive count fired on every map ever made. The baseline is what stops it.
+    const doc = { nodes: [], temporal: { temporal_registry: { Gregorian: {}, Julian: {} } } };
+    const shipped = { calendars: ['Gregorian', 'Julian'], appAssetPrefixes: [] } as never;
+    expect(applyFacetRules(doc, DEFAULT_FACET_RULES, shipped).find((r) => r.id === 'custom-calendars'))
+      .toBeUndefined();
   });
 });

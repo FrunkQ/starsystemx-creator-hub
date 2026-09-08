@@ -7,7 +7,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   readOverrides, overridesFrom, overrideId, describeOverrides, KIND_LABEL,
-  sameDefinition, groupOverrides
+  sameDefinition, groupOverrides, customCalendars, calendarCaveat
 } from '../src/lib/bundle/overrides';
 import { buildClip, buildRulesClip } from '../src/lib/bundle/clip';
 
@@ -246,5 +246,45 @@ describe('grouping them for a library', () => {
       ...withMap('m1', { liquids: [{ name: 'x' }] }),
       ...withMap('m1', { gasPhysics: { x: {} } })
     ])).toHaveLength(2);
+  });
+});
+
+describe('the calendar, which is the one thing a clip cannot carry (D-72)', () => {
+  const results = (extra: Record<string, unknown> = {}) => [
+    { id: 'custom-calendars', label: 'Custom calendars', category: 'Custom content', count: 1,
+      values: ['Thousand Suns Reckoning'], ...extra }
+  ];
+
+  it('reads the names a map keeps time on', () => {
+    expect(customCalendars(results())).toEqual(['Thousand Suns Reckoning']);
+  });
+
+  it('says nothing at all when there is nothing to say', () => {
+    // Three different reasons - none, not evaluated, baseline unavailable - and one right answer.
+    // A hub that warned about a calendar it was not sure existed would train people to ignore it.
+    expect(customCalendars([])).toEqual([]);
+    expect(customCalendars(null)).toEqual([]);
+    expect(customCalendars(results({ count: 0 }))).toEqual([]);
+    expect(customCalendars([{ id: 'custom-tag-categories', count: 3 }])).toEqual([]);
+    expect(calendarCaveat([])).toBe('');
+  });
+
+  it('names it rather than shrugging', () => {
+    // "a custom calendar" is a shrug; the name is a thing somebody can go and look at.
+    expect(calendarCaveat(['Thousand Suns Reckoning'])).toContain('"Thousand Suns Reckoning"');
+    expect(calendarCaveat(['A', 'B'])).toMatch(/"A" and "B"/);
+  });
+
+  it('still says something useful for a map indexed before the names were kept', () => {
+    // `countKeysAt` recorded only a count until D-72. Older rows have no values.
+    expect(calendarCaveat([], 1)).toContain('its own calendar');
+    expect(calendarCaveat([], 3)).toContain('3 calendars');
+  });
+
+  it('says the DOWNLOAD is fine, because it is', () => {
+    // The calendar is in the save. This is a caveat about copying ONE object, and telling somebody
+    // their download was incomplete when it is not would be a worse bug than the one warned about.
+    expect(calendarCaveat(['X'])).toMatch(/full\s+download does/);
+    expect(calendarCaveat(['X'])).toMatch(/copying something from here does not bring it/);
   });
 });

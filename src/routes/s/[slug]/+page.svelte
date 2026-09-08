@@ -19,6 +19,7 @@
   import { formatBytes, ROLE_PILLS } from '$lib/bundle/facets';
   import { COMMENT_MAX } from '$lib/comments';
   import { FAN_WORK_BADGE, fanWorkNotice, cleanSetting } from '$lib/fanWork';
+  import { customCalendars, calendarCaveat } from '$lib/bundle/overrides';
   let { data } = $props();
 
   const s = $derived(data.system);
@@ -104,6 +105,16 @@
   type Credit = { title: string; creator: string | null; url: string | null; chain?: Origin[] };
   type Stop = { url: string | null; title: string | null; creator: string | null };
   const fanSetting = $derived(cleanSetting((s as { fan_setting?: string | null }).fan_setting));
+  // A custom calendar is the one customisation a clip cannot carry (D-72) - it is the campaign's
+  // clock rather than one of its rules, and adopting somebody else's would re-date everything in
+  // the campaign it landed in. So the page says so where the copying happens.
+  const calendars = $derived.by(() => {
+    const names = customCalendars((s as { facet_results?: unknown }).facet_results);
+    const rule = (Array.isArray((s as { facet_results?: unknown }).facet_results)
+      ? ((s as { facet_results: Array<{ id: string; count: number }> }).facet_results)
+      : []).find((r) => r?.id === 'custom-calendars');
+    return { names, caveat: calendarCaveat(names, rule?.count ?? names.length) };
+  });
   const credits = $derived((Array.isArray(s.content_credits) ? s.content_credits : []) as Credit[]);
   // The original of each credit, and the maps it passed through on the way here.
   const lineage = (c: Credit): { original: Stop; via: Stop[] } => {
@@ -315,6 +326,12 @@
     Open a star to see what orbits it. Copy any row to take that object - or that object and
     everything beneath it - into your own campaign in Star System Explorer.
   </p>
+  <!-- THE ONE THING A COPY CANNOT BRING (D-72). Beside the COPY controls and deliberately nowhere
+       near the download button: the calendar is in the save, so the file is complete. Telling
+       somebody their download was missing something when it was not would be the worse bug. -->
+  {#if calendars.caveat}
+    <p class="caveat">{calendars.caveat}</p>
+  {/if}
   <!-- A starmap opens with its stars minimised - sixty stars is the list, each with its summary;
        a single system opens to planet level (owner, 2026-09-05). -->
   <NodeTree
@@ -508,5 +525,10 @@
     display: block; width: 100%; margin-top: 4px; font: inherit;
     background: var(--panel-2); color: var(--ink);
     border: 1px solid var(--edge); border-radius: 8px; padding: 8px;
+  }
+  /* Quiet and beside the copy controls: a fact about what copying does, not a warning. */
+  .caveat {
+    margin: 0 0 12px; padding: 8px 12px; border-left: 2px solid var(--warn);
+    color: var(--ink-dim); font-size: 0.9rem; max-width: 78ch;
   }
 </style>
