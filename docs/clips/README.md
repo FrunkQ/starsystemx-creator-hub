@@ -17,8 +17,18 @@ Only the custom rules are invented, because no real save on hand has any.
 
 ## The cast
 
-One planet (**Bellwether**) with a moon and two ships beneath it. Bellwether's hydrosphere names a
-liquid called `unobtainium`, which is the thing the paste has to resolve.
+One planet (**Bellwether**) with a moon and two ships beneath it. Bellwether's
+`hydrosphere.composition` names a liquid called `unobtainium`, which is the thing the paste has to
+resolve, and its `temperatureK` is **60** - between that liquid's melt (20 K) and boil (90 K).
+
+> **Corrected 2026-09-08**, and thank you: the first version of these fixtures wrote
+> `hydrosphere.liquid`, which is not a field. The engine reads `hydrosphere.composition`
+> (`types.ts:111`), and `SystemProcessor` passes it straight to `liquidDef(hydroComp, pack)`.
+>
+> **The fault was in these fixtures and nowhere else - there is nothing to rename in the hub.** The
+> hub never writes a hydrosphere: `snippetFor` is a deny list, so a clip of a real body has always
+> carried whatever the engine wrote. It must stay that way; a hub that rewrote node fields on the
+> way out would be a second opinion about the engine's own shape.
 
 The rules carry three definitions, chosen to cover the three shapes: `liquids` (a list keyed by
 `name`), `engineDefinitions` and `fuelDefinitions` (lists keyed by `id`).
@@ -30,8 +40,9 @@ The rules carry three definitions, chosen to cover the three shapes: `liquids` (
 A body that needs a custom liquid, with the rules that define it.
 
 **Expected:** Bellwether and everything under it pastes. `unobtainium`, `q-drive` and `dt-slush` are
-added to the destination campaign's own overrides. **Bellwether's hydrosphere resolves** — its phase,
-appearance and climate are right rather than falling back.
+added to the destination campaign's own overrides. And the checkable part: **Bellwether's surface
+phase comes out LIQUID**, because 60 K sits between that liquid's melt and boil points. Without the
+merge, `liquidDef` returns undefined and there is no phase to compute at all.
 
 The report says what came with it.
 

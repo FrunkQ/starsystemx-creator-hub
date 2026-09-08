@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.51.3 - 2026-09-08
+
+The R-19 test clips named a hydrosphere field that does not exist - `liquid` where the engine reads
+`composition`. Caught by the engine stream while testing against them. The fixtures are corrected
+and clip 1 now has a checkable outcome rather than a vague one: the body's surface phase should come
+out liquid, because its temperature sits between that liquid's melt and boil points.
+
+Nothing in the hub itself changed, and nothing needed to: the hub never writes a hydrosphere. A clip
+carries whatever the engine wrote.
+
+
 ## 0.51.2 - 2026-09-08
 
 Seven test clips for the engine stream's R-19 work, in `docs/clips/`, with the expected outcome for

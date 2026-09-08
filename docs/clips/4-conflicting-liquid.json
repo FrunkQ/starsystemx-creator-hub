@@ -15,9 +15,10 @@
       "roleHint": "planet",
       "parentId": null,
       "hydrosphere": {
-        "liquid": "unobtainium",
+        "composition": "unobtainium",
         "coverage": 0.6
-      }
+      },
+      "temperatureK": 60
     },
     {
       "id": "moon-c",

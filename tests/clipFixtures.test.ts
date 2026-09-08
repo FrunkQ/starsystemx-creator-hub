@@ -62,11 +62,38 @@ function realNodes(): ClipNode[] {
   })) as ClipNode[];
 }
 
-/** Point a body at the custom liquid, so the paste has something to resolve. */
+/**
+ * Point a body at the custom liquid, so the paste has something to resolve.
+ *
+ * `hydrosphere.composition`, NOT `hydrosphere.liquid`. The first draft of this fixture invented the
+ * second name and the engine stream caught it while testing R-19: the rules arrived and the body
+ * still could not find them, so clip 1's promised outcome could not come true.
+ *
+ * **The fault was HERE and nowhere else, which is worth saying plainly**: the hub never writes a
+ * hydrosphere. `snippetFor` is a DENY list (D-58) - it copies the node as the save had it, so a
+ * clip of a real body has always carried whatever the engine wrote. There is no field to rename in
+ * the hub, and there must not be: a hub that rewrote node fields on the way out would be a second
+ * opinion about the engine's own shape.
+ *
+ * The path this exercises, in the engine's `SystemProcessor`:
+ *   const hydroComp = body.hydrosphere?.composition;
+ *   const surfaceDef = liquidDef(hydroComp, pack);
+ *
+ * The temperature is set deliberately: 60 K sits between this liquid's meltK (20) and boilK (90),
+ * so a merged liquid makes the surface phase LIQUID - an observable outcome rather than "it
+ * resolves". Without the merge, `liquidDef` returns undefined and there is no phase at all.
+ */
 function usingTheLiquid(nodes: ClipNode[]): ClipNode[] {
   return nodes.map((n) =>
     n.node_id === 'planet-b'
-      ? { ...n, snippet: { ...(n.snippet as object), hydrosphere: { liquid: 'unobtainium', coverage: 0.6 } } }
+      ? {
+          ...n,
+          snippet: {
+            ...(n.snippet as object),
+            hydrosphere: { composition: 'unobtainium', coverage: 0.6 },
+            temperatureK: 60
+          }
+        }
       : n);
 }
 
@@ -80,7 +107,8 @@ describe('the R-19 test clips', () => {
 
   it('1. a body that needs a custom liquid, with the rules that define it', () => {
     // EXPECTED: the planet and its moon paste; the liquid, engine and fuel are added to the
-    // destination's own overrides; Bellwether's hydrosphere resolves and its phase is right.
+    // destination's own overrides; and Bellwether's surface phase comes out LIQUID - 60 K is
+    // between this liquid's melt (20 K) and boil (90 K). Without the merge there is no phase at all.
     const clip = buildClip(nodes, 'planet-b', SOURCE, [], RULES)!;
     expect(clip.root).toBe('planet-b');
     expect(clip.nodes.length).toBeGreaterThan(1);
