@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.49.1 - 2026-09-08
+
+The custom rules page returned a 500 until migration 0037 had been run - it named a column the
+database did not have yet. It now reads tolerantly and says the library is empty, which is the
+honest answer while the migration is pending.
+
+A test scans every route for the same mistake: a young column in a select string, or worse, a filter
+on one, which the tolerant reader cannot rescue.
+
+
 ## 0.49.0 - 2026-09-08
 
 ### A library of everybody's custom rules
