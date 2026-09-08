@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.52.0 - 2026-09-09
+
+### A debug link you can actually paste
+
+It showed the bare token and a sentence explaining how to build a URL out of it. It shows the whole
+link now, with a Copy button - and a Copy against every link in the list that is still live, so
+losing it no longer means making another and leaving the first one lying around.
+
+That needed the token stored rather than only its fingerprint. It is cleared the moment the link is
+used, so a spent link never shows one; validation still goes through the hash, unchanged.
+
+**Migration 0038 is the owner's to run.** Until it does, the page behaves exactly as before.
+
+
 ## 0.51.3 - 2026-09-08
 
 The R-19 test clips named a hydrosphere field that does not exist - `liquid` where the engine reads

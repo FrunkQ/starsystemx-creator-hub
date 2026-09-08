@@ -16,7 +16,13 @@ function randomToken(): string {
   return [...b].map((x) => x.toString(16).padStart(2, '0')).join('');
 }
 
-/** Create a link. Returns the plaintext token ONCE - only its hash is stored. */
+/**
+ * Create a link.
+ *
+ * THE TOKEN IS STORED AS WELL AS HASHED (0038, D-74), so an admin can copy it again while the link
+ * is still live. Lookup is unchanged and still goes through `token_hash`; the plaintext is there to
+ * show the person who is about to send it. It is CLEARED the moment the link is spent.
+ */
 export async function createInvite(
   sb: Db, adminId: string, note: string, ttlHours: number
 ): Promise<{ id: string; token: string; expiresAt: string }> {
@@ -27,6 +33,7 @@ export async function createInvite(
   const { error } = await sb.from('debug_invites').insert({
     id,
     token_hash: await sha256Hex(enc.encode(token)),
+    token,
     created_by: adminId,
     note: note.slice(0, 200) || null,
     expires_at: expiresAt
@@ -77,5 +84,8 @@ export async function acceptUpload(
 
   // Spend the link only AFTER the file is safely stored, or a failed write would burn it and the
   // person would have nothing to try again with.
-  await sb.from('debug_invites').update({ used_at: new Date().toISOString() }).eq('id', invite.id);
+  // Spent, and the token goes with it (D-74). A dead link that still shows a token invites somebody
+  // to try it, and one write does both so the two can never disagree.
+  await sb.from('debug_invites')
+    .update({ used_at: new Date().toISOString(), token: null }).eq('id', invite.id);
 }

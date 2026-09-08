@@ -2,10 +2,22 @@ import type { PageServerLoad, Actions } from './$types';
 import { error, fail } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import { loadGates } from '$lib/server/config';
+import { loadSite } from '$lib/server/site';
+import { tolerantSelect } from '$lib/server/tolerant';
 import { createInvite } from '$lib/server/debugUploads';
 import * as audit from '$lib/server/audit';
 
-export const load: PageServerLoad = async ({ platform, locals }) => {
+/** What the Links table shows. `token` is absent until 0038 runs (D-74). */
+type InviteRow = {
+  id: string;
+  note: string | null;
+  created_at: string;
+  expires_at: string;
+  used_at: string | null;
+  token?: string | null;
+};
+
+export const load: PageServerLoad = async ({ platform, locals, url }) => {
   const env = platform?.env;
   if (!env) throw error(500, 'not configured');
   if (locals.viewer?.role !== 'admin') throw error(404, 'Not found');
@@ -13,15 +25,25 @@ export const load: PageServerLoad = async ({ platform, locals }) => {
   const sb = db(env);
   const gates = await loadGates(sb);
 
-  const [{ data: invites }, { data: uploads }] = await Promise.all([
-    sb.from('debug_invites').select('id, note, created_at, expires_at, used_at')
-      .order('created_at', { ascending: false }).limit(20),
+  const [{ data: invites, dropped }, { data: uploads }] = await Promise.all([
+    // `token` arrives with 0038 (D-74). TOLERANT, because a push deploys before the owner runs the
+    // migration and a plain select on a young column is a 500 for everybody until they do - the
+    // lesson /rules taught the hard way (D-71).
+    tolerantSelect<InviteRow[]>(
+      ['id', 'note', 'created_at', 'expires_at', 'used_at', 'token'], ['token'],
+      (cols) => sb.from('debug_invites').select(cols)
+        .order('created_at', { ascending: false }).limit(20)
+    ),
     sb.from('debug_uploads').select('id, filename, byte_size, user_note, uploaded_at, invite_id')
       .order('uploaded_at', { ascending: false }).limit(50)
   ]);
 
   return {
     invites: invites ?? [],
+    /** False until 0038 runs: the list then says a link cannot be re-copied rather than pretending. */
+    canRecopy: !dropped.includes('token'),
+    /** The address links are built from, so the page never has to guess at its own hostname. */
+    siteUrl: (await loadSite(sb, url)).url,
     uploads: uploads ?? [],
     retentionDays: gates.debug_retention_days
   };

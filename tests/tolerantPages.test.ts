@@ -24,7 +24,7 @@ import { readFileSync, globSync } from 'node:fs';
  * ADD TO THIS WHEN YOU ADD A COLUMN. It is the whole mechanism, and an entry costs nothing until
  * somebody writes a query that names it.
  */
-const RECENT = ['rule_overrides', 'fan_setting', 'comments_mailed_at', 'cover_options'];
+const RECENT = ['rule_overrides', 'fan_setting', 'comments_mailed_at', 'cover_options', 'token'];
 
 /** The filter builders that name a column and would fail on a missing one. */
 const FILTERS = ['not', 'is', 'eq', 'neq', 'gt', 'gte', 'lt', 'lte', 'in', 'like', 'ilike', 'order'];

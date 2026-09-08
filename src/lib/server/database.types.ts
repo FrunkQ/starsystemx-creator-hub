@@ -379,6 +379,9 @@ export type DeviceCodeRow = {
 export type DebugInviteRow = {
   id: string;
   token_hash: string;
+  // 0038: the token in plaintext, so an admin can copy the link again while it is still live
+  // (D-74). CLEARED when the link is spent. Validation still goes through `token_hash`.
+  token: string | null;
   created_by: string | null;
   note: string | null;
   created_at: string;
