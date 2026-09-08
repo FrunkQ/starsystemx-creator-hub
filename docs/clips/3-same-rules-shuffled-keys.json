@@ -1,0 +1,68 @@
+{
+  "sseClip": 1,
+  "source": {
+    "site": "StarSystemX Explorers",
+    "url": "https://explorers.starsystemx.com/s/contract-reach#node=planet-b",
+    "title": "Contract Reach",
+    "creator": "FrunkQ"
+  },
+  "root": "planet-b",
+  "nodes": [
+    {
+      "id": "planet-b",
+      "name": "Bellwether",
+      "kind": "body",
+      "roleHint": "planet",
+      "parentId": null,
+      "hydrosphere": {
+        "liquid": "unobtainium",
+        "coverage": 0.6
+      }
+    },
+    {
+      "id": "moon-c",
+      "name": "Tally",
+      "kind": "body",
+      "roleHint": "moon",
+      "parentId": "planet-b"
+    },
+    {
+      "id": "ship-d",
+      "name": "Contract Runner",
+      "kind": "construct",
+      "parentId": "planet-b",
+      "image": {
+        "url": "https://example.test/runner.jpg"
+      }
+    }
+  ],
+  "rulePackOverrides": {
+    "liquids": [
+      {
+        "colorHex": "#7fd4c1",
+        "boilK": 90,
+        "meltK": 20,
+        "label": "Liquid Unobtainium",
+        "name": "unobtainium"
+      }
+    ],
+    "fuelDefinitions": [
+      {
+        "id": "dt-slush",
+        "name": "D-T Slush",
+        "density_kg_per_m3": 225,
+        "description": "Cryogenic deuterium-tritium."
+      }
+    ],
+    "engineDefinitions": [
+      {
+        "id": "q-drive",
+        "name": "Q Drive",
+        "type": "fusion",
+        "fuel_type_id": "dt-slush",
+        "thrust_kN": 900,
+        "efficiency_isp": 12000
+      }
+    ]
+  }
+}

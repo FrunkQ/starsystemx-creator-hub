@@ -1,0 +1,35 @@
+{
+  "sseClip": 1,
+  "source": {
+    "site": "StarSystemX Explorers",
+    "url": "https://explorers.starsystemx.com/s/contract-reach#node=planet-b",
+    "title": "Contract Reach",
+    "creator": "FrunkQ"
+  },
+  "root": "planet-b",
+  "nodes": [
+    {
+      "id": "planet-b",
+      "name": "Bellwether",
+      "kind": "body",
+      "roleHint": "planet",
+      "parentId": null
+    },
+    {
+      "id": "moon-c",
+      "name": "Tally",
+      "kind": "body",
+      "roleHint": "moon",
+      "parentId": "planet-b"
+    },
+    {
+      "id": "ship-d",
+      "name": "Contract Runner",
+      "kind": "construct",
+      "parentId": "planet-b",
+      "image": {
+        "url": "https://example.test/runner.jpg"
+      }
+    }
+  ]
+}
