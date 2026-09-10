@@ -108,6 +108,43 @@ const noteOf = (form: FormData) => String(form.get('note') ?? '').trim().slice(0
 const ID = /^[0-9a-f-]{36}$/;
 
 export const actions: Actions = {
+  /**
+   * TRUST, or stop trusting (D-78).
+   *
+   * A MODERATOR'S TO GIVE, unlike the staff role. The D-39 line is whether a thing can be UNDONE,
+   * and this one can, completely: untrusting somebody takes effect on their next upload, and every
+   * picture that went out on trust is still in the queue and still bannable with one click. That is
+   * a different kind of decision from handing somebody the power to take maps down.
+   *
+   * Never on yourself, for the same reason as the rest of this page: a moderator who can widen
+   * their own limits is a moderator with no limits.
+   */
+  trust: async ({ request, platform, locals, params }) => {
+    const { sb, me } = await staff(platform, locals);
+    const person = await personByHandle(sb, params.handle);
+    if (person.id === me.id) return fail(400, { message: 'Not yourself.' });
+
+    const form = await request.formData();
+    const trusted = form.get('trusted') === 'on';
+    const { error: e } = await sb.from('creators').update({ trusted }).eq('id', person.id);
+    if (e) {
+      // Before 0039 the column does not exist, and saying which is more use than "it failed".
+      return fail(500, {
+        message: /column/i.test(e.message)
+          ? 'Trust needs migration 0039, which has not been run yet.'
+          : e.message
+      });
+    }
+
+    await audit.record(sb, me.id, trusted ? 'creator.trust' : 'creator.untrust',
+      'creator:' + person.id, noteOf(form) ?? undefined);
+    return {
+      done: trusted
+        ? 'Trusted. Their pictures go out on arrival and still appear in the review queue.'
+        : 'No longer trusted. Their next upload waits for review like anybody else.'
+    };
+  },
+
   /** Suspend, ban, reinstate - with the reason the person will read. */
   state: async ({ request, platform, locals, params }) => {
     const { sb, me } = await staff(platform, locals);

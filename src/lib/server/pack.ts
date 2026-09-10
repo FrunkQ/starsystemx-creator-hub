@@ -40,7 +40,9 @@ export interface PackResult {
  * something is missing rather than wondering why a planet has no picture.
  */
 export async function packForDownload(
-  env: HubEnv, sb: Db, systemId: string, slug: string, fanSetting?: string | null
+  env: HubEnv, sb: Db, systemId: string, slug: string, fanSetting?: string | null,
+  /** The moderator's note when this map is on hold (D-79). Written into the README. */
+  holdNote?: string | null
 ): Promise<PackResult | null> {
   const stored = await r2.getBundle(env, systemId);
   if (!stored) return null;
@@ -101,6 +103,18 @@ export async function packForDownload(
   // that needs it most is the one nobody filled the field in on.
   //
   // APPENDED, never replacing: README.txt is the engine's, and this is a paragraph after it.
+  // THE HOLD NOTE TRAVELS WITH THE FILE (D-79). Somebody can reach a download without ever seeing
+  // the map page - a direct link, the API, the engine's own fetch - and a warning that only exists
+  // on a web page is a warning most of the people who need it will not read.
+  if (holdNote && holdNote.trim()) {
+    out[README_NAME] = strToU8(appendNotice(out[README_NAME],
+      ['--', 'THIS MAP IS ON HOLD', '',
+        'Somebody has reported that it may not work properly:', '', '  ' + holdNote.trim(), '',
+        'It is here anyway, because a file nobody can fetch is a file nobody can diagnose. If it',
+        'does not work, please say so through the hub - that is how it gets fixed or cleared.'
+      ].join('\n')));
+  }
+
   out[README_NAME] = strToU8(appendNotice(out[README_NAME], fanWorkFileNotice(fanSetting)));
 
   return { bytes: zipSync(out), withheld, filename: slug + '.sse.zip' };

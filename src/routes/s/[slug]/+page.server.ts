@@ -1,5 +1,5 @@
-import type { PageServerLoad } from './$types';
-import { error } from '@sveltejs/kit';
+import type { PageServerLoad, Actions } from './$types';
+import { error, fail } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import * as ledger from '$lib/server/ledger';
 import { ensureCover, coverNodeFrom } from '$lib/server/cover';
@@ -8,6 +8,9 @@ import { loadSite } from '$lib/server/site';
 import { loadGates } from '$lib/server/config';
 import { mayContribute } from '$lib/server/auth';
 import { removalRole, commentNotice } from '$lib/comments';
+import { isStaff } from '$lib/server/auth';
+import * as audit from '$lib/server/audit';
+import { tolerantWrite } from '$lib/server/tolerant';
 import { isBadge } from '$lib/badges';
 import { densityFrom, densityLevel, densitySummary } from '$lib/bundle/density';
 import { bestDensity } from '$lib/server/density';
@@ -168,6 +171,10 @@ export const load: PageServerLoad = async ({ params, platform, setHeaders, url, 
     starred,
     comments,
     commentsAvailable: !commentsErr,
+    // A MODERATOR READING A MAP PAGE HAS THE CONTROLS THERE (owner, 2026-09-10: "If a mod is on a
+    // map page they have the controls there to withdraw"). Walking to /admin to act on the thing
+    // in front of you is how a moderator ends up not acting on it.
+    isStaff: isStaff(locals.viewer),
     mayComment: mayContribute(locals.viewer),
     notice,
     signedIn: !!locals.viewer,
@@ -180,4 +187,65 @@ export const load: PageServerLoad = async ({ params, platform, setHeaders, url, 
       ? approved.has(system.cover_sha256) || system.cover_sha256 === backfilled
       : false
   };
+};
+
+
+/**
+ * The moderator's controls, on the page they are already looking at (D-79).
+ *
+ * WHY THEY ARE HERE AND NOT ONLY IN /admin: the owner asked for it, and the reason it is right is
+ * that a moderator who has to go somewhere else to act on what they are looking at usually does not.
+ * Every one of these is already reachable from the admin pages; this is the same power, closer.
+ */
+export const actions: Actions = {
+  /**
+   * HOLD: this map may be broken. It stays downloadable, with a warning.
+   *
+   * The owner: *"allow peeps to download it with a warning that this file may have problems and to
+   * bring it to my attention if it does not work."* That is the whole point - a file nobody can
+   * fetch is a file nobody can diagnose, and the person best placed to say what is wrong with it is
+   * the person trying to use it.
+   */
+  hold: async ({ request, platform, locals, params }) => {
+    const env = platform?.env;
+    if (!env || !isStaff(locals.viewer)) throw error(404, 'Not found');
+    const sb = db(env);
+
+    const form = await request.formData();
+    const note = String(form.get('note') ?? '').trim().slice(0, 500);
+    if (note.length < 5) {
+      return fail(400, { holdMessage: 'Say what is wrong with it - the note is what a downloader reads.' });
+    }
+
+    const { data: system } = await sb.from('systems').select('id').eq('slug', params.slug).maybeSingle();
+    if (!system) throw error(404, 'Not found');
+
+    const { error: e } = await tolerantWrite(
+      { hold_note: note, held_at: new Date().toISOString(), held_by: locals.viewer!.id },
+      (row) => Promise.resolve(sb.from('systems').update(row as never).eq('id', system.id))
+    );
+    if (e) return fail(500, { holdMessage: 'That did not save: ' + e.message });
+
+    await audit.record(sb, locals.viewer!.id, 'system.hold', 'system:' + system.id, note);
+    return { holdMessage: 'On hold. The download stays open and now carries your note.' };
+  },
+
+  /** Off hold. The note goes with it - it described a problem that is no longer being claimed. */
+  unhold: async ({ platform, locals, params }) => {
+    const env = platform?.env;
+    if (!env || !isStaff(locals.viewer)) throw error(404, 'Not found');
+    const sb = db(env);
+
+    const { data: system } = await sb.from('systems').select('id').eq('slug', params.slug).maybeSingle();
+    if (!system) throw error(404, 'Not found');
+
+    const { error: e } = await tolerantWrite(
+      { hold_note: null, held_at: null, held_by: null },
+      (row) => Promise.resolve(sb.from('systems').update(row as never).eq('id', system.id))
+    );
+    if (e) return fail(500, { holdMessage: 'That did not save: ' + e.message });
+
+    await audit.record(sb, locals.viewer!.id, 'system.unhold', 'system:' + system.id);
+    return { holdMessage: 'Off hold.' };
+  }
 };

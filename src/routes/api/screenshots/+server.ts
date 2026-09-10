@@ -87,10 +87,15 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
   const mime = MIME_BY_EXT[ext] ?? 'application/octet-stream';
   if (!(await r2.has(env, sha256))) await r2.putAsset(env, sha256, bytes, mime);
 
+  // A TRUSTED CREATOR'S PICTURE IS USABLE AT ONCE (D-78), and still appears in the queue marked as
+  // pre-approved. This is the case the owner asked for by name: adding a screenshot and having it
+  // greyed out until somebody looks is what makes a working session stop and start.
+  const { data: me } = await sb.from('creators').select('trusted').eq('id', viewer!.id).maybeSingle();
   await ledger.registerNovel(
     sb,
     known.has(sha256) ? [] : [{ sha256, kind: 'image', byte_size: bytes.length, mime }],
-    false
+    false,
+    !!(me as { trusted?: boolean } | null)?.trusted
   );
 
   const { error: e } = await sb.from('system_screenshots').upsert({

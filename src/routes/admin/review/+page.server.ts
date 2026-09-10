@@ -4,16 +4,33 @@ import { db } from '$lib/server/db';
 import * as ledger from '$lib/server/ledger';
 import { isStaff } from '$lib/server/auth';
 
+/** What `ledger.queue` and `ledger.preApproved` both return, per row. */
+type QueueRow = {
+  sha256: string;
+  kind: string;
+  byte_size: number;
+  mime: string;
+  usage_count: number;
+  report_count: number;
+  flagged: boolean;
+  first_seen_at: string;
+};
+
 export const load: PageServerLoad = async ({ platform, locals }) => {
   const env = platform?.env;
   if (!env) throw error(500, 'not configured');
   if (!isStaff(locals.viewer)) throw error(404, 'Not found');
 
   const sb = db(env);
-  const queue = await ledger.queue(sb, 60);
-  if (!queue.length) return { cards: [] };
+  // TWO LISTS, ONE PAGE (D-78). What is waiting, and what went out on trust without anybody
+  // looking - the owner's condition for pre-approval was that he still sees it and can still
+  // withdraw it, so it is on the same page rather than tucked somewhere else.
+  const [queue, pre] = await Promise.all([ledger.queue(sb, 60), ledger.preApproved(sb, 30)]);
+  if (!queue.length && !pre.length) return { cards: [], preApproved: [] };
 
-  const hashes = queue.map((q) => q.sha256 as string);
+  // The claims and uses are looked up for BOTH lists in one read each: two round trips whatever the
+  // length, rather than two per card.
+  const hashes = [...queue, ...pre].map((q) => q.sha256 as string);
 
   // THE REVIEW CARD SHOWS THE IMAGE BESIDE THE CREATOR'S OWN LICENCE CLAIM (design 6.4), which
   // lets one pass judge two things at once: is this acceptable content, and is that attribution
@@ -56,7 +73,11 @@ export const load: PageServerLoad = async ({ platform, locals }) => {
     : { data: [] as any[] };
   const personBy = new Map((people ?? []).map((p: any) => [p.id, p]));
 
-  const cards = queue.map((q) => {
+  // NAMED EXPLICITLY rather than generic. A generic parameter looked tidier and the spread through
+  // it came out as `{claims, uses, filename}` on the far side - every field of the row silently
+  // dropped, because the load's inferred return type does not carry the type variable across.
+  // Writing the shape down is duller and survives the round trip to the page.
+  const decorate = (q: QueueRow) => {
     const mine = usesBy.get(q.sha256 as string) ?? [];
     return {
       ...q,
@@ -69,7 +90,11 @@ export const load: PageServerLoad = async ({ platform, locals }) => {
       /** The path inside the bundle - which is the closest thing an asset has to a filename. */
       filename: (mine[0]?.bundle_path as string | undefined) ?? null
     };
-  });
+  };
 
-  return { cards };
+  return {
+    cards: queue.map(decorate),
+    /** Already usable, nobody has looked. Withdrawing one is an ordinary ban. */
+    preApproved: pre.map(decorate)
+  };
 };

@@ -56,6 +56,9 @@ export type CreatorRow = {
   display_name: string | null;
   role: CreatorRole;
   state: CreatorState;
+  // 0039: their uploads are approved on arrival AND still appear in the queue, marked (D-78). Not a
+  // role - it confers no ability to see or judge anybody else's content.
+  trusted?: boolean;
   // 0022: why, in plain words, when suspended or banned. Null when active.
   state_note: string | null;
   // 0024: when they last looked at the comments on their maps. Null = never; everything is new.
@@ -80,6 +83,9 @@ export type AssetRowDb = {
   usage_count: number;
   report_count: number;
   flagged: boolean;
+  // 0039: approved on arrival because the uploader is trusted, not because anybody looked (D-78).
+  // Keeps it in the review queue MARKED, which is what makes pre-approval acceptable.
+  approved_on_trust?: boolean;
 }
 
 export type SystemRow = {
@@ -125,6 +131,11 @@ export type SystemRow = {
   // mixes, pigments, biosphere forms, fuels, engines and sensors (D-71). Whole and unmodified, so a
   // clip can carry them to a paste and the browse page can list them. Null for most maps.
   rule_overrides: unknown;
+  // 0039: a map with a suspected fault (D-79). Still downloadable - a file nobody can fetch is a
+  // file nobody can diagnose - with the note shown to whoever is about to take it. Null = not held.
+  hold_note?: string | null;
+  held_at?: string | null;
+  held_by?: string | null;
   // 0023: how much of the map is written about (bundle/density.ts): the raw 0..1 score, and the
   // detail behind it {total, described, avgLength}. Null until measured.
   info_density: number | null;
@@ -376,6 +387,7 @@ export type DeviceCodeRow = {
   expires_at: string;
 };
 
+// (see CreatorRow / SystemRow above for 0039's additions)
 export type DebugInviteRow = {
   id: string;
   token_hash: string;

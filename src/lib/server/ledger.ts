@@ -45,10 +45,33 @@ export async function lookup(sb: Db, hashes: string[]): Promise<Map<string, Revi
  * `flagged` moves them to the FRONT of the queue rather than stopping anything (design 6.6).
  */
 export async function registerNovel(
-  sb: Db, rows: Omit<AssetRow, 'review_state'>[], flagged: boolean
+  sb: Db, rows: Omit<AssetRow, 'review_state'>[], flagged: boolean,
+  /**
+   * TRUSTED UPLOADER (D-78): their bytes are approved on arrival rather than waiting.
+   *
+   * READ THIS BEFORE CHANGING IT. This is not a bypass, it is a REORDERING - the pictures still
+   * appear in the review queue, marked, and every moderator power over them is unchanged. What it
+   * removes is the WAIT, which is the thing that made a working creator's session stop and start.
+   *
+   * It is only safe because the hub can take an approval back: the ledger keys on BYTES, so banning
+   * a hash removes that picture from every map at once, retrospectively. The cost of being wrong is
+   * minutes of exposure rather than a permanent hole - a very different trade from a system where
+   * "approved" cannot be undone.
+   *
+   * AND IT IS IGNORED WHEN THE UPLOAD IS FLAGGED. Trust says "this person does not upload rubbish";
+   * `flagged` says "this particular upload looks like a pattern the hub watches for". The second is
+   * about the upload and outranks the first, or trust becomes a way to launder exactly the thing
+   * the flag exists to catch.
+   */
+  trusted = false
 ): Promise<void> {
   if (!rows.length) return;
-  const payload = rows.map((r) => ({ ...r, review_state: 'novel' as const, flagged }));
+  const auto = trusted && !flagged;
+  const state = auto ? ('approved' as const) : ('novel' as const);
+  // MARKED, not merely approved (0039). Without the mark, a pre-approved picture is
+  // indistinguishable from one the hub drew itself, and the queue would either lose it or fill with
+  // generated covers - either way the owner's "they still appear on my review list" would be false.
+  const payload = rows.map((r) => ({ ...r, review_state: state, flagged, approved_on_trust: auto }));
   // onConflict do-nothing: a hash seen concurrently by another upload keeps its existing verdict.
   // NEVER upsert the review_state here - that would reset an approved or banned hash to novel.
   const { error } = await sb.from('assets').upsert(payload, { onConflict: 'sha256', ignoreDuplicates: true });
@@ -129,5 +152,35 @@ export async function queue(sb: Db, limit = 60) {
     .order('first_seen_at', { ascending: false })
     .limit(limit);
   if (error) throw new Error(`queue unreadable: ${error.message}`);
+  return data ?? [];
+}
+
+/**
+ * Pictures approved on arrival because their uploader is trusted, and not yet looked at (D-78).
+ *
+ * THE OWNER'S OWN CONDITION: *"they will still appear on my review list (as pre-approved) and I
+ * still have the same control to withdraw them."* This is that list. A reviewer sees the same
+ * pictures they would have seen; what changed is that the creator did not have to wait.
+ *
+ * `reviewed_by is null` is what keeps it a QUEUE rather than an archive. The moment somebody makes
+ * a real decision - approve it properly, or ban it - the row stops appearing here, because it has
+ * now been looked at. Withdrawing one is an ordinary ban and needs no special path.
+ *
+ * TOLERANT OF THE COLUMN BEING ABSENT: a push deploys before the owner runs 0039 (D-71), and an
+ * empty pre-approved list is the correct answer until then rather than a 500 on the review page.
+ */
+export async function preApproved(sb: Db, limit = 30) {
+  const { data, error } = await sb.from('assets')
+    .select('sha256, kind, byte_size, mime, usage_count, report_count, flagged, first_seen_at')
+    .eq('review_state', 'approved')
+    .eq('approved_on_trust', true)
+    .is('reviewed_by', null)
+    .order('first_seen_at', { ascending: false })
+    .limit(limit);
+  if (error) {
+    // Before 0039 the column does not exist and this is not an error worth showing anybody.
+    console.warn('pre-approved list unavailable: ' + error.message);
+    return [];
+  }
   return data ?? [];
 }

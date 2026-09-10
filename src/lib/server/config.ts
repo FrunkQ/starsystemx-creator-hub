@@ -35,6 +35,7 @@ export interface Gates {
   // Tier benefits. A tier is a set of config rows, not a branch in code - same reasoning as the
   // gates themselves: what Pro is worth will be tuned, and tuning it should not need a deploy.
   pro_uploads_per_user_per_day: number;
+  trusted_uploads_per_user_per_day: number;
   pro_max_bundle_bytes: number;
   pro_max_assets_per_bundle: number;
 
@@ -133,6 +134,10 @@ export const GATE_FALLBACKS: Gates = {
   signups_open: true,
 
   pro_uploads_per_user_per_day: 10,
+  // A TRUSTED CREATOR'S DAILY ALLOWANCE (D-78). The owner asked for it configurable and named ten.
+  // The ordinary limit is ONE, which is a deliberate brake on a stranger; it is the wrong brake on
+  // somebody whose uploads are already going out without waiting.
+  trusted_uploads_per_user_per_day: 10,
   pro_max_bundle_bytes: 200 * 1024 * 1024,
   pro_max_assets_per_bundle: 600,
 

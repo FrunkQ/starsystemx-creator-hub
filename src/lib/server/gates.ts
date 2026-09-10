@@ -41,15 +41,27 @@ export async function checkPreflight(
   // free. This is checked again after hashing; here we only refuse someone already at the ceiling
   // with a non-update.
   if (!isUpdate) {
+    // A TRUSTED CREATOR GETS THE ROOMIER ALLOWANCE (D-78). The ordinary limit is ONE a day, which
+    // is a deliberate brake on a stranger and the wrong brake on somebody whose pictures already go
+    // out without waiting - the owner asked for both halves of trust together for that reason.
+    //
+    // Read from the row rather than passed in, so every caller of this function gets it right by
+    // default. It is one indexed lookup on a path that is already several.
+    const { data: me } = await sb.from('creators').select('trusted').eq('id', viewer.id).maybeSingle();
+    const trusted = !!(me as { trusted?: boolean } | null)?.trusted;
+    const allowance = trusted
+      ? Math.max(gates.uploads_per_user_per_day, gates.trusted_uploads_per_user_per_day)
+      : gates.uploads_per_user_per_day;
+
     const since = new Date(Date.now() - 24 * 36e5).toISOString();
     const { count } = await sb.from('upload_events')
       .select('id', { count: 'exact', head: true })
       .eq('creator_id', viewer.id).eq('is_update', false).gte('created_at', since);
-    if ((count ?? 0) >= gates.uploads_per_user_per_day) {
+    if ((count ?? 0) >= allowance) {
       return {
         code: 'daily-limit',
         message:
-          `You have reached today's upload limit of ${gates.uploads_per_user_per_day}. ` +
+          `You have reached today's upload limit of ${allowance}. ` +
           'Updating a map you have already published does not count against it.'
       };
     }

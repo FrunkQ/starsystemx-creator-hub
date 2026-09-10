@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.57.0 - 2026-09-11
+
+### Trusted explorers, and maps that can be put on hold
+
+**Trust** turns the wait around rather than removing it. A trusted explorer's pictures are approved
+on arrival, so adding a screenshot and using it happen in one go - and they still appear in the
+review queue, marked, in a section of their own, with Withdraw beside each one. Banning one still
+takes it off every map at once, which is exactly what makes going in this order safe. They get the
+roomier daily upload allowance too, which is a config row.
+
+Granting it is a moderator's to do, unlike the staff role: it can be undone completely.
+
+**On hold** is the state that was missing between "published" and "taken down". A map with a
+suspected fault stays downloadable, with the moderator's note shown above the download *and written
+into the file* - because most people who fetch a map never see its page. A file nobody can fetch is
+a file nobody can diagnose, and the person best placed to say what is wrong with it is the person
+trying to use it.
+
+A moderator reading a map page has the hold controls right there, rather than having to go to the
+admin pages to act on what is in front of them.
+
+**Migration 0039 is the owner's to run.** Everything works before it does; the trust panel says so
+if you try.
+
+
 ## 0.56.0 - 2026-09-11
 
 ### A map list Star System Explorer can show inside itself

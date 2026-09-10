@@ -143,6 +143,26 @@
     {/if}
   </form>
 
+  <!-- TRUST (D-78). A MODERATOR'S to give, unlike the role above, because it can be undone
+       completely: untrusting takes effect on the next upload, and every picture that went out on
+       trust is still in the queue and still one click from being withdrawn. -->
+  <form class="panel" method="POST" action="?/trust">
+    <h2>Trust</h2>
+    <p class="muted">
+      A trusted explorer's pictures are approved <strong>on arrival</strong> instead of waiting for
+      review - so adding a screenshot and using it happen in one go. They still appear in the review
+      queue marked as pre-approved, and withdrawing one takes it off every map at once, exactly as
+      it always did. They also get the roomier daily upload allowance.
+    </p>
+    <label class="check">
+      <input type="checkbox" name="trusted" checked={(p as { trusted?: boolean }).trusted === true} />
+      Trust this explorer
+    </label>
+    <label>Note (optional) <input name="note" maxlength="500" placeholder="Why" /></label>
+    <button class="primary" type="submit" disabled={data.self}>Save</button>
+    {#if data.self}<span class="muted"> Not on yourself.</span>{/if}
+  </form>
+
   <form class="panel danger-zone" method="POST" action="?/delete">
     <h2>Delete this account</h2>
     <p class="muted">

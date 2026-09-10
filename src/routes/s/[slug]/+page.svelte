@@ -20,7 +20,7 @@
   import { COMMENT_MAX } from '$lib/comments';
   import { FAN_WORK_BADGE, fanWorkNotice, cleanSetting } from '$lib/fanWork';
   import { customCalendars, calendarCaveat } from '$lib/bundle/overrides';
-  let { data } = $props();
+  let { data, form } = $props();
 
   const s = $derived(data.system);
   const total = $derived(data.bodies.length + data.constructs.length);
@@ -123,6 +123,7 @@
       : []).find((r) => r?.id === 'custom-calendars');
     return { names, caveat: calendarCaveat(names, rule?.count ?? names.length) };
   });
+  const holdNote = $derived(((s as { hold_note?: string | null }).hold_note ?? '').trim() || null);
   const credits = $derived((Array.isArray(s.content_credits) ? s.content_credits : []) as Credit[]);
   // The original of each credit, and the maps it passed through on the way here.
   const lineage = (c: Credit): { original: Stop; via: Stop[] } => {
@@ -219,7 +220,21 @@
         {/if}
       </p>
 
-      {#if data.withheldCount > 0}
+      <!-- ON HOLD (D-79). ABOVE the download and not instead of it: the owner's whole point is that the
+       file stays fetchable, because a file nobody can fetch is a file nobody can diagnose - and the
+       person best placed to say what is wrong with it is the person trying to use it. -->
+  {#if holdNote}
+    <div class="panel notice bad">
+      <h3>This map may have problems</h3>
+      <p>{holdNote}</p>
+      <p>
+        It is still yours to download. If it does not work,
+        <a href="/takedown">tell us what happened</a> - that is how it gets fixed or cleared.
+      </p>
+    </div>
+  {/if}
+
+  {#if data.withheldCount > 0}
         <div class="panel notice">
           <h3>{data.withheldCount} {data.withheldCount === 1 ? 'picture is' : 'pictures are'} awaiting review</h3>
           <p>
@@ -428,6 +443,35 @@
   <div class="foot-actions">
     <button onclick={() => (reportOpen = !reportOpen)}>Report a problem with this map</button>
   </div>
+
+  <!-- THE CONTROLS WHERE THE MODERATOR ALREADY IS (D-79). Everything here is reachable from /admin;
+       this is the same power, closer, because a moderator who has to walk somewhere else to act on
+       what they are looking at usually does not. -->
+  {#if data.isStaff}
+    <div class="panel staff">
+      <h3>Moderator</h3>
+      {#if form?.holdMessage}<p class="ok">{form.holdMessage}</p>{/if}
+      {#if holdNote}
+        <p class="muted">On hold: "{holdNote}"</p>
+        <form method="POST" action="?/unhold">
+          <button type="submit">Take it off hold</button>
+        </form>
+      {:else}
+        <form method="POST" action="?/hold" class="hold-form">
+          <label>
+            Put this map on hold
+            <input name="note" maxlength="500" required
+                   placeholder="What is wrong with it - this is what a downloader reads." />
+          </label>
+          <button type="submit">Hold</button>
+        </form>
+        <p class="muted small">
+          It stays downloadable with your note attached. Use it when a map looks broken rather than
+          unwelcome - taking it down is <a href="/admin/explorers">elsewhere</a>, and different.
+        </p>
+      {/if}
+    </div>
+  {/if}
   {#if reportOpen}
     <form class="panel" method="POST" action="/api/report">
       <input type="hidden" name="slug" value={s.slug} />
@@ -551,4 +595,15 @@
     background: var(--warn); color: var(--accent-ink);
   }
   .who .role.mod { background: var(--accent); }
+  .staff { border-left: 3px solid var(--warn); }
+  .staff h3 { margin: 0 0 8px; font-size: 1rem; }
+  .hold-form { display: flex; gap: 10px; align-items: end; flex-wrap: wrap; }
+  .hold-form label { display: block; color: var(--ink-faint); font-size: 0.85rem; flex: 1 1 30ch; }
+  .hold-form input {
+    display: block; width: 100%; margin-top: 3px; font: inherit;
+    background: var(--panel-2); color: var(--ink);
+    border: 1px solid var(--edge); border-radius: 8px; padding: 8px 10px;
+  }
+  .staff .ok { color: var(--accent); }
+  .staff .small { font-size: 0.85rem; margin-top: 8px; }
 </style>

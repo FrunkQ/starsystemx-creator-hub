@@ -305,10 +305,14 @@ export async function ingest(
     await r2.putAsset(env, asset.sha256, asset.bytes, asset.mime);
   }
 
+  // A trusted creator's bundle art is approved on arrival (D-78) - unless the upload itself was
+  // flagged, in which case the flag wins: trust is about the person, the flag is about this upload.
+  const { data: uploader } = await sb.from('creators').select('trusted').eq('id', viewer.id).maybeSingle();
   await ledger.registerNovel(
     sb,
     novel.map((n) => ({ sha256: n.sha256, kind: n.kind, byte_size: n.bytes.length, mime: n.mime })),
-    flagged
+    flagged,
+    !!(uploader as { trusted?: boolean } | null)?.trusted
   );
 
   // ---- rows -------------------------------------------------------------------------------------

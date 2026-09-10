@@ -17,7 +17,7 @@ export const GET: RequestHandler = async ({ params, platform, request }) => {
 
   const sb = db(env);
   const { data: system } = await sb.from('systems')
-    .select('id, slug, title, state, visibility, fan_setting')
+    .select('id, slug, title, state, visibility, fan_setting, hold_note')
     .eq('slug', params.slug).maybeSingle();
 
   if (!system || system.state !== 'public') throw error(404, 'not found');
@@ -25,7 +25,9 @@ export const GET: RequestHandler = async ({ params, platform, request }) => {
   // The setting rides into the README so the notice travels with the file (D-61). Read from the
   // row rather than passed in: a download is not a place to trust a query string.
   const packed = await packForDownload(env, sb, system.id, system.slug,
-    (system as { fan_setting?: string | null }).fan_setting ?? null);
+    (system as { fan_setting?: string | null }).fan_setting ?? null,
+    // A hold warning belongs in the file too - most people who need it never see the page (D-79).
+    (system as { hold_note?: string | null }).hold_note ?? null);
   if (!packed) throw error(404, 'not found');
 
   // ONE PLACE COUNTS A MAP LEAVING (D-77). It was written out here; `?open=` has always come

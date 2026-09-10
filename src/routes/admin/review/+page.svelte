@@ -69,6 +69,25 @@
     }
   }
 
+  /**
+   * Withdraw a pre-approved picture. AN ORDINARY BAN and nothing special (D-78) - the ledger keys
+   * on bytes, so this takes it off every map at once, which is exactly what made pre-approval a
+   * safe trade in the first place.
+   */
+  async function withdraw(hash: string) {
+    if (busy) return;
+    if (!confirm('Take this picture off every map that uses it?')) return;
+    busy = true;
+    try {
+      await post(hash, 'banned', 'content');
+      // It leaves the pre-approved list by being decided, so a reload is the honest refresh.
+      location.reload();
+    } catch {
+      alert('That did not save. Nothing has changed.');
+      busy = false;
+    }
+  }
+
   // Undo puts the hash back to novel AND back on screen. Without it the queue is a one-way door
   // and a reviewer working fast will not work fast.
   async function undo() {
@@ -116,7 +135,9 @@
 
 {#if !cards.length}
   <div class="panel"><p>Nothing waiting. The queue holds only novel images, so this is the normal state.</p></div>
-{:else}
+{/if}
+
+{#if cards.length}
   <div class="review">
     <div class="stage">
       <!-- The single privileged serve route: the one place an unreviewed asset is shown. -->
@@ -235,6 +256,38 @@
   {/if}
 {/if}
 
+<!-- ============================================================================================
+     ALREADY OUT, NOBODY HAS LOOKED (D-78). The owner's condition for pre-approval was exactly this:
+     "they will still appear on my review list (as pre-approved) and I still have the same control
+     to withdraw them." Trust reorders the review; it does not remove it.
+
+     Separate from the queue above, because these are not WAITING for a decision - they are live,
+     and the question is different: not "may this go out" but "should this have".
+     ============================================================================================ -->
+{#if data.preApproved?.length}
+  <h2 class="strip-head">Went out on trust · {data.preApproved.length}</h2>
+  <p class="muted pre-note">
+    Approved on arrival because the uploader is trusted, and live now. Nobody has looked at these.
+    Banning one takes it off every map at once, exactly as it always did.
+  </p>
+  <div class="strip">
+    {#each data.preApproved as c (c.sha256)}
+      <div class="thumb pre">
+        <img src="/private/asset/{c.sha256}" alt="" loading="lazy" />
+        <span class="cap">
+          {#if c.uses[0]}
+            <strong>{who(c.uses[0])}</strong>
+            <span class="map">{c.uses[0].systems?.title ?? 'a map'}</span>
+          {/if}
+        </span>
+        <span class="pre-acts">
+          <button class="danger" onclick={() => withdraw(c.sha256)} disabled={busy}>Withdraw</button>
+        </span>
+      </div>
+    {/each}
+  </div>
+{/if}
+
 <style>
   h1 { margin: 0 0 4px; }
   .lede { color: var(--ink-dim); margin: 0 0 8px; }
@@ -286,4 +339,8 @@
   .cap { display: block; padding: 6px 8px; font-size: 0.78rem; line-height: 1.35; }
   .cap strong { display: block; color: var(--ink); font-weight: 600; }
   .cap .map { color: var(--ink-faint); }
+  .pre-note { margin: 0 0 12px; font-size: 0.9rem; max-width: 78ch; }
+  .thumb.pre { border-color: var(--warn); cursor: default; }
+  .pre-acts { display: block; padding: 0 8px 8px; }
+  .pre-acts button { width: 100%; font-size: 0.8rem; padding: 4px 8px; }
 </style>

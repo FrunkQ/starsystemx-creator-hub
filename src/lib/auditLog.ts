@@ -38,6 +38,12 @@ const LABELS: Record<string, { verb: string; group: ActionGroup }> = {
   'comments.remove-all': { verb: 'removed every comment by', group: 'Moderation' },
   // Reports
   'report.dismiss': { verb: 'dismissed a report', group: 'Moderation' },
+  // Trust (D-78) is Accounts, not Moderation: it is about a person, not about a picture.
+  'creator.trust': { verb: 'trusted an explorer - their pictures now go out on arrival', group: 'Accounts' },
+  'creator.untrust': { verb: 'stopped trusting an explorer', group: 'Accounts' },
+  // Holding a map (D-79) IS a judgement about content, so it sits with the rest of moderation.
+  'system.hold': { verb: 'put a map on hold', group: 'Moderation' },
+  'system.unhold': { verb: 'took a map off hold', group: 'Moderation' },
   // Takedowns (D-69). Moderation, so "only what a moderator can do" on /admin/log includes them -
   // which is the filter an admin uses to read what was decided on their behalf.
   'takedown.actioned': { verb: 'took material down after a claim', group: 'Moderation' },
