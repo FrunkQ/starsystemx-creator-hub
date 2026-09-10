@@ -938,3 +938,22 @@ that changes whenever a field is added. Same reasoning that declined `rootKind` 
 **Ready for STREAM N once both halves are in:** copy a body with a custom liquid into a fresh
 campaign, check the liquid arrived and the body's phase is right; paste the same clip again and
 check nothing is duplicated or renamed.
+
+## R-20. A compact map list for a panel inside the app
+
+**Asked and ANSWERED 2026-09-11, hub v0.56.0. Interface: `docs/prompt-for-sse-2026-09-11-map-list-api.md`.**
+
+**HUB-SIDE STATUS: LIVE.** `GET /api/maps` gained `limit` (1-50, so ten a time), `kind`, a
+`discussed` sort (most comments), and ABSOLUTE per-item urls - `url`, `downloadUrl`, `coverUrl`,
+`openUrl`. It was already public, uncredentialed and CORS-open.
+
+**EXTENDED, NOT DUPLICATED.** The file's own header says two answers to "what is on the hub" that
+could disagree is one too many, and a second endpoint would have been exactly that.
+
+**THE ONE TRAP IN IT: `openUrl` is null for every single SYSTEM**, because the engine refuses one
+through `?open=` (R-18). The hub will not hand out a link that opens the app to an error. If R-18
+ships, the field starts filling itself in and nothing else changes.
+
+**NOT ANSWERED HERE: "use it to host the default files."** That is a bigger question - a map on the
+hub has a creator, a licence and a takedown route, and a file the app SHIPS has none of those. The
+prompt sets out the shape and a possible first step; it is the owner's call, not the hub's.

@@ -1,0 +1,144 @@
+# For the SSE stream: the hub's map list, for a panel inside the app
+
+From the Creator Hub side, 2026-09-11, hub **v0.56.0**. This is **R-20** in
+`docs/sse-requirements.md`.
+
+The owner: *"We need to have closer integration between SSE and explorers site — and use it to host
+the default files. eg: a small API that can provide a compact list of star systems in Explorers as a
+list INSIDE SSE to single click and load. I will work out the SSE side BUT we need the ability for
+SSE to hook into — thumbnail & key data & url. Be able to get them 10 at a time sorted by latest,
+most popular, most comments, etc. I just need an interface definition for SSE."*
+
+**Here is the interface. It is live now** — nothing is waiting on the hub.
+
+---
+
+## The endpoint
+
+```
+GET https://explorers.starsystemx.com/api/maps
+```
+
+**No credentials, ever.** Browsing and downloading the hub never need an account, in the app exactly
+as on the web. `Access-Control-Allow-Origin: *` is set, and `OPTIONS` is answered, so a browser
+fetch from the app works with `credentials: 'omit'`.
+
+Cached for 60 seconds at the edge.
+
+### Query parameters
+
+| parameter | values | default | notes |
+|---|---|---|---|
+| `sort` | `new` \| `loved` \| `discussed` \| `detailed` | `loved` | latest, most starred, most comments, most written-up |
+| `limit` | 1–50 | 30 | **pass 10** for a panel |
+| `page` | 1–50 | 1 | 1-based; `page=2` with `limit=10` is items 11–20 |
+| `kind` | `starmap` \| `system` | both | see the note on `openUrl` |
+| `tag` | repeatable, up to 8 | — | matches the hub's derived pills |
+| `q` | text | — | title contains |
+
+`sort=detailed` orders by how much of a map is *written about* — the 0–5 "information" figure below.
+It is the hub's own answer to "which of these is worth a GM's evening", and it may be the most
+useful default for a panel that is trying to show something good rather than something recent.
+
+---
+
+## What comes back
+
+```jsonc
+{
+  "maps": [ /* … */ ],
+  "page": 1,
+  "pageSize": 10,
+  "sort": "new",
+  "downloadPath": "/api/download/{slug}",   // legacy templates, still honoured
+  "coverPath": "/asset/{sha256}"
+}
+```
+
+### One map
+
+The fields worth a panel's attention. There are more on the object — they are the hub's own card
+columns and are not part of this contract; **read the ones below and ignore the rest**, because
+anything else may change without a version bump.
+
+```ts
+interface HubMap {
+  slug: string;              // stable forever; the hub's own identifier
+  title: string;
+  blurb: string | null;      // one line, the creator's own hook
+  kind: 'starmap' | 'system';
+
+  url: string;               // the map's page on the hub, absolute
+  downloadUrl: string;       // the .sse.zip or .json, absolute — no account needed
+  coverUrl: string | null;   // 1200×630 cover image, absolute; null when it has none
+  openUrl: string | null;    // opens this map in Star System Explorer; see below
+
+  system_count: number;
+  body_count: number;
+  construct_count: number;
+  hearts_count: number;      // stars
+  comments_count?: number;
+  download_count: number;
+  information: number;       // 0–5: how much of it is written about, 5 = best on the hub today
+
+  auto_tags: string[];       // derived from the file itself
+  tags: string[];            // what the cartographer says it is
+  updated_at: string;        // ISO 8601
+}
+```
+
+**`coverUrl` is the thumbnail.** It is the picture the hub draws or the creator chose — 1200×630,
+and safe to scale down hard; the card designs on the hub use it at about 240px wide.
+
+---
+
+## The one field with a trap in it
+
+**`openUrl` is `null` for every single system, and that is deliberate.**
+
+The engine refuses a single system through `?open=` — it says *"That link points at a single system
+rather than a campaign"* (R-18, still open). So the hub does not hand out a link that would open the
+app to an error. For those maps the hub's own page offers **Copy** instead (D-56), and a panel can
+do the same: fetch `downloadUrl` and paste it in, or offer the download.
+
+If R-18 ever ships, the hub starts filling that field in for systems and nothing else changes.
+
+**`kind=starmap`** is therefore the filter to use if your panel is strictly "click to open".
+
+---
+
+## Two things this does not do yet, and would happily
+
+**No cursor paging.** `page` is an offset, which is fine at ten a time and this library's size, and
+would be the wrong shape at ten thousand maps. Say the word before that matters.
+
+**No "since" parameter.** If a panel wants to poll for what is new, an `updated_after` would be
+cheaper than fetching page one and diffing. Not built because nobody has needed it — ask.
+
+---
+
+## Hosting the default files
+
+The owner's larger point — *"use it to host the default files"* — is a bigger conversation than this
+endpoint and is **not** answered here. Worth noting the shape of the problem before anybody starts:
+
+- A map on the hub is somebody's, with a creator, a licence and a takedown route. A file the app
+  ships as a **default** is the app's, and the two have different rules about being removed. Serving
+  a shipped default through the same list would blur that.
+- The hub already tells the engine what it ships, in the other direction: `shipped-content.json`
+  (R-13) is how the hub knows a calendar is yours and not a GM's. Whatever this becomes should not
+  end up as a second, disagreeing answer to "what is app content".
+
+A reasonable first step, if you want one: publish the defaults as ordinary hub maps under a hub
+account, and have the panel filter on a tag. That gets the list, the covers and the download path
+for free, and keeps "app content" and "somebody's content" distinguishable. **Not doing that unless
+the owner says so** — it is his call, not the hub's.
+
+---
+
+## To try it now
+
+```
+https://explorers.starsystemx.com/api/maps?sort=new&limit=10
+https://explorers.starsystemx.com/api/maps?sort=discussed&limit=10&kind=starmap
+```

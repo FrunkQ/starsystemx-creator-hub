@@ -11,8 +11,13 @@ import { tolerantSelect } from '$lib/server/tolerant';
 import { CARD_COLUMNS, CARD_OPTIONAL, type CardRow } from '$lib/server/cards';
 import { bestDensity } from '$lib/server/density';
 import { densityLevel } from '$lib/bundle/density';
+import { loadSite } from '$lib/server/site';
+import { loadGates } from '$lib/server/config';
+import { openLink } from '$lib/openInSse';
 
-const PAGE = 30;
+const DEFAULT_PAGE = 30;
+/** Ten is what Star System Explorer asks for; fifty is as much as one screen can use (R-20). */
+const MAX_PAGE = 50;
 
 /** A card's columns and the few more the app wants for its own list. */
 const LIST_COLUMNS = [...CARD_COLUMNS, 'carried_images', 'carried_models', 'source_bytes', 'created_with', 'updated_at'];
@@ -25,26 +30,46 @@ export const GET: RequestHandler = async ({ platform, url, setHeaders }) => {
   const tags = url.searchParams.getAll('tag').filter(Boolean).slice(0, 8);
   const q = (url.searchParams.get('q') ?? '').trim().slice(0, 80);
   const sortParam = url.searchParams.get('sort');
-  const sort = sortParam === 'new' ? 'new' : sortParam === 'detailed' ? 'detailed' : 'loved';
+  const sort: 'new' | 'detailed' | 'discussed' | 'loved' =
+    sortParam === 'new' ? 'new'
+      : sortParam === 'detailed' ? 'detailed'
+        : sortParam === 'discussed' ? 'discussed'
+          : 'loved';
   const page = Math.max(1, Math.min(50, Number.parseInt(url.searchParams.get('page') ?? '1', 10) || 1));
+  // A CALLER-CHOSEN PAGE SIZE (R-20). The engine wants ten for a panel inside itself; the web pages
+  // want thirty. Clamped, because the size is in a query string a stranger writes.
+  const size = Math.max(1, Math.min(MAX_PAGE,
+    Number.parseInt(url.searchParams.get('limit') ?? String(DEFAULT_PAGE), 10) || DEFAULT_PAGE));
+  const kindParam = url.searchParams.get('kind');
+  const kind = kindParam === 'starmap' || kindParam === 'system' ? kindParam : null;
 
   // Built from the column list so a column the database lacks yet can be dropped and the query
   // run again (tolerant.ts).
   const sb = db(env);
+  const gates = await loadGates(sb);
   const [{ data, error: e }, best] = await Promise.all([
     tolerantSelect<ListRow[]>(LIST_COLUMNS, CARD_OPTIONAL, (cols) => {
       let query = sb.from('systems').select(cols).eq('state', 'public').eq('visibility', 'public');
 
       if (tags.length) query = query.contains('auto_tags', tags);
       if (q) query = query.ilike('title', '%' + q + '%');
+      // A campaign and a single system are different things to ask for, and the engine can only
+      // OPEN the first (R-18) - so a panel offering "open this" wants to be able to say which.
+      if (kind) query = query.eq('kind', kind);
 
+      // `discussed` orders on `comments_count`, which arrived with 0021 - long run everywhere. Note
+      // that ORDERING on a column is not something `tolerantSelect` can rescue: it drops a column
+      // from the projection and re-runs, it cannot unpick an order clause (D-71). If 0021 were ever
+      // in doubt this sort would have to be gated rather than tolerated.
       query = sort === 'new'
         ? query.order('created_at', { ascending: false })
         : sort === 'detailed'
           ? query.order('info_density', { ascending: false, nullsFirst: false }).order('hearts_count', { ascending: false })
-          : query.order('hearts_count', { ascending: false }).order('created_at', { ascending: false });
+          : sort === 'discussed'
+            ? query.order('comments_count', { ascending: false, nullsFirst: false }).order('created_at', { ascending: false })
+            : query.order('hearts_count', { ascending: false }).order('created_at', { ascending: false });
 
-      return query.range((page - 1) * PAGE, page * PAGE - 1);
+      return query.range((page - 1) * size, page * size - 1);
     }),
     // What a 5 on the information meter means today (D-30).
     bestDensity(sb)
@@ -56,13 +81,37 @@ export const GET: RequestHandler = async ({ platform, url, setHeaders }) => {
     throw error(503, 'could not read the library');
   }
 
+  // ============================================================================================
+  // ABSOLUTE URLS PER ITEM (R-20), not only the path templates below.
+  //
+  // The owner, on the engine showing a list of hub maps inside itself: *"we need the ability for
+  // SSE to hook into - thumbnail & key data & url."* The templates stayed for the callers that
+  // already use them, but assembling a URL from a template is a job every caller then does slightly
+  // differently, and each one is a chance to get the hostname wrong. `site.url` is the address the
+  // hub gives out everywhere else (D-41), so it is the address it hands out here.
+  //
+  // `openUrl` IS NULL FOR A SINGLE SYSTEM, deliberately and not as an omission: the engine refuses
+  // one through `?open=` (R-18), and a link that opens the app to an error is worse than no link.
+  // A caller can offer Copy for those, which is what the hub's own page does (D-56).
+  // ============================================================================================
+  const site = await loadSite(sb, url);
+  const openPrefix = gates.open_in_sse_url;
+
   setHeaders({ 'cache-control': 'public, max-age=60', ...PUBLIC_CORS });
   return json({
-    // `information`: 0..5, how much of the map is written about, 5 being the best on the hub.
-    maps: (data ?? []).map((m) => ({ ...m, information: densityLevel(m.info_density, best) })),
+    maps: (data ?? []).map((m) => ({
+      ...m,
+      // `information`: 0..5, how much of the map is written about, 5 being the best on the hub.
+      information: densityLevel(m.info_density, best),
+      url: site.url + '/s/' + m.slug,
+      downloadUrl: site.url + '/api/download/' + m.slug,
+      coverUrl: m.cover_sha256 ? site.url + '/asset/' + m.cover_sha256 : null,
+      openUrl: openLink(openPrefix, site.url, m.slug, m.kind)
+    })),
     page,
-    pageSize: PAGE,
-    // The app builds its own download url from the slug; given here so the contract is explicit.
+    pageSize: size,
+    sort,
+    // Kept for the callers already built against them.
     downloadPath: '/api/download/{slug}',
     coverPath: '/asset/{sha256}'
   });

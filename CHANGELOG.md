@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.56.0 - 2026-09-11
+
+### A map list Star System Explorer can show inside itself
+
+`/api/maps` takes a `limit` now, so ten at a time works, plus a `kind` filter and a `discussed` sort
+for most-commented. Every map comes back with absolute urls - its page, its download, its cover, and
+a link that opens it in the app - so nothing has to assemble a URL and get the hostname wrong.
+
+That last one is null for a single system on purpose: the app refuses to open one, and a link that
+opens it to an error is worse than no link.
+
+The interface is written up for the engine stream in `docs/prompt-for-sse-2026-09-11-map-list-api.md`.
+
+
 ## 0.55.0 - 2026-09-11
 
 ### Copying a system counts as a download, and comments show a role
