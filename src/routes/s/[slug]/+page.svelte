@@ -60,6 +60,14 @@
       await navigator.clipboard.writeText(clipText(clip));
       copied = true;
       setTimeout(() => (copied = false), 2200);
+      // TAKING A SYSTEM AWAY IS A DOWNLOAD (D-77). A system cannot be opened in the engine, so this
+      // button IS its download - counting only the other one made these maps look unread. Fire and
+      // forget: a counter must never be able to spoil a copy that has already worked.
+      void fetch('/api/copied', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ slug: s.slug })
+      }).catch(() => undefined);
     } catch {
       copied = false; // a denied clipboard permission is not an error worth shouting about
     }
@@ -369,6 +377,11 @@
             <li>
               <div class="who">
                 <b>{c.by}</b>
+                <!-- The same two colours as the banner and the review queue (D-74): a role that
+                     reads differently in different places makes people doubt all of them. -->
+                {#if c.role && c.role !== 'user'}
+                  <span class="role" class:mod={c.role === 'moderator'}>{c.role}</span>
+                {/if}
                 <time datetime={c.created_at}>{c.created_at.slice(0, 10)}</time>
                 <span class="who-acts">
                   {#if c.removable}
@@ -531,4 +544,11 @@
     margin: 0 0 12px; padding: 8px 12px; border-left: 2px solid var(--warn);
     color: var(--ink-dim); font-size: 0.9rem; max-width: 78ch;
   }
+  /* A commenter's role, in the banner's colours. */
+  .who .role {
+    font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.07em; font-weight: 700;
+    padding: 1px 6px; border-radius: 999px;
+    background: var(--warn); color: var(--accent-ink);
+  }
+  .who .role.mod { background: var(--accent); }
 </style>

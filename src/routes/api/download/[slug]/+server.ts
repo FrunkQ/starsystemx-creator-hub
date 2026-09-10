@@ -6,6 +6,7 @@ import type { RequestHandler } from './$types';
 import { error } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import { packForDownload } from '$lib/server/pack';
+import { countTakeaway } from '$lib/server/takeaway';
 import { fanWorkHeader } from '$lib/fanWork';
 import { withCors, preflight } from '$lib/server/cors';
 import { visitorHash } from '$lib/server/visitor';
@@ -27,24 +28,9 @@ export const GET: RequestHandler = async ({ params, platform, request }) => {
     (system as { fan_setting?: string | null }).fan_setting ?? null);
   if (!packed) throw error(404, 'not found');
 
-  // Fire and forget: a download counter is not worth failing a download over.
-  // The postgrest builder is a thenable, not a Promise - wrap it before attaching a catch.
-  platform?.context?.waitUntil?.(
-    Promise.resolve(sb.rpc('increment_download', { p_system_id: system.id })).then(
-      () => undefined,
-      () => undefined
-    )
-  );
-  // The counter stays (the cards sort by it). This is the HISTORY behind it: one row per download,
-  // carrying a week-scoped visitor hash and nothing else - never an address (server/visitor.ts).
-  // Same fire-and-forget; and before 0014 creates the table, it simply fails quietly.
-  platform?.context?.waitUntil?.(
-    visitorHash(request, env.VISITOR_SALT)
-      .then((visitor_hash) => Promise.resolve(sb.from('download_events').insert({
-        id: crypto.randomUUID(), system_id: system.id, visitor_hash
-      })))
-      .then(() => undefined, () => undefined)
-  );
+  // ONE PLACE COUNTS A MAP LEAVING (D-77). It was written out here; `?open=` has always come
+  // through this route, and Copy now reaches the same helper rather than a second copy of it.
+  countTakeaway(env, sb, system.id, request, platform?.context?.waitUntil?.bind(platform.context));
 
   return new Response(packed.bytes as unknown as ArrayBuffer, {
     // CORS: the SSE app fetches this cross-origin for `?hub=<slug>`. Without it the browser refuses

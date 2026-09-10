@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.55.0 - 2026-09-11
+
+### Copying a system counts as a download, and comments show a role
+
+A single system cannot be opened in Star System Explorer, so the hub offers Copy instead - which
+means for those maps Copy *is* the download. Counting only the download button made the busiest
+systems look like the least read. Opening in the app already counted, because that goes through the
+download route. Copying one row out of a map still does not: borrowing a planet is not taking the
+map, and the number has to keep meaning one thing.
+
+Comments now carry the commenter's role where they have one, in the same two colours as the banner.
+
+
 ## 0.54.0 - 2026-09-10
 
 ### The review queue says who, what and what else

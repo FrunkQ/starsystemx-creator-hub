@@ -89,13 +89,20 @@ export const load: PageServerLoad = async ({ params, platform, setHeaders, url, 
     .order('created_at', { ascending: true }).limit(200);
   const commenterIds = [...new Set((commentRows ?? []).flatMap((c) => (c.creator_id ? [c.creator_id] : [])))];
   const { data: commenters } = commenterIds.length
-    ? await sb.from('creators').select('id, handle, display_name').in('id', commenterIds)
-    : { data: [] as { id: string; handle: string; display_name: string | null }[] };
+    // The ROLE comes too (owner, 2026-09-10: "Users comments should show their role pill (if
+    // any)"). It is the difference between a stranger's opinion under somebody's map and a word
+    // from the person who could take it down, and a reader deserves to be able to tell.
+    ? await sb.from('creators').select('id, handle, display_name, role').in('id', commenterIds)
+    : { data: [] as { id: string; handle: string; display_name: string | null; role: string }[] };
   const commenterName = new Map((commenters ?? []).map((c) => [c.id, c.display_name ?? c.handle]));
+  const commenterRole = new Map((commenters ?? []).map((c) => [c.id, c.role]));
   const comments = (commentRows ?? []).map((c) => ({
     id: c.id, body: c.body, created_at: c.created_at,
     // No author left: they deleted their account and chose to leave their words (0022).
     by: c.creator_id ? commenterName.get(c.creator_id) ?? 'an explorer' : 'a former explorer',
+    // Null for an ordinary explorer, which is most of them - a pill on everybody is a pill on
+    // nobody. Never for a departed author: there is no account left to have a role.
+    role: c.creator_id ? (commenterRole.get(c.creator_id) ?? null) : null,
     // Who may take it down is decided here, once; the page only draws the button.
     removable: !!removalRole(locals.viewer, c, system.creator_id)
   }));
