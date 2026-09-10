@@ -2041,6 +2041,182 @@ the download button, and it says the full download **does** bring the calendar -
 the calendar is in the save. Telling somebody their download was incomplete when it is not would be
 a worse bug than the one being warned about.
 
+### D-75. Moderators could not see the pictures they were created to review
+
+The owner, 2026-09-10: *"Moderator review: moderators can't see images - admin could for review."*
+
+`/private/asset/[hash]` is **the one route that serves an unreviewed asset** — the file's own header
+says there must never be a second — and it asked for the admin role. So the role invented to judge
+pictures could open the review queue and get a page of broken images.
+
+The comparison predated the moderator role (D-39) and was never revisited when `isStaff` was written
+for it. **A codebase does not re-read itself**: the same shape of miss put a bare `admin` check on
+the explorers list badge two days earlier, and both were written before there was anything else for
+them to be wrong about.
+
+Every other hard-coded comparison turned out to be correct — config, backup, debug, stats, log and
+the outbox drain are "running the place" and admin-only by D-39 — so the fix was one line and the
+scan is what makes that a fact rather than a hope. `tests/staffAccess.test.ts` refuses the
+comparison anywhere else.
+
+**One awkwardness worth its comment:** `isStaff` is a type predicate, so a negated call narrows
+`viewer` to `never` for the rest of the expression, and TypeScript follows that through an
+intermediate boolean too. The viewer's id is read *before* the check rather than fought with.
+
+### D-76. What the first bytes say, on the review card
+
+The owner: *"We need more file details - name, apparent type, size, guess from first few bytes."*
+
+The last one is the one that earns its place, and the reason is that **everything else on that card
+is somebody's claim**. The filename came out of a zip a stranger built; the content type came off
+that filename. Neither is evidence. The first bytes are.
+
+**Not a hole being plugged.** The hub already refuses anything outside its allowed extensions and
+never executes what it stores. This is a *signal*, shown to the person who has been asked to decide,
+beside the other signals — a `.png` that is really a zip is worth a second look, not a refusal.
+
+**On demand, per card, as a range read.** Computing it for the whole queue would be sixty R2 reads
+before the page painted, in a Worker with 10ms of CPU, to answer a question about the one picture
+somebody is looking at. And a range of 32 bytes rather than the object: pulling a 4 MB screenshot
+down to look at eight bytes of it is D-53's mistake in a smaller key.
+
+**THE MISMATCH LINE IS DELIBERATELY NARROW.** Only a positive identification that contradicts the
+declared type. Unrecognised bytes say nothing at all, because the pattern list is short on purpose
+and **a warning that cries wolf stops being read** — which would cost more than the warning is worth.
+
+**My own tests found two real faults in it**, and both are the kind that only a test written to
+disbelieve the code will find. Pointing one at the repo's own favicon rather than at bytes I typed
+showed that most SVGs open with `<svg` and not `<?xml`, which the pattern list missed entirely. And
+`mismatch()` treated "recognised but no mime" as "nothing to compare" — silently exempting the
+executables, which are the single most alarming thing it exists to catch.
+
+**Also on the card now: who.** The uploader is not on the asset — an asset is BYTES, and the same
+bytes can arrive on four maps from four people, which is the whole reason the ledger keys on the
+hash. So the person is reached through the maps that use it, with their role and account state,
+because a picture from a suspended account is a different decision. One batched read, not one per
+card.
+
+**And the rest of the queue**, as captioned thumbnails. Clicking moves the cursor rather than
+navigating: a queue you leave is a queue that does not get cleared. Being able to see that the next
+eight are one person's screenshots rather than eight unrelated uploads changes how you read the one
+in front of you.
+
+### D-77. A copied system counts as a download
+
+The owner: *"Count clicking on 'copy a System' as a download - and open in SSE (prob does already)."*
+
+He was right about the second: `?open=` fetches `/api/download/<slug>`, so it always counted.
+
+**Why the first should:** the engine refuses a single system through `?open=` (R-18), so the hub
+offers Copy instead (D-56). **For those maps Copy IS the download**, and counting only the button
+made the busiest systems look like the least read — purely because of a limitation in a different
+program.
+
+**What is not counted, and the line matters:** copying ONE ROW is not taking the map. That is
+somebody borrowing a planet, and folding it in would turn a distribution count into a
+fiddling-about count. The cards sort on this number, so it has to keep meaning one thing.
+
+The counting was written out inline in the download route and became `server/takeaway.ts`, called
+from both — a second copy is two places to remember when the shape of the event changes.
+
+### D-78. Trust reverses the order of review; it does not remove it
+
+The owner: *"I wanna be able to tag users as 'trusted' in which case their pictures are
+'pre-approved' without a manual review and can be used right away. NB: they will still appear on my
+review list (as pre-approved) and I still have the same control to withdraw them."*
+
+**That second sentence is the whole design**, and it is the easy one to skip. A trusted creator's
+pictures go out without waiting AND still appear in the queue, marked, with Withdraw on each. What
+is removed is the WAIT — the thing that made a working session stop and start — not the review.
+
+**It is only safe because an approval can be taken back.** The ledger keys on BYTES, so banning a
+hash removes that picture from every map at once, retrospectively. The cost of being wrong is
+minutes of exposure rather than a permanent hole — a very different trade from a system where
+"approved" cannot be undone. Reordering trust and review is defensible here for that reason alone.
+
+**`approved_on_trust` exists because three approvals otherwise look identical**: one a reviewer
+made, one the hub made when it drew a cover (D-21), and one nobody made at all. Without the column
+the queue would either lose the pictures it is promising to show or fill up with the hub's own
+generated covers.
+
+**A FLAGGED UPLOAD IS NEVER AUTO-APPROVED.** Trust says "this person does not upload rubbish"; the
+flag says "this particular upload looks like the pattern we watch for". The narrower claim wins, or
+trust becomes a way to launder exactly what the flag exists to catch.
+
+**A column on `creators`, not a role.** A trusted explorer is not staff: they cannot see or judge
+anybody else's content. Folding it into `creator_role` would have made it a rank and collided with
+`moderator` on the first person who was both.
+
+**A moderator's to give**, unlike the staff role, because D-39's line is whether a thing can be
+undone — and this can be, completely.
+
+### D-79. On hold: the state between published and taken down
+
+The owner: *"We probably need to have a means to 'put a map on hold' - allow peeps to download it
+with a warning that this file may have problems and to bring it to my attention if it does not
+work."*
+
+**Today a map with a suspected fault has two possible answers and both are wrong.** Leave it up and
+say nothing, so people download something broken and blame the hub. Or take it down, so a map that
+is probably fine disappears and its creator is punished for a suspicion.
+
+**A FLAG, NOT A `state`.** `systems.state` is about PERMISSION — may this be seen. A hold is about
+CONFIDENCE — does this work. Different questions, and a map can be any combination of them, so
+folding hold into the enum would mean a taken-down map could not also be flagged as broken, and
+restoring one would silently clear the other.
+
+**The download stays open, which is the owner's entire point.** A file nobody can fetch is a file
+nobody can diagnose, and the person best placed to say what is wrong with it is the person trying to
+use it. The warning asks them to say so.
+
+**And it travels in the file.** Most people who fetch a map never see its page — a direct link, the
+API, the engine's own fetch — so a warning that exists only on a web page is a warning most of the
+people who need it will not read.
+
+**The controls are on the map page**, because a moderator who has to go somewhere else to act on
+what they are looking at usually does not.
+
+### D-80. A pending account, dealt with from both ends
+
+The owner: *"Users on 'pending - email not confirmed' I need some additional controls. To make them
+active (sends a mail) to send a new pending e-mail (need to offer the user that capability to send
+again in case junked)."*
+
+The user's own half already existed — the resend button on `/account` was built with the pending
+state in D-67, for exactly the junked-mail case. This is the admin half, for when somebody writes in
+because the mail is not arriving at all.
+
+**Two acts, two buttons, and the difference is why they are not one:**
+
+- **Resend** asks Supabase to send it again. Nothing changes; they still confirm.
+- **Confirm** DECIDES that the address is good without them clicking anything.
+
+The second is not a shortcut for the first. It says the hub is satisfied the person owns that
+address on some other evidence, so it is written to the audit log — **if the address turns out to be
+wrong, "who decided that" has to have an answer.** It updates Supabase's own record too, or the two
+disagree and the next sign-in reads Supabase's answer rather than the hub's.
+
+### D-81. Pushing a map into Debug, from the page you are already on
+
+The owner: *"Be able to push from 'main site' into Debug if there is a problem with it."*
+
+The same destination as a one-shot link, reached from the other side. A link is for a file the hub
+does not have; this is for one it already stores and somebody has just found fault with — usually a
+map on hold (D-79), where the next question is "what is actually wrong with it" and the file is
+right there.
+
+**The bytes are copied, not referenced.** The debug store's whole promise is that what a
+diagnostician looks at is what arrived. Pointing at the live bundle would mean the evidence changed
+the moment the creator uploaded a new version — which is precisely when somebody is most likely to
+be looking at it.
+
+**No invite row.** `invite_id` stays null: nothing was sent and no link was spent, so inventing an
+invite to satisfy a foreign key would put a fiction into the record of how a file arrived.
+
+**ADMIN, not staff** — the only control on that panel that is. A debug upload is an unredacted
+campaign, GM notes and hidden systems intact, and `/admin/debug` is admin-only for that reason. A
+moderator who could put a map there could not then read it.
+
 ### D-16. The takedown address is assembled at runtime, never served as text
 
 The owner's instruction was explicit: keep it off the page as scrapable text. It is stored as
