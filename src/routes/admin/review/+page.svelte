@@ -8,6 +8,7 @@
   // Every decision is written against the HASH with a reviewer and a timestamp. Never against the
   // upload, or the same bytes come back tomorrow.
   import { invalidate } from '$app/navigation';
+  import { humanBytes } from '$lib/bundle/sniff';
   let { data } = $props();
 
   // A decided hash is hidden by FILTERING the loaded queue rather than by mutating a local copy.
@@ -20,6 +21,24 @@
 
   const cards = $derived(data.cards.filter((c: any) => !decided.has(c.sha256)));
   const current = $derived(cards[Math.min(cursor, Math.max(0, cards.length - 1))]);
+
+  // WHAT THE BYTES SAY, asked for the card on screen and no other (D-76). Sixty R2 reads before the
+  // page painted would answer a question about the one picture somebody is looking at.
+  let facts = $state<Record<string, any> | null>(null);
+  let factsFor: string | null = null;
+  $effect(() => {
+    const hash = current?.sha256;
+    if (!hash || hash === factsFor) return;
+    factsFor = hash;
+    facts = null;
+    fetch('/api/review/sniff/' + hash)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((f) => { if (factsFor === hash) facts = (f as Record<string, any>) ?? null; })
+      .catch(() => { if (factsFor === hash) facts = null; });
+  });
+
+  /** "A Painter (moderator)" - the pill matters, because staff uploads are not a stranger's. */
+  const who = (u: any) => u?.uploader?.display_name ?? u?.uploader?.handle ?? 'unknown';
 
   async function post(hash: string, verdict: string, reason?: string) {
     const res = await fetch('/api/review', {
@@ -120,10 +139,51 @@
         {/if}
       {/each}
 
-      <h2>Used by</h2>
-      <ul>
+      <h2>The file</h2>
+      <dl class="facts">
+        {#if current.filename}<dt>Name</dt><dd class="mono">{current.filename}</dd>{/if}
+        <dt>Declared</dt><dd class="mono">{current.mime ?? 'nothing'}</dd>
+        <dt>Size</dt><dd>{humanBytes(current.byte_size)}</dd>
+        <dt>Bytes say</dt>
+        <dd>
+          {#if !facts}
+            <span class="muted">looking...</span>
+          {:else if facts.format}
+            {facts.format}
+          {:else if facts.readable === false}
+            <span class="bad-text">the stored object is missing</span>
+          {:else}
+            <span class="muted">not a format the hub recognises</span>
+          {/if}
+        </dd>
+      </dl>
+      {#if facts?.mismatch}
+        <!-- THE ONE SIGNAL WORTH INTERRUPTING FOR. Everything else on this card is a claim - the
+             name came out of a stranger's zip and the type came off that name. This is the bytes
+             disagreeing with both. -->
+        <p class="bad-text">
+          The bytes say <strong>{facts.format}</strong>, which is not what this file claims to be.
+        </p>
+      {/if}
+
+      <h2>Who and where</h2>
+      <ul class="uses">
         {#each current.uses as u}
-          <li><a href="/s/{u.systems?.slug}" rel="noopener">{u.systems?.title ?? u.system_id}</a></li>
+          <li>
+            <a href="/s/{u.systems?.slug}" rel="noopener">{u.systems?.title ?? u.system_id}</a>
+            <span class="muted">by</span>
+            {#if u.uploader}
+              <a href="/admin/explorers/{u.uploader.handle}">{who(u)}</a>
+              {#if u.uploader.role !== 'user'}
+                <span class="role" class:mod={u.uploader.role === 'moderator'}>{u.uploader.role}</span>
+              {/if}
+              {#if u.uploader.state !== 'active'}
+                <span class="tag warn">{u.uploader.state}</span>
+              {/if}
+            {:else}
+              <span class="muted">an unknown explorer</span>
+            {/if}
+          </li>
         {/each}
       </ul>
 
@@ -143,6 +203,36 @@
       </div>
     </aside>
   </div>
+
+  <!-- ============================================================================================
+       THE REST OF THE QUEUE, VISIBLE (owner, 2026-09-10: "The queue only shows the first image and
+       it would be great if it thumbnailed the rest below with who uploaded them and which map they
+       are associated with").
+       
+       It is not decoration: a reviewer who can see the next eight can tell a batch of one person's
+       screenshots from eight unrelated uploads, and that changes how they read the one in front of
+       them. Clicking moves the cursor rather than opening anything - this page is a queue, and
+       leaving it to come back is what makes a queue not get cleared.
+       ============================================================================================ -->
+  {#if cards.length > 1}
+    <h2 class="strip-head">Waiting behind it</h2>
+    <div class="strip">
+      {#each cards as c, i (c.sha256)}
+        <button class="thumb" class:on={i === cursor} onclick={() => (cursor = i)}
+                title="{c.filename ?? c.sha256.slice(0, 12)} - {c.uses.length} {c.uses.length === 1 ? 'map' : 'maps'}">
+          <img src="/private/asset/{c.sha256}" alt="" loading="lazy" />
+          <span class="cap">
+            {#if c.uses[0]}
+              <strong>{who(c.uses[0])}</strong>
+              <span class="map">{c.uses[0].systems?.title ?? 'a map'}</span>
+            {:else}
+              <span class="map">no map yet</span>
+            {/if}
+          </span>
+        </button>
+      {/each}
+    </div>
+  {/if}
 {/if}
 
 <style>
@@ -169,4 +259,31 @@
   .muted { color: var(--ink-dim); font-size: 0.9rem; }
   .bad-text { color: var(--bad); font-size: 0.9rem; }
   .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+  /* The file facts, as a definition list so the labels line up and the values can be long. */
+  .facts { display: grid; grid-template-columns: max-content 1fr; gap: 2px 12px; margin: 0 0 10px; font-size: 0.9rem; }
+  .facts dt { color: var(--ink-faint); }
+  .facts dd { margin: 0; }
+  .mono { font-family: ui-monospace, Consolas, monospace; font-size: 0.85rem; word-break: break-all; }
+  .uses { list-style: none; padding: 0; margin: 0; }
+  .uses li { margin: 0 0 4px; }
+  /* The banner's two colours, so a role reads the same wherever it appears (D-74). */
+  .role {
+    font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.07em; font-weight: 700;
+    padding: 1px 6px; border-radius: 999px; margin-left: 4px;
+    background: var(--warn); color: var(--accent-ink);
+  }
+  .role.mod { background: var(--accent); }
+  .tag.warn { border-color: var(--warn); color: var(--warn); }
+
+  .strip-head { margin: 26px 0 10px; font-size: 1rem; }
+  .strip { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+  .thumb {
+    padding: 0; background: var(--panel); border: 1px solid var(--edge); border-radius: 8px;
+    overflow: hidden; cursor: pointer; text-align: left; display: block;
+  }
+  .thumb.on { border-color: var(--accent); }
+  .thumb img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; display: block; background: var(--panel-2); }
+  .cap { display: block; padding: 6px 8px; font-size: 0.78rem; line-height: 1.35; }
+  .cap strong { display: block; color: var(--ink); font-weight: 600; }
+  .cap .map { color: var(--ink-faint); }
 </style>

@@ -38,6 +38,21 @@ export async function getAsset(env: HubEnv, sha256: string): Promise<R2ObjectBod
   return env.HUB_ASSETS.get(assetKey(sha256));
 }
 
+/**
+ * Just the first bytes of an asset (D-76), for working out what a file really is.
+ *
+ * A RANGE READ, not a whole object. The review queue asks this per card, and pulling a 4 MB
+ * screenshot down to look at eight bytes of it would be a Worker's whole CPU budget spent on
+ * nothing (D-53's lesson, in a smaller key).
+ */
+export async function getAssetHead(
+  env: HubEnv, sha256: string, length: number
+): Promise<Uint8Array | null> {
+  const object = await env.HUB_ASSETS.get(assetKey(sha256), { range: { offset: 0, length } });
+  if (!object) return null;
+  return new Uint8Array(await object.arrayBuffer());
+}
+
 export async function putBundle(env: HubEnv, systemId: string, bytes: Uint8Array): Promise<void> {
   await env.HUB_BUNDLES.put(bundleKey(systemId), bytes as unknown as ArrayBuffer, {
     httpMetadata: { contentType: 'application/zip' }

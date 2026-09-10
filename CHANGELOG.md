@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.54.0 - 2026-09-10
+
+### The review queue says who, what and what else
+
+Every card now names **who uploaded it** and which map it is on - with their role and their account
+state, because a picture from a suspended account is a different decision. An asset is bytes, and
+the same bytes can arrive from four people on four maps, so a card can honestly name more than one.
+
+**The file itself**: its name inside the bundle, the type it claims to be, its size, and what its
+first bytes actually say. That last one is the only thing on the card that is not somebody's claim -
+the name came out of a stranger's zip and the type came off that name. When the bytes contradict the
+claim, the card says so; when they are simply unrecognised it stays quiet, because a warning that
+cries wolf stops being read.
+
+**And the rest of the queue is visible** as thumbnails underneath, each captioned with who uploaded
+it and which map. Clicking one moves to it. Being able to see that the next eight are one person's
+screenshots rather than eight unrelated uploads changes how you read the one in front of you.
+
+
 ## 0.53.0 - 2026-09-10
 
 ### Moderators can see the pictures they are meant to review

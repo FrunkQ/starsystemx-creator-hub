@@ -37,11 +37,39 @@ export const load: PageServerLoad = async ({ platform, locals }) => {
     usesBy.get(u.sha256)!.push(u);
   }
 
-  return {
-    cards: queue.map((q) => ({
+  // ============================================================================================
+  // WHO UPLOADED IT (owner, 2026-09-10: *"Images review page need user details on it so we know WHO
+  // is doing it."*).
+  //
+  // It is not on the asset - an asset is BYTES, and the same bytes can arrive on four maps from
+  // four people, which is the whole reason the ledger keys on the hash. So the person is reached
+  // through the maps that use it, and a card can honestly name more than one.
+  //
+  // ONE BATCHED READ. A card is one query for the queue, one for the claims, one for the uses and
+  // one for the people - not one per card, which at sixty cards is sixty round trips inside a 10ms
+  // budget (D-53).
+  // ============================================================================================
+  const creatorIds = [...new Set((uses ?? [])
+    .map((u: any) => u.systems?.creator_id).filter(Boolean))] as string[];
+  const { data: people } = creatorIds.length
+    ? await sb.from('creators').select('id, handle, display_name, role, state').in('id', creatorIds)
+    : { data: [] as any[] };
+  const personBy = new Map((people ?? []).map((p: any) => [p.id, p]));
+
+  const cards = queue.map((q) => {
+    const mine = usesBy.get(q.sha256 as string) ?? [];
+    return {
       ...q,
       claims: claimsBy.get(q.sha256 as string) ?? [],
-      uses: usesBy.get(q.sha256 as string) ?? []
-    }))
-  };
+      uses: mine.map((u: any) => ({
+        ...u,
+        // The uploader, beside the map, because "who" and "where" are one question on this page.
+        uploader: personBy.get(u.systems?.creator_id) ?? null
+      })),
+      /** The path inside the bundle - which is the closest thing an asset has to a filename. */
+      filename: (mine[0]?.bundle_path as string | undefined) ?? null
+    };
+  });
+
+  return { cards };
 };
