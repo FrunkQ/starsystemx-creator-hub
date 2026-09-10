@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.53.0 - 2026-09-10
+
+### Moderators can see the pictures they are meant to review
+
+The one route that serves an unreviewed image asked for an admin. So the role created to review
+pictures could open the review queue and see nothing in it - every card a broken image.
+
+The check predated the moderator role and was never revisited. A test now scans for the same shape
+of miss anywhere else.
+
+
 ## 0.52.1 - 2026-09-09
 
 A debug link made before the hub started keeping tokens now says "not kept" rather than showing an

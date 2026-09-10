@@ -4,7 +4,10 @@
 // unknown all mean "not served". This is the single, deliberate exception, and it exists because
 // two people legitimately need to see bytes before anyone else does:
 //
-//   AN ADMIN     - somebody has to look at the picture in order to review it.
+//   STAFF        - somebody has to look at the picture in order to review it. A MODERATOR as much
+//                  as an admin: judging pictures is the whole of what the role was created for
+//                  (D-39), and this line said `admin` for four days after it existed, so the one
+//                  person the queue was built for could not see a single image in it (D-75).
 //   THE CREATOR  - they need to see the screenshot they just added to their own map. This leaks
 //                  nothing: they uploaded those bytes, they already have them on disk.
 //
@@ -14,6 +17,7 @@ import type { RequestHandler } from './$types';
 import { error } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import * as r2 from '$lib/server/r2';
+import { isStaff } from '$lib/server/auth';
 
 const HEX64 = /^[0-9a-f]{64}$/;
 
@@ -32,7 +36,15 @@ export const GET: RequestHandler = async ({ params, platform, locals }) => {
 
   const sb = db(env);
 
-  if (viewer.role !== 'admin' && !(await ownsAssetUse(sb, viewer.id, hash))) {
+  // `isStaff`, not a hard-coded comparison against the admin role. That comparison predates the
+  // moderator role and silently excluded it - the same shape of miss as the explorers list's badge.
+  // The helper is a type predicate for exactly this reason: ONE place decides who staff are.
+  //
+  // The id is read BEFORE the check, deliberately. `isStaff` is a type predicate (`v is T`), so a
+  // negated call narrows `viewer` to `never` for the rest of the expression - and TypeScript tracks
+  // that through an intermediate boolean too. Taking the id first sidesteps the whole question.
+  const viewerId = viewer.id;
+  if (!isStaff(viewer) && !(await ownsAssetUse(sb, viewerId, hash))) {
     throw error(404, 'not found');
   }
 
