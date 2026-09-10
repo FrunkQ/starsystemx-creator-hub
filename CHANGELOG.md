@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.59.0 - 2026-09-11
+
+### Push a map into Debug from its own page
+
+When a map looks broken, an admin can copy its stored file straight into the debug store from the
+map page - the same place a one-shot link delivers to, reached from the other side. The copy is
+frozen, so a new upload from the creator will not change what you are looking at.
+
+Admin rather than moderator, because a debug upload is an unredacted campaign and the debug pages
+are admin only for that reason - a moderator who could put a map there could not then read it.
+
+
 ## 0.58.0 - 2026-09-11
 
 ### Screenshots are a slideshow, and a stuck account can be unstuck

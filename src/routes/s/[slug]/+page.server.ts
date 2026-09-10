@@ -8,7 +8,8 @@ import { loadSite } from '$lib/server/site';
 import { loadGates } from '$lib/server/config';
 import { mayContribute } from '$lib/server/auth';
 import { removalRole, commentNotice } from '$lib/comments';
-import { isStaff } from '$lib/server/auth';
+import { isStaff, isAdmin } from '$lib/server/auth';
+import * as debugUploads from '$lib/server/debugUploads';
 import * as audit from '$lib/server/audit';
 import { tolerantWrite } from '$lib/server/tolerant';
 import { isBadge } from '$lib/badges';
@@ -175,6 +176,10 @@ export const load: PageServerLoad = async ({ params, platform, setHeaders, url, 
     // map page they have the controls there to withdraw"). Walking to /admin to act on the thing
     // in front of you is how a moderator ends up not acting on it.
     isStaff: isStaff(locals.viewer),
+    // Pushing a map into the debug store is ADMIN only (D-81): a debug upload is an unredacted
+    // campaign, and /admin/debug is admin only for that reason - a moderator who could put a map
+    // there could not then read it.
+    isAdmin: isAdmin(locals.viewer),
     mayComment: mayContribute(locals.viewer),
     notice,
     signedIn: !!locals.viewer,
@@ -228,6 +233,36 @@ export const actions: Actions = {
 
     await audit.record(sb, locals.viewer!.id, 'system.hold', 'system:' + system.id, note);
     return { holdMessage: 'On hold. The download stays open and now carries your note.' };
+  },
+
+  /**
+   * PUSH THIS MAP INTO DEBUG (D-81). The owner: *"Be able to push from 'main site' into Debug if
+   * there is a problem with it."*
+   *
+   * ADMIN, NOT STAFF, and it is the one control on this panel that is. A debug upload is an
+   * unredacted campaign - GM notes, hidden systems, secrets intact - and `/admin/debug` is admin
+   * only for exactly that reason (D-39: running the place). A moderator who could put a map there
+   * could not then read it, which would be a strange power to hand out; and the material is the
+   * most sensitive the hub holds.
+   */
+  toDebug: async ({ request, platform, locals, params }) => {
+    const env = platform?.env;
+    if (!env || !isAdmin(locals.viewer)) throw error(404, 'Not found');
+    const sb = db(env);
+
+    const { data: system } = await sb.from('systems')
+      .select('id, slug, title').eq('slug', params.slug).maybeSingle();
+    if (!system) throw error(404, 'Not found');
+
+    const note = String((await request.formData()).get('note') ?? '').trim().slice(0, 1000);
+    const result = await debugUploads.pushMapToDebug(
+      env, sb, system.id as string, system.slug as string,
+      note || 'Pushed from the map page for diagnosis.'
+    );
+    if (!result.ok) return fail(500, { holdMessage: result.message });
+
+    await audit.record(sb, locals.viewer!.id, 'debug.push', 'system:' + system.id, note || undefined);
+    return { holdMessage: 'Copied into the debug store. It is on /admin/debug and goes on the usual retention clock.' };
   },
 
   /** Off hold. The note goes with it - it described a problem that is no longer being claimed. */

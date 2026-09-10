@@ -78,6 +78,7 @@ const LABELS: Record<string, { verb: string; group: ActionGroup }> = {
   'discord.test-share': { verb: 'posted a test to Discord', group: 'Running the place' },
   'debug.invite.create': { verb: 'made a debug upload link', group: 'Running the place' },
   'debug.upload.delete': { verb: 'deleted a debug upload', group: 'Running the place' },
+  'debug.push': { verb: 'copied a map into the debug store', group: 'Running the place' },
   // Other people's doing, recorded here because it changes an account
   'identity.link': { verb: 'linked an account', group: 'Other' },
   'device.approve': { verb: 'approved a device', group: 'Other' },

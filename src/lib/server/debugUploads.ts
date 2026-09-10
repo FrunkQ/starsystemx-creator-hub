@@ -6,6 +6,7 @@
 import type { Db } from './database.types';
 import { sha256Hex } from '$lib/bundle/hash';
 import type { HubEnv } from './db';
+import * as r2 from './r2';
 
 const enc = new TextEncoder();
 
@@ -88,4 +89,51 @@ export async function acceptUpload(
   // to try it, and one write does both so the two can never disagree.
   await sb.from('debug_invites')
     .update({ used_at: new Date().toISOString(), token: null }).eq('id', invite.id);
+}
+
+/**
+ * Push a PUBLISHED map into the debug store for diagnosis (D-81).
+ *
+ * ============================================================================================
+ * The owner: *"Be able to push from 'main site' into Debug if there is a problem with it."*
+ *
+ * It is the same destination as a one-shot link, reached from the other side. A link is for a file
+ * the hub does not have; this is for one it already stores and somebody has just found fault with -
+ * usually a map that has been put on hold (D-79), where the next question is "what is actually
+ * wrong with it" and the file is right there.
+ *
+ * NO INVITE ROW. `invite_id` is nullable and stays null: nothing was sent to anybody and no link
+ * was spent, so inventing an invite to satisfy a foreign key would put a fiction in the record of
+ * how a file arrived. A null there means exactly what it should - this one came from inside.
+ *
+ * THE BYTES ARE COPIED, NOT REFERENCED. The debug store's whole promise is that what a diagnostician
+ * looks at is what arrived, and it is deleted on its own schedule (30 days). Pointing at the live
+ * bundle instead would mean the evidence changed the moment the creator uploaded a new version -
+ * which is precisely when somebody is most likely to be looking at it.
+ * ============================================================================================
+ */
+export async function pushMapToDebug(
+  env: HubEnv, sb: Db, systemId: string, slug: string, note: string
+): Promise<{ ok: true; id: string } | { ok: false; message: string }> {
+  const stored = await r2.getBundle(env, systemId);
+  if (!stored) return { ok: false, message: 'The stored file for that map is missing.' };
+
+  const bytes = new Uint8Array(await stored.arrayBuffer());
+  const id = crypto.randomUUID();
+
+  await env.HUB_BUNDLES.put(debugKey(id), bytes as unknown as ArrayBuffer, {
+    httpMetadata: { contentType: 'application/octet-stream' }
+  });
+
+  const { error } = await sb.from('debug_uploads').insert({
+    id,
+    invite_id: null,
+    filename: slug + '.sse.zip',
+    byte_size: bytes.length,
+    user_note: note.slice(0, 1000) || null,
+    storage_key: debugKey(id)
+  });
+  if (error) return { ok: false, message: 'could not record it: ' + error.message };
+
+  return { ok: true, id };
 }

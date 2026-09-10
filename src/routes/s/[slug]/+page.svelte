@@ -510,6 +510,23 @@
           unwelcome - taking it down is <a href="/admin/explorers">elsewhere</a>, and different.
         </p>
       {/if}
+
+      {#if data.isAdmin}
+        <!-- ADMIN ONLY (D-81). A debug upload is an unredacted campaign - GM notes and hidden
+             systems intact - and /admin/debug is admin only for that reason. -->
+        <form method="POST" action="?/toDebug" class="hold-form to-debug">
+          <label>
+            Copy it into Debug to look inside
+            <input name="note" maxlength="1000" placeholder="What to look for (optional)" />
+          </label>
+          <button type="submit">Push to Debug</button>
+        </form>
+        <p class="muted small">
+          Takes a copy of the stored file into <a href="/admin/debug">the debug store</a>, on the
+          usual retention clock. The copy is frozen - a new upload from the creator will not change
+          what you are looking at.
+        </p>
+      {/if}
     </div>
   {/if}
   {#if reportOpen}
@@ -659,4 +676,5 @@
     background: var(--panel-2); border: 1px solid var(--edge); border-radius: 8px; cursor: pointer;
   }
   .count { color: var(--ink-faint); font-size: 0.82rem; margin: 6px 0 0; text-align: right; }
+  .to-debug { margin-top: 14px; border-top: 1px solid var(--edge); padding-top: 12px; }
 </style>
