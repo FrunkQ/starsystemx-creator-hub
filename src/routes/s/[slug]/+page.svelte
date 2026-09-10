@@ -123,6 +123,15 @@
       : []).find((r) => r?.id === 'custom-calendars');
     return { names, caveat: calendarCaveat(names, rule?.count ?? names.length) };
   });
+  // WHICH SCREENSHOT IS ON SCREEN. Wraps at both ends, because a gallery that stops at the last
+  // picture makes somebody click back through six to see the second one again.
+  let shotIndex = $state(0);
+  const shown = $derived(data.screenshots[Math.min(shotIndex, data.screenshots.length - 1)] ?? null);
+  const step = (by: number) => {
+    const n = data.screenshots.length;
+    if (n > 1) shotIndex = ((shotIndex + by) % n + n) % n;
+  };
+
   const holdNote = $derived(((s as { hold_note?: string | null }).hold_note ?? '').trim() || null);
   const credits = $derived((Array.isArray(s.content_credits) ? s.content_credits : []) as Credit[]);
   // The original of each credit, and the maps it passed through on the way here.
@@ -263,14 +272,45 @@
         {/if}
       {/if}
 
+      <!-- ============================================================================================
+           ONE PICTURE AT A TIME (owner, 2026-09-11: "we don't wanna list EVERY image under the full
+           view - too much space. Take a leaf out of Steam and just slideshow them").
+
+           The cover stays first and stays the one on the cards - what changed is that six
+           screenshots no longer make the page six screens long. Everything is still HERE and still
+           reachable, which is why this is a slideshow and not a "click to see more" that hides
+           things behind a request.
+
+           IT WORKS WITHOUT JAVASCRIPT, more or less: the current image is a plain img and the
+           thumbnails are buttons, so with scripts off a reader sees the first picture and its
+           caption rather than nothing. A gallery that shows nothing when a script fails to load is
+           a gallery that shows nothing to the people most likely to be on a bad connection.
+           ============================================================================================ -->
       {#if data.screenshots.length}
-        <div class="shots">
-          {#each data.screenshots as shot (shot.sha256)}
-            <figure>
-              <img src="/asset/{shot.sha256}" alt={shot.caption ?? 'Screenshot of ' + s.title} loading="lazy" />
-              {#if shot.caption}<figcaption>{shot.caption}</figcaption>{/if}
+        <div class="gallery">
+          {#key shown.sha256}
+            <figure class="shot">
+              <img src="/asset/{shown.sha256}"
+                   alt={shown.caption ?? 'Screenshot of ' + s.title} loading="lazy" />
+              {#if shown.caption}<figcaption>{shown.caption}</figcaption>{/if}
             </figure>
-          {/each}
+          {/key}
+
+          {#if data.screenshots.length > 1}
+            <div class="reel">
+              <button class="step" onclick={() => step(-1)} aria-label="Previous picture">&lsaquo;</button>
+              <div class="thumbs">
+                {#each data.screenshots as shot, i (shot.sha256)}
+                  <button class="pick" class:on={i === shotIndex} onclick={() => (shotIndex = i)}
+                          aria-label="Picture {i + 1} of {data.screenshots.length}">
+                    <img src="/asset/{shot.sha256}" alt="" loading="lazy" />
+                  </button>
+                {/each}
+              </div>
+              <button class="step" onclick={() => step(1)} aria-label="Next picture">&rsaquo;</button>
+            </div>
+            <p class="count">{shotIndex + 1} of {data.screenshots.length}</p>
+          {/if}
         </div>
       {/if}
     </aside>
@@ -528,7 +568,6 @@
   .visual .cover { margin: 0 0 12px; }
   .cover-link { display: block; }
   .cover-link:hover .cover { border-color: var(--accent); }
-  .visual .shots { margin: 0; }
   .by .badges { display: inline-flex; gap: 4px; vertical-align: middle; margin: 0 4px; }
   .star {
     display: inline-flex; align-items: center; gap: 8px; font: inherit; font-size: 0.92rem;
@@ -556,10 +595,6 @@
     border: 1px solid var(--edge); margin: 22px 0; display: block;
   }
   h2 { margin: 32px 0 8px; font-size: 1.2rem; }
-  .shots { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); margin: 22px 0; }
-  .shots figure { margin: 0; }
-  .shots img { width: 100%; border-radius: var(--radius); border: 1px solid var(--edge); display: block; }
-  .shots figcaption { color: var(--ink-faint); font-size: 0.85rem; margin-top: 6px; }
   .muted { color: var(--ink-dim); margin: 0 0 12px; }
   .facts { display: flex; flex-wrap: wrap; gap: 8px 22px; margin: 0 0 10px; color: var(--ink-dim); }
   .facts b { color: var(--ink); font-variant-numeric: tabular-nums; }
@@ -606,4 +641,22 @@
   }
   .staff .ok { color: var(--accent); }
   .staff .small { font-size: 0.85rem; margin-top: 8px; }
+  /* The gallery: one big picture, a strip of the rest, and the count. */
+  .gallery { margin: 0; }
+  .shot { margin: 0; }
+  .shot img { width: 100%; border-radius: var(--radius); border: 1px solid var(--edge); display: block; }
+  .shot figcaption { color: var(--ink-faint); font-size: 0.85rem; margin-top: 6px; }
+  .reel { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
+  .thumbs { display: flex; gap: 6px; overflow-x: auto; flex: 1; padding-bottom: 2px; }
+  .pick {
+    padding: 0; border: 1px solid var(--edge); border-radius: 6px; overflow: hidden;
+    background: var(--panel-2); cursor: pointer; flex: 0 0 auto;
+  }
+  .pick.on { border-color: var(--accent); }
+  .pick img { width: 64px; height: 40px; object-fit: cover; display: block; }
+  .step {
+    flex: 0 0 auto; padding: 6px 10px; font-size: 1.1rem; line-height: 1;
+    background: var(--panel-2); border: 1px solid var(--edge); border-radius: 8px; cursor: pointer;
+  }
+  .count { color: var(--ink-faint); font-size: 0.82rem; margin: 6px 0 0; text-align: right; }
 </style>

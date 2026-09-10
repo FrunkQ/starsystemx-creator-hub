@@ -143,6 +143,32 @@
     {/if}
   </form>
 
+  <!-- A PENDING ACCOUNT (D-80). Only shown when there is one, because a panel about confirmation
+       on every explorer's page is a panel nobody reads. -->
+  {#if p.state === 'pending'}
+    <div class="panel notice">
+      <h2>Waiting on their email</h2>
+      <p class="muted">
+        They joined but have not clicked the confirmation link, so they can look around and download
+        but not share, star or comment. They can send themselves another from their own account page.
+      </p>
+      <div class="tries">
+        <form method="POST" action="?/pending">
+          <input type="hidden" name="what" value="resend" />
+          <button type="submit">Send the confirmation again</button>
+        </form>
+        <form method="POST" action="?/pending">
+          <input type="hidden" name="what" value="confirm" />
+          <button class="primary" type="submit">Confirm it for them</button>
+        </form>
+      </div>
+      <p class="muted small">
+        Confirming for them is a decision, not a shortcut - it says you are satisfied they own that
+        address on some other evidence. It is recorded against your name.
+      </p>
+    </div>
+  {/if}
+
   <!-- TRUST (D-78). A MODERATOR'S to give, unlike the role above, because it can be undone
        completely: untrusting takes effect on the next upload, and every picture that went out on
        trust is still in the queue and still one click from being withdrawn. -->
@@ -210,4 +236,6 @@
     background: var(--warn); color: var(--accent-ink); border: 0;
   }
   .role.mod { background: var(--accent); }
+  .tries { display: flex; flex-wrap: wrap; gap: 10px; margin: 10px 0 0; }
+  .small { font-size: 0.85rem; }
 </style>

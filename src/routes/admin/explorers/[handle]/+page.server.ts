@@ -4,6 +4,8 @@ import { db } from '$lib/server/db';
 import type { Db } from '$lib/server/database.types';
 import type { CreatorState, CreatorRole } from '$lib/server/database.types';
 import { loadGates } from '$lib/server/config';
+import { loadSite } from '$lib/server/site';
+import { linkClient } from '$lib/server/db';
 import * as accounts from '$lib/server/accounts';
 import * as audit from '$lib/server/audit';
 import { isBadge } from '$lib/badges';
@@ -93,7 +95,9 @@ async function ownerOnly(platform: App.Platform | undefined, locals: App.Locals)
 }
 
 async function personByHandle(sb: Db, handle: string) {
-  const { data } = await sb.from('creators').select('id, handle, role').eq('handle', handle).maybeSingle();
+  // The state comes too: the pending actions (D-80) refuse on an account that is not waiting, and
+  // a guard that cannot see the state is a guard that trusts the form instead.
+  const { data } = await sb.from('creators').select('id, handle, role, state').eq('handle', handle).maybeSingle();
   if (!data) throw error(404, 'Not found');
   return data;
 }
@@ -143,6 +147,69 @@ export const actions: Actions = {
         ? 'Trusted. Their pictures go out on arrival and still appear in the review queue.'
         : 'No longer trusted. Their next upload waits for review like anybody else.'
     };
+  },
+
+  /**
+   * A PENDING ACCOUNT, DEALT WITH (D-80). The owner: *"Users on 'pending - email not confirmed' I
+   * need some additional controls. To make them active (sends a mail) to send a new pending e-mail
+   * (need to offer the user that capability to send again in case junked)."*
+   *
+   * The user's own "send me another" already exists on their account page (D-67) - it was built
+   * with the pending state, for exactly the junked-mail case. This is the other half: the admin
+   * side, for when somebody writes in because the mail is not arriving at all.
+   *
+   * TWO DIFFERENT ACTS, and the difference is the whole reason they are separate buttons:
+   *
+   *   resend   ask Supabase to send the confirmation again. Nothing changes; they still confirm.
+   *   confirm  DECIDE that the address is good, without them clicking anything.
+   *
+   * The second is a real decision, not a shortcut for the first. It says the hub is satisfied the
+   * person owns that address on some other evidence - they replied from it, you know them - and it
+   * is recorded as the admin's doing, because if the address turns out to be wrong the answer to
+   * "who decided that" has to exist.
+   */
+  pending: async ({ request, platform, locals, params, url }) => {
+    const { sb, me, env } = await staff(platform, locals);
+    const person = await personByHandle(sb, params.handle);
+    const what = String((await request.formData()).get('what') ?? '');
+
+    if (person.state !== 'pending') {
+      return fail(400, { message: 'That account is not waiting on a confirmation.' });
+    }
+
+    if (what === 'resend') {
+      const { data: user } = await sb.auth.admin.getUserById(person.id);
+      const to = user?.user?.email;
+      if (!to) return fail(500, { message: 'No address on that account.' });
+      const site = await loadSite(sb, url);
+      const { error: e } = await linkClient(env).auth.resend({
+        type: 'signup', email: to, options: { emailRedirectTo: site.url + '/login?joined=1' }
+      });
+      if (e) {
+        return fail(429, {
+          message: /rate|too many|seconds/i.test(e.message)
+            ? 'Supabase sent one very recently. Give it a minute.'
+            : 'That did not send: ' + e.message
+        });
+      }
+      await audit.record(sb, me.id, 'creator.resend-confirm', 'creator:' + person.id);
+      // The ADDRESS IS NOT ECHOED BACK. It is on the list for an admin who needs it; a confirmation
+      // message that prints it is a message that prints it into somebody else's screenshot.
+      return { done: 'Sent again. It goes to the address they signed up with.' };
+    }
+
+    if (what === 'confirm') {
+      // Supabase's own record is updated too, or the two disagree about whether the address is
+      // confirmed - and the next sign-in would read Supabase's answer, not the hub's.
+      await sb.auth.admin.updateUserById(person.id, { email_confirm: true }).catch(() => undefined);
+      const { error: e } = await sb.from('creators').update({ state: 'active' }).eq('id', person.id);
+      if (e) return fail(500, { message: e.message });
+      await audit.record(sb, me.id, 'creator.confirm', 'creator:' + person.id,
+        'confirmed by an admin without the link being clicked');
+      return { done: 'Active. They can share, star and comment now.' };
+    }
+
+    return fail(400, { message: 'Nothing to do.' });
   },
 
   /** Suspend, ban, reinstate - with the reason the person will read. */

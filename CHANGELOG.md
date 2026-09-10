@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.58.0 - 2026-09-11
+
+### Screenshots are a slideshow, and a stuck account can be unstuck
+
+A map with six screenshots no longer makes its page six screens long. One picture at a time with a
+strip of thumbnails underneath, the cover still first and still the one on the cards. Nothing is
+hidden - it is a slideshow, not a "click to see more".
+
+And an explorer waiting on a confirmation email now has controls on their admin page: send it again,
+or confirm the address for them. Those are different acts and they are different buttons - the
+second is a decision that you are satisfied they own that address, and it is recorded against your
+name. They can already send themselves another from their own account page.
+
+
 ## 0.57.0 - 2026-09-11
 
 ### Trusted explorers, and maps that can be put on hold

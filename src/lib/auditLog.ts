@@ -41,6 +41,10 @@ const LABELS: Record<string, { verb: string; group: ActionGroup }> = {
   // Trust (D-78) is Accounts, not Moderation: it is about a person, not about a picture.
   'creator.trust': { verb: 'trusted an explorer - their pictures now go out on arrival', group: 'Accounts' },
   'creator.untrust': { verb: 'stopped trusting an explorer', group: 'Accounts' },
+  'creator.resend-confirm': { verb: 'sent a confirmation email again', group: 'Accounts' },
+  // Recorded because it is a DECISION, not a convenience: if the address turns out to be wrong,
+  // the answer to "who decided that" has to exist (D-80).
+  'creator.confirm': { verb: 'confirmed an email address for somebody', group: 'Accounts' },
   // Holding a map (D-79) IS a judgement about content, so it sits with the rest of moderation.
   'system.hold': { verb: 'put a map on hold', group: 'Moderation' },
   'system.unhold': { verb: 'took a map off hold', group: 'Moderation' },
