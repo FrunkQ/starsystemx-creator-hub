@@ -602,7 +602,21 @@ export async function writeNodeRows(
   })), (rows) => Promise.resolve(sb.from('constructs').insert(rows as Partial<ConstructRow>[])));
 }
 
+/**
+ * The map's address. A NEW map gets one from its title, suffixed until free (`my-starmap-2`).
+ *
+ * AN EXISTING MAP KEEPS THE ONE IT HAS (D-84), whatever its title now says. D-25 recorded that
+ * slugs never change, and three things lean on it: every link already shared (a Discord post, a
+ * bookmark, the QR code printed on a designed cover), the `origin/hub` url the engine stamps into
+ * OTHER people's files when they paste from this map, and "Used in", which finds those maps by slug.
+ * This recomputed the slug on every re-upload instead, so renaming a map in the app and uploading
+ * it again moved it - breaking all three - and freed the old address for the next stranger's map
+ * with that name, where the old links and credits would then have landed.
+ */
 async function uniqueSlug(sb: Db, title: string, systemId: string): Promise<string> {
+  const { data: mine } = await sb.from('systems').select('slug').eq('id', systemId).maybeSingle();
+  if (mine?.slug) return mine.slug;
+
   const base = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'system';
   for (let i = 0; i < 20; i++) {
     const slug = i === 0 ? base : base + '-' + (i + 1);

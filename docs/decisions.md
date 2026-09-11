@@ -2264,6 +2264,38 @@ anywhere else in `src`.
 **An entry already pushed keeps its wrong name** — the row was written before this. Delete it and
 push the map again, or rename the downloaded file to `.json`; the bytes are exactly right.
 
+### D-84. A re-upload keeps the map's address
+
+The owner, 2026-09-11: *"what happens if 2 starmaps of the same name happen?"*
+
+**That part was already right.** The second gets `/s/my-starmap-2`, the next `-3`, and past twenty a
+slug ending in eight characters of the map's id. The column is `unique` in 0001, so two maps can
+never share an address whatever the code does. Identical titles are allowed and are told apart on
+the cards by who made them.
+
+**Answering it turned up what was not.** D-25 recorded that *"slugs never change"*, and three things
+lean on that: every link already shared (a Discord post, a bookmark, the QR code printed on a
+designed cover), the `origin/hub` url the engine stamps into OTHER people's files when they paste
+from a map, and "Used in", which finds those maps by slug. But `uniqueSlug` ran on every upload,
+**updates included**, from whatever the title now said. Rename a map in the app, upload it again, and
+it moved — breaking all three — while its old address became free for the next stranger's map with
+that name, which is where the old links, the QR code and the credits would then have led.
+
+Renaming on the hub's manage page never did this; it edits the title only. The re-upload was the one
+path, and its own comment said *"the stable URL is the `systems` row which is not touched"* two lines
+above the line that touched it.
+
+**The fix is the rule D-25 already stated:** an existing map keeps the slug it has. A creator who
+uploads under the app's default name and renames later keeps the default-looking address — the
+price of links that do not rot. A scan of the nine public maps on 2026-09-11 found one whose address
+differs from its title: `local-neighbourhood`, titled "Local Neighbourhood (Default)". Its title was
+most likely edited on the manage page; either way, before this fix its next re-upload would have
+moved it to `local-neighbourhood-default`.
+
+**Not fixed, because it is rare and harmless:** two maps with the same title uploaded in the same
+instant can both find `my-starmap` free, and the second then fails on the unique column. Uploading
+again works.
+
 ### D-16. The takedown address is assembled at runtime, never served as text
 
 The owner's instruction was explicit: keep it off the page as scrapable text. It is stored as
