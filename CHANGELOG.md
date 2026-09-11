@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.61.2 - 2026-09-11
+
+### The app's map list finds your tags and says who made each map
+
+The list Star System Explorer reads now matches a tag whether the hub worked it out from the file or
+the map's creator chose it - the same as Browse. And each map in it names its creator, so the app can
+put a name on the card.
+
+
 ## 0.61.1 - 2026-09-11
 
 ### Maps that need a fix go to the back

@@ -2509,6 +2509,30 @@ and "life" would have put broken maps one click from the top of the page this is
 reading, with a line saying which kind of trouble it is and a link to the fix - the same place the
 fan-work pill goes, for the same reason.
 
+### D-90. The app's map list finds a person's tags, and names who made each map
+
+The engine stream's seam report on R-20, relayed by the owner on 2026-09-11: *"tag= filters
+auto_tags, not tags, so a hand-added `default` is invisible to it today. The list sends no creator,
+so the card shows none."* It had built the in-app list against 0.59.2 and verified it in a browser.
+
+**`tag=` matched the derived pills only.** `/api/maps` filtered `auto_tags` while `/browse` - which the
+route's own header says it mirrors - matches `auto_tags` OR the creator's `tags`. So a tag a person
+put on a map could never be found through the API. It now uses the same clause as /browse.
+
+**Which made validation load-bearing.** The old filter passed the tags as an array parameter; the
+new one writes them into a PostgREST `or` string, where a comma or a bracket is syntax. A tag must now
+be lowercase letters, digits and hyphens, or it is dropped - the rule /browse already applied.
+
+**`creator: { name, url }`** on each map: the display name the map's own page shows, or the handle,
+read in one query for the page. `url` is null because the hub has no public profile page yet; the
+field is shaped for the day it does. The raw `creator_id` is removed from the object rather than left
+beside it - it is the database's, not the contract's.
+
+**What is NOT decided: who may put `default` on a map.** Whatever carries it is the first thing a new
+GM sees in the app. A tag in the ordinary vocabulary would let any cartographer put their own map on
+that screen - the "app content versus somebody's content" line the hub drew in its R-20 note. The
+filter will find `default` the moment a map has it; who can give it is the owner's call.
+
 ### D-16. The takedown address is assembled at runtime, never served as text
 
 The owner's instruction was explicit: keep it off the page as scrapable text. It is stored as

@@ -33,7 +33,7 @@ Cached for 60 seconds at the edge.
 | `limit` | 1–50 | 30 | **pass 10** for a panel |
 | `page` | 1–50 | 1 | 1-based; `page=2` with `limit=10` is items 11–20 |
 | `kind` | `starmap` \| `system` | both | see the note on `openUrl` |
-| `tag` | repeatable, up to 8 | — | matches the hub's derived pills |
+| `tag` | repeatable, up to 8 | — | matches the hub's derived pills **or** the creator's own tags; every tag given must match; lowercase letters, digits and hyphens only |
 | `q` | text | — | title contains |
 
 `sort=detailed` orders by how much of a map is *written about* — the 0–5 "information" figure below.
@@ -84,8 +84,17 @@ interface HubMap {
   auto_tags: string[];       // derived from the file itself
   tags: string[];            // what the cartographer says it is
   updated_at: string;        // ISO 8601
+
+  creator: { name: string; url: string | null } | null;
+                             // the name the hub shows on the map's page; url is null until the hub
+                             // has public profile pages, and will be absolute when it does
 }
 ```
+
+**Maps that need a fix come last**, in every sort, and carry `needs-a-fix` in `auto_tags` (hub D-88,
+D-89). That pill means the hub read something wrong in the file - often something that stops the app
+opening it. A panel that only wants maps that will open can leave those out; one that shows them
+should say so.
 
 **`coverUrl` is the thumbnail.** It is the picture the hub draws or the creator chose — 1200×630,
 and safe to scale down hard; the card designs on the hub use it at about 240px wide.
@@ -133,6 +142,17 @@ A reasonable first step, if you want one: publish the defaults as ordinary hub m
 account, and have the panel filter on a tag. That gets the list, the covers and the download path
 for free, and keeps "app content" and "somebody's content" distinguishable. **Not doing that unless
 the owner says so** — it is his call, not the hub's.
+
+---
+
+## Answering the seam report (hub 0.61.2, 2026-09-11)
+
+- **`tag=` now matches the creator's own tags too**, the same clause /browse uses. A hand-added tag is
+  found; `tag=real-astronomy&kind=starmap` returns Local Neighbourhood.
+- **`creator` is on every map** - `{ name, url }`, `url` null for now.
+- **`default` is not settled.** The tag filter will find it the moment a map carries it, but who may
+  put it on a map is the owner's decision and has not been made. Until it is, treat `tag=default`
+  as "whatever the hub returns", as the engine already does.
 
 ---
 
