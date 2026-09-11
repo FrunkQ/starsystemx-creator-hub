@@ -53,10 +53,12 @@ export interface AdminCounts {
   takedowns: number | null;
   debug: number | null;
   tags: number | null;
+  /** Public maps the hub found problems in that no staff member has noted yet (D-88). */
+  issues: number | null;
 }
 
 export const EMPTY_COUNTS: AdminCounts =
-  { review: null, reports: null, debug: null, tags: null, takedowns: null };
+  { review: null, reports: null, debug: null, tags: null, takedowns: null, issues: null };
 
 /**
  * The areas, in the order they are worth looking at within their group.
@@ -73,6 +75,9 @@ export const ADMIN_AREAS: AdminArea[] = [
   // moderation rather than in Discord: "a moderator page to see incoming requests and whether the
   // info was removed or the request ignored" (D-69).
   { href: '/admin/takedowns', label: 'Takedowns', group: 'Moderation', tier: 'moderator', count: 'takedowns', countNoun: 'takedown claims still open' },
+  // Maps the hub READ something wrong in, rather than something a person reported (D-88). Beside
+  // reports because the owner put it there: "A new issues tab near reports/takedowns/comments".
+  { href: '/admin/issues', label: 'Issues', group: 'Moderation', tier: 'moderator', count: 'issues', countNoun: 'public maps with problems nobody has noted' },
   { href: '/admin/comments', label: 'Comments', group: 'Moderation', tier: 'moderator' },
   { href: '/admin/explorers', label: 'Explorers', group: 'Moderation', tier: 'moderator' },
 
@@ -123,7 +128,10 @@ export function badgeFor(area: AdminArea, counts: AdminCounts): number | null {
  * Only the real queues count - tags and pictures waiting, and reports still open.
  */
 export function outstanding(counts: AdminCounts): number {
-  return (counts.review ?? 0) + (counts.reports ?? 0) + (counts.tags ?? 0) + (counts.takedowns ?? 0);
+  // Issues count because they can reach zero: "Noted" takes a map out of the number without waiting
+  // for its creator to fix it (D-88). A count that only a stranger could clear would be debug's.
+  return (counts.review ?? 0) + (counts.reports ?? 0) + (counts.tags ?? 0) + (counts.takedowns ?? 0)
+    + (counts.issues ?? 0);
 }
 
 /** Badges over this are shown as "99+": the exact number stops mattering long before then. */

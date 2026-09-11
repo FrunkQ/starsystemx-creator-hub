@@ -17,6 +17,7 @@ import { nodesWithSystem } from './attribution';
 import { applyFacetRules, type FacetResult, type FacetRule } from './facetRules';
 import { isAppAsset, type ShippedManifest } from './shipped';
 import { displayRole } from './roles';
+import { PROBLEM_TAG } from './problems';
 
 export interface Facets {
   systemCount: number;
@@ -129,8 +130,12 @@ const SIGNAL_TESTS: [string, (key: string) => boolean][] = [
  * Kept deliberately small: a wall of thirty pills is as useless as none. Each one has to answer
  * "would somebody choose a map because of this?"
  */
-export function deriveTags(f: Facets, opts: { hasGmContent: boolean }): string[] {
+export function deriveTags(f: Facets, opts: { hasGmContent: boolean; needsFix?: boolean }): string[] {
   const tags: string[] = [];
+
+  // FIRST, when the hub found something wrong with the file (D-88): the one pill that changes
+  // whether a download will work at all, so it must never be the one a card's limit cuts off.
+  if (opts.needsFix) tags.push(PROBLEM_TAG);
 
   // What SHAPE of thing is it - the first question anyone asks.
   if (f.systemCount > 1) {

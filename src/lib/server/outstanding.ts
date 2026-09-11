@@ -20,7 +20,7 @@ import type { AdminCounts } from '$lib/adminNav';
 import { EMPTY_COUNTS } from '$lib/adminNav';
 
 export async function outstandingCounts(sb: Db): Promise<AdminCounts> {
-  const [review, reports, debug, tags, takedowns] = await Promise.all([
+  const [review, reports, debug, tags, takedowns, issues] = await Promise.all([
     // The review queue: exactly `ledger.queue`'s predicate, so the badge and the page agree.
     count(sb, 'assets', (q) => q.eq('review_state', 'novel')),
     count(sb, 'reports', (q) => q.eq('state', 'open')),
@@ -30,9 +30,12 @@ export async function outstandingCounts(sb: Db): Promise<AdminCounts> {
     count(sb, 'tag_proposals', (q) => q.eq('state', 'pending')),
     // Takedown claims nobody has answered (D-69). Resolving one moves it out of `open`; the row
     // itself is kept forever, so this counts the QUEUE and never the archive.
-    count(sb, 'takedowns', (q) => q.eq('state', 'open'))
+    count(sb, 'takedowns', (q) => q.eq('state', 'open')),
+    // Public maps with problems nobody has noted (D-88). Before 0040 the columns are missing, the
+    // count fails, and the badge is absent - null, never a zero that looks like good news.
+    count(sb, 'systems', (q) => q.eq('state', 'public').not('problems', 'is', null).is('problems_noted_at', null))
   ]);
-  return { review, reports, debug, tags, takedowns };
+  return { review, reports, debug, tags, takedowns, issues };
 }
 
 /**

@@ -213,10 +213,32 @@
       <p>{result.withheldCount} images are waiting to be looked at, and are not shared yet.</p>
     {/if}
   </div>
+  <!-- WHAT THE HUB FOUND WRONG WITH THE FILE (D-88) - said the moment it is found, with the fix,
+       while the creator still has Star System Explorer open. -->
+  {#if result.ok && result.problems?.length}
+    <div class="panel notice bad problems">
+      <h3>The hub found {result.problems.length === 1 ? 'a problem' : result.problems.length + ' problems'} in this file</h3>
+      {#each result.problems as p (p.code)}
+        <div class="problem">
+          <p><strong>{p.title}.</strong> {p.detail}</p>
+          <p class="fix"><span class="lbl">How to fix it:</span> {p.fix}</p>
+        </div>
+      {/each}
+      <p>
+        <strong>We advise fixing {result.problems.length === 1 ? 'it' : 'them'} before you publish.</strong>
+        Your upload is saved as a draft; <a href="/upload?replaces={result.systemId}">upload the fixed file as a new version</a>
+        and this clears by itself.
+      </p>
+    </div>
+  {/if}
 {/if}
 
 <style>
   h1 { margin: 0 0 6px; }
+  .problem { margin: 0 0 10px; }
+  .problem p { margin: 0 0 4px; }
+  .problem .fix { color: var(--ink-dim); }
+  .problem .lbl { color: var(--ink-faint); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; }
   .lede { color: var(--ink-dim); margin: 0 0 20px; max-width: 60ch; }
   label { display: block; margin: 12px 0; color: var(--ink-dim); }
   /* The drop zone: the file input is still the control - it is just given a body worth aiming at. */

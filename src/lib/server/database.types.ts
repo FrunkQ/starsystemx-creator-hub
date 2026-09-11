@@ -136,6 +136,11 @@ export type SystemRow = {
   hold_note?: string | null;
   held_at?: string | null;
   held_by?: string | null;
+  // 0040: what the hub found wrong with the file when it last read it (bundle/problems.ts, D-88),
+  // and whether staff have seen it. Null problems = none; rewritten on every upload and re-index.
+  problems?: unknown;
+  problems_noted_at?: string | null;
+  problems_noted_by?: string | null;
   // 0023: how much of the map is written about (bundle/density.ts): the raw 0..1 score, and the
   // detail behind it {total, described, avgLength}. Null until measured.
   info_density: number | null;

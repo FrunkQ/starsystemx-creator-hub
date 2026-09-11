@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.61.0 - 2026-09-11
+
+### Maps that need a fix say so, and say how
+
+When the hub reads a map and finds something wrong with the file - something that stops Star System
+Explorer opening it, or leaves part of it broken - it now says so plainly, with steps to fix it.
+
+- **On upload** you are told straight away, while you still have the app open.
+- **On your manage page** each problem is listed with how to fix it. Publishing is still possible, but
+  we advise against it until it is fixed, and the button asks you to confirm.
+- **On the map's page and card** a `needs-a-fix` pill appears, with the same help, so anyone about to
+  download it knows first.
+- **For moderators and admins**, a new Issues tab lists every public map with problems, and they get
+  an email when one is published or found.
+
+Upload a fixed version and it all clears by itself.
+
+Needs migration 0040 to keep what it finds; until then maps are checked on upload but nothing is stored.
+
+
 ## 0.60.0 - 2026-09-11
 
 ### Re-index one map from its page, and a Config button that shows its work

@@ -47,6 +47,8 @@ const LABELS: Record<string, { verb: string; group: ActionGroup }> = {
   'creator.confirm': { verb: 'confirmed an email address for somebody', group: 'Accounts' },
   // Holding a map (D-79) IS a judgement about content, so it sits with the rest of moderation.
   'system.hold': { verb: 'put a map on hold', group: 'Moderation' },
+  // Staff saw what the hub found wrong with a public map (D-88). Not a fix - only the creator can do that.
+  'system.issues-noted': { verb: 'noted the problems the hub found in a map', group: 'Moderation' },
   'system.unhold': { verb: 'took a map off hold', group: 'Moderation' },
   // Takedowns (D-69). Moderation, so "only what a moderator can do" on /admin/log includes them -
   // which is the filter an admin uses to read what was decided on their behalf.

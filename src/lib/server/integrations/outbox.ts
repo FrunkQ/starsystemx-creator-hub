@@ -19,7 +19,9 @@ export type OutboxKind =
   // somebody else's service, inside a request that is about to return a page.
   | 'mail.takedown'
   | 'mail.queue'
-  | 'mail.comments';
+  | 'mail.comments'
+  // A public map the hub found problems in (D-88), to the staff.
+  | 'mail.issue';
 
 export interface Intent {
   kind: OutboxKind;

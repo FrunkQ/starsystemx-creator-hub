@@ -22,6 +22,7 @@
   import { customCalendars, calendarCaveat } from '$lib/bundle/overrides';
   import { enhance } from '$app/forms';
   import { invalidateAll } from '$app/navigation';
+  import { PROBLEM_TAG } from '$lib/bundle/problems';
   let { data, form } = $props();
 
   const s = $derived(data.system);
@@ -265,6 +266,31 @@
         {/if}
       </p>
 
+  <!-- WHAT THE HUB FOUND WRONG WITH THE FILE (D-88), beside the download like a hold: a map that
+       will not open should say so before somebody fetches it, not after. The fix is written for its
+       creator, and harmless for anybody else to read - a GM with a copy can apply it too. -->
+  {#if data.problems.length}
+    <div class="panel notice problems" class:bad={data.problems.some((p) => p.severity === 'refuses')} id="problems">
+      <h3>
+        <span class="tag warn">{PROBLEM_TAG}</span>
+        {data.problems.some((p) => p.severity === 'refuses')
+          ? 'Star System Explorer may not open this map'
+          : 'This map opens, but part of it is wrong'}
+      </h3>
+      {#each data.problems as p (p.code)}
+        <div class="problem">
+          <p><strong>{p.title}.</strong> {p.detail}</p>
+          <p class="fix"><span class="lbl">How to fix it:</span> {p.fix}</p>
+        </div>
+      {/each}
+      {#if data.isOwner}
+        <p><a href="/manage/{s.id}">Manage this map</a> - upload the fixed file as a new version and this goes away by itself.</p>
+      {:else}
+        <p class="muted">Its creator has been shown the same advice. It clears itself when a fixed version is uploaded.</p>
+      {/if}
+    </div>
+  {/if}
+
       <!-- ON HOLD (D-79). ABOVE the download and not instead of it: the owner's whole point is that the
        file stays fetchable, because a file nobody can fetch is a file nobody can diagnose - and the
        person best placed to say what is wrong with it is the person trying to use it. -->
@@ -451,7 +477,11 @@
   {#if findMore.length}
     <div class="find-more">
       <span class="lbl">Find more maps with:</span>
-      {#each findMore as t (t.tag)}<a class="tag" class:mine={t.mine} href="/browse?tag={t.tag}">{t.tag}</a>{/each}
+      {#each findMore as t (t.tag)}
+        <!-- The problem pill points at the help, not at a list of other broken maps. -->
+        {#if t.tag === PROBLEM_TAG}<a class="tag warn" href="#problems">{t.tag}</a>
+        {:else}<a class="tag" class:mine={t.mine} href="/browse?tag={t.tag}">{t.tag}</a>{/if}
+      {/each}
     </div>
   {/if}
 
@@ -524,7 +554,7 @@
        this is the same power, closer, because a moderator who has to walk somewhere else to act on
        what they are looking at usually does not. -->
   {#if data.isStaff}
-    <div class="panel staff">
+    <div class="panel staff" id="moderator">
       <h3>Moderator</h3>
       {#if form?.holdMessage}<p class="ok">{form.holdMessage}</p>{/if}
       {#if holdNote}
@@ -732,4 +762,14 @@
   .reindex .small { display: block; margin-top: 6px; }
   .reindex p { margin: 8px 0 0; }
   .staff .bad-text { color: var(--bad); }
+  /* WHAT IS WRONG WITH THE FILE (D-88). Amber for a map that opens with faults, the notice's red
+     edge for one that will not open; the pill says which kind of help this is. */
+  .problems { border-left-color: var(--warn); }
+  .problems.bad { border-left-color: var(--bad); }
+  .problems h3 { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .problem { margin: 0 0 10px; }
+  .problem p { margin: 0 0 4px; }
+  .problem .fix { color: var(--ink-dim); }
+  .problem .lbl { color: var(--ink-faint); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  .tag.warn { border-color: var(--warn); color: var(--warn); }
 </style>

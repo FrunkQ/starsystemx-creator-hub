@@ -81,6 +81,28 @@ export async function adminAddresses(sb: Db, gates: Gates): Promise<string[]> {
   }
 }
 
+/**
+ * EVERYBODY ON THE STAFF: the admin addresses above, and every active moderator's own sign-in
+ * address (D-88). For notices a moderator can act on - a public map the hub found problems in -
+ * where writing only to the admins would make the moderators the last to hear about their own work.
+ *
+ * Never throws; if the moderators cannot be looked up, the admins still hear.
+ */
+export async function staffAddresses(sb: Db, gates: Gates): Promise<string[]> {
+  const out = new Set(await adminAddresses(sb, gates));
+  try {
+    const { data: mods } = await sb.from('creators').select('id').eq('role', 'moderator').eq('state', 'active');
+    for (const m of mods ?? []) {
+      const { data } = await sb.auth.admin.getUserById(m.id as string);
+      const email = data?.user?.email;
+      if (looksLikeEmail(email)) out.add(email);
+    }
+  } catch {
+    // The admins' addresses are already in.
+  }
+  return [...out];
+}
+
 /** A plausible address. Not validation - that is the mail server's job - just a refusal of nonsense. */
 export const looksLikeEmail = (v: unknown): v is string =>
   typeof v === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.trim()) && v.trim().length <= 254;

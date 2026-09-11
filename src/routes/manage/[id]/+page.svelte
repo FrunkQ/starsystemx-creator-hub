@@ -4,6 +4,7 @@
   import { coverCrop, shrinkTo } from '$lib/cover/image';
   import { SETTINGS, SETTING_MAX, fanWorkNotice } from '$lib/fanWork';
   import { LICENCES } from '$lib/licences';
+  import { PROBLEM_TAG } from '$lib/bundle/problems';
   import { COVER_W, COVER_H, renderCover } from '$lib/cover/generate';
   let { data, form } = $props();
 
@@ -356,6 +357,36 @@
   <div class="panel notice bad"><p>{form.message}</p></div>
 {/if}
 
+<!-- WHAT THE HUB FOUND WRONG WITH THE FILE (D-88), with what to do about it. The owner: "with
+     advice on the issue to help them resolve it themselves". The fix is always in Star System
+     Explorer and always ends in a new upload - which is also what clears this panel. -->
+{#if data.problems.length}
+  <div class="panel notice problems" class:bad={data.problems.some((p) => p.severity === 'refuses')} id="problems">
+    <h3>
+      <span class="tag warn">{PROBLEM_TAG}</span>
+      The hub found {data.problems.length === 1 ? 'a problem' : data.problems.length + ' problems'} in this file
+    </h3>
+    {#each data.problems as p (p.code)}
+      <div class="problem">
+        <p>
+          <span class="sev" class:refuses={p.severity === 'refuses'}>{p.severity === 'refuses' ? 'Will not open' : 'Opens with faults'}</span>
+          <strong>{p.title}.</strong> {p.detail}
+        </p>
+        <p class="fix"><span class="lbl">How to fix it:</span> {p.fix}</p>
+      </div>
+    {/each}
+    <p>
+      {#if s.state === 'public'}
+        It is public as it is, so the page shows a <em>needs a fix</em> notice and the hub's staff have
+        been told. <a href="/upload?replaces={s.id}">Upload the fixed file</a> and it clears by itself.
+      {:else}
+        <strong>We advise fixing this before you publish.</strong>
+        <a href="/upload?replaces={s.id}">Upload the fixed file as a new version</a> and this goes away by itself.
+      {/if}
+    </p>
+  </div>
+{/if}
+
 <!-- THE NOTICE SAYS THERE IS A PROBLEM; THE PANEL BELOW IS WHERE IT IS FIXED (D-55, D-59). -->
 {#if !data.mayPublish}
   <div class="panel notice">
@@ -668,6 +699,15 @@
 <form class="panel" method="POST" action="?/publish">
   <h2>{s.state === 'public' ? 'Published' : s.state === 'removed' ? 'Taken down' : 'Not published yet'}</h2>
   <input type="hidden" name="state" value={s.state === 'public' ? 'draft' : 'public'} />
+  <!-- ADVISED, NOT REFUSED (D-88): a map with problems can still be published, after one plain
+       question beside the button that does it. The server asks the same question if it is skipped. -->
+  {#if s.state !== 'public' && s.state !== 'removed' && data.problems.length}
+    <label class="anyway">
+      <input type="checkbox" name="anyway" />
+      Publish anyway - I know the hub found {data.problems.length === 1 ? 'a problem' : 'problems'} in this file
+      (<a href="#problems">see above</a>). Staff will be told.
+    </label>
+  {/if}
   <button class="primary" type="submit" disabled={s.state === 'removed' || (s.state !== 'public' && !data.mayPublish)}>
     {s.state === 'public' ? 'Take it down' : 'Publish'}
   </button>
@@ -762,6 +802,21 @@
   .bad { color: var(--bad); font-size: 0.85rem; margin: 8px 0 0; }
   .slide { display: block; margin: 10px 0 0; color: var(--ink-dim); font-size: 0.9rem; }
   .why { margin: 10px 0 0; color: var(--warn); font-size: 0.9rem; }
+  /* The hub's findings (D-88): amber for faults, the notice's red for a map that will not open. */
+  .problems { border-left-color: var(--warn); }
+  .problems.bad { border-left-color: var(--bad); }
+  .problems h3 { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .problem { margin: 0 0 10px; }
+  .problem p { margin: 0 0 4px; }
+  .problem .fix { color: var(--ink-dim); }
+  .problem .lbl { color: var(--ink-faint); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  .sev {
+    font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700;
+    border: 1px solid var(--warn); color: var(--warn); border-radius: 999px; padding: 0 6px; margin-right: 6px;
+  }
+  .sev.refuses { border-color: var(--bad); color: var(--bad); }
+  .tag.warn { border-color: var(--warn); color: var(--warn); }
+  .anyway { display: block; margin: 0 0 10px; color: var(--warn); font-size: 0.92rem; }
   .ok { color: var(--accent); }
   /* One picture, its fields beside it: you cannot credit a thing you cannot see. */
   .credit { display: grid; grid-template-columns: 140px minmax(0, 1fr); gap: 14px; margin: 14px 0 0; align-items: start;

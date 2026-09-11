@@ -18,9 +18,11 @@ describe('who can reach what', () => {
     // THE OWNER'S OWN LIST, pinned so it cannot drift by accident. It was five areas from D-39
     // ("Tag Review, Review, Comments, Explorers, Reports") and Takedowns joined it on 2026-09-07 at
     // his word: *"a moderator page to see incoming requests and whether the info was removed or the
-    // request ignored"* (D-69). Anything else appearing here should have to argue with this line.
+    // request ignored"* (D-69). Issues joined on 2026-09-11, also at his word: *"A new issues tab
+    // near reports/takedowns/comments"* (D-88). Anything else appearing here should have to argue
+    // with this line.
     expect(seen.map((a) => a.href)).toEqual([
-      '/admin/tags', '/admin/review', '/admin/reports', '/admin/takedowns',
+      '/admin/tags', '/admin/review', '/admin/reports', '/admin/takedowns', '/admin/issues',
       '/admin/comments', '/admin/explorers'
     ]);
     expect(seen.every((a) => a.group === 'Moderation')).toBe(true);
@@ -43,7 +45,7 @@ describe('who can reach what', () => {
 });
 
 describe('the number circles', () => {
-  const counts = { review: 3, reports: 1, debug: 12, tags: 2, takedowns: 0 };
+  const counts = { review: 3, reports: 1, debug: 12, tags: 2, takedowns: 0, issues: 0 };
 
   it('shows a count where there is one', () => {
     expect(badgeFor(ADMIN_AREAS.find((a) => a.href === '/admin/review')!, counts)).toBe(3);
@@ -70,13 +72,13 @@ describe('the number circles', () => {
 
 describe('the one number in the banner', () => {
   it('is the real queues added up', () => {
-    expect(outstanding({ review: 3, reports: 1, debug: 12, tags: 2, takedowns: 4 })).toBe(10);
+    expect(outstanding({ review: 3, reports: 1, debug: 12, tags: 2, takedowns: 4, issues: 0 })).toBe(10);
   });
 
   // Debug uploads are kept files, not a queue. A badge that never reaches zero teaches people to
   // stop reading badges, which costs the two that mean something.
   it('leaves the debug uploads out', () => {
-    expect(outstanding({ review: 0, reports: 0, debug: 40, tags: 0, takedowns: 0 })).toBe(0);
+    expect(outstanding({ review: 0, reports: 0, debug: 40, tags: 0, takedowns: 0, issues: 0 })).toBe(0);
   });
 
   it('is zero when nothing could be counted', () => {

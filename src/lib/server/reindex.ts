@@ -32,6 +32,8 @@ import { tolerantWrite } from './tolerant';
 import { rulePackOverridesOf } from '$lib/bundle/overrides';
 import { writeNodeRows } from './ingest';
 import { regenerateGeneratedCover } from './cover';
+import { findProblems } from '$lib/bundle/problems';
+import { problemColumns, problemsChanged, tellStaff } from './problems';
 
 export async function reindexSystem(
   env: HubEnv, sb: Db, systemId: string, site: Site, gates: Gates
@@ -49,7 +51,9 @@ export async function reindexSystem(
   // The engine's shipped-content manifest, cached (R-13, D-36). A re-index is how a map uploaded
   // against a stale baseline gets an accurate one - which is the whole point of keeping the bytes.
   const facets = computeFacets(doc, undefined, await shippedManifest(env, gates.sse_manifest_url));
-  const autoTags = deriveTags(facets, { hasGmContent: detectGmContent(doc).hasGmContent });
+  // Read again with the rest, so a map fixed by the READER - or found broken by it - says so (D-88).
+  const problems = findProblems(doc);
+  const autoTags = deriveTags(facets, { hasGmContent: detectGmContent(doc).hasGmContent, needsFix: problems.length > 0 });
   const density = informationDensity(doc);
 
   // Node images are keyed by bundle path; the link table remembers which hash sits at each.
@@ -89,9 +93,19 @@ export async function reindexSystem(
     // reader improves the hub re-indexes rather than asking anybody to upload their file again
     // (D-26). The stored bundle already holds them; nothing else has to happen.
     rule_overrides: rulePackOverridesOf(doc),
+    ...problemColumns(problems, system.problems),
     reindexed_at: new Date().toISOString()
   }, (row) => Promise.resolve(sb.from('systems').update(row as Partial<SystemRow>).eq('id', systemId)));
   if (error) return { ok: false, message: 'could not update the map: ' + error.message };
+
+  // A PUBLIC MAP THAT NEWLY HAS PROBLEMS gets the staff's attention, exactly as publishing one does
+  // (D-88). This is how a map that went up before the hub could see the fault - the one that started
+  // all this - comes to anybody's notice. Once per distinct set of findings.
+  if (system.state === 'public' && problems.length && problemsChanged(problems, system.problems)) {
+    const { data: creator } = await sb.from('creators').select('handle, display_name').eq('id', system.creator_id).maybeSingle();
+    await tellStaff(env, sb, gates, site.url, { id: system.id, slug: system.slug, title: system.title },
+      creator?.display_name ?? creator?.handle ?? null, problems);
+  }
 
   // The card was drawn from the old rows; draw it again from the new ones.
   await regenerateGeneratedCover(env, sb, systemId, site, gates);

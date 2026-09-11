@@ -16,6 +16,7 @@ import { isBadge } from '$lib/badges';
 import { densityFrom, densityLevel, densitySummary } from '$lib/bundle/density';
 import { bestDensity } from '$lib/server/density';
 import { openLink } from '$lib/openInSse';
+import { problemsFrom } from '$lib/bundle/problems';
 
 export const load: PageServerLoad = async ({ params, platform, setHeaders, url, locals }) => {
   const env = platform?.env;
@@ -180,6 +181,10 @@ export const load: PageServerLoad = async ({ params, platform, setHeaders, url, 
     // campaign, and /admin/debug is admin only for that reason - a moderator who could put a map
     // there could not then read it.
     isAdmin: isAdmin(locals.viewer),
+    // WHAT THE HUB FOUND WRONG WITH THE FILE (D-88), shown to everybody: a downloader deserves to
+    // know a map may not open before they try it, and the fix is harmless for anyone to read.
+    problems: problemsFrom((system as { problems?: unknown }).problems),
+    isOwner: !!locals.viewer && locals.viewer.id === system.creator_id,
     mayComment: mayContribute(locals.viewer),
     notice,
     signedIn: !!locals.viewer,

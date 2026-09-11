@@ -13,6 +13,7 @@
   import InfoDensity from '$lib/components/InfoDensity.svelte';
   import { densityLevel } from '$lib/bundle/density';
   import { FAN_WORK_BADGE } from '$lib/fanWork';
+  import { PROBLEM_TAG } from '$lib/bundle/problems';
   interface System {
     slug: string;
     title: string;
@@ -54,9 +55,13 @@
   // At most four pills on a card. The CREATOR'S tags come first - they are the ones that separate
   // one Solar System from the next - then the derived pills that change whether somebody clicks.
   const pills = $derived.by(() => {
+    // A MAP WITH PROBLEMS SAYS SO FIRST (D-88), ahead even of the creator's own tags: whether a
+    // download will open at all matters more than what is in it, and the four-pill limit must never
+    // be what hides it.
+    const broken = (system.auto_tags ?? []).includes(PROBLEM_TAG) ? [{ t: PROBLEM_TAG, mine: false }] : [];
     const mine = (system.tags ?? []).slice(0, 3).map((t) => ({ t, mine: true }));
     const auto = (system.auto_tags ?? []).filter((t) => PILLS.has(t)).map((t) => ({ t, mine: false }));
-    return [...mine, ...auto].slice(0, 4);
+    return [...broken, ...mine, ...auto].slice(0, 4);
   });
 </script>
 
@@ -95,7 +100,7 @@
          because a browser scrolling a grid should be able to see it without opening anything. -->
     {#if system.fan_setting}<p class="fan">{FAN_WORK_BADGE}: {system.fan_setting}</p>{/if}
     {#if pills.length}
-      <div class="pills">{#each pills as p (p.t)}<span class="tag" class:mine={p.mine}>{p.t}</span>{/each}</div>
+      <div class="pills">{#each pills as p (p.t)}<span class="tag" class:mine={p.mine} class:warn={p.t === PROBLEM_TAG}>{p.t}</span>{/each}</div>
     {/if}
     <div class="meta">
       <!-- Stars, with the symbol - a map of stars is starred, not hearted. -->
@@ -158,6 +163,7 @@
   .counts { color: var(--ink-faint); font-size: 0.85rem; margin-top: 6px; }
   .pills { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
   .tag.mine { border-color: var(--accent); }
+  .tag.warn { border-color: var(--warn); color: var(--warn); }
   .stars { display: inline-flex; align-items: center; gap: 4px; }
   .stars svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; }
 </style>

@@ -15,6 +15,8 @@ import {
   storeGeneratedCover, linkCover, factsFor, regenerateGeneratedCover, coverIsScreenshot, coverNodeFrom
 } from '$lib/server/cover';
 import { reindexSystem } from '$lib/server/reindex';
+import { problemsFrom } from '$lib/bundle/problems';
+import { tellStaff } from '$lib/server/problems';
 import { coverOptionsFrom } from '$lib/cover/generate';
 import { MAX_DECODE_BYTES } from '$lib/cover/image';
 import { tolerantWrite } from '$lib/server/tolerant';
@@ -134,6 +136,8 @@ export const load: PageServerLoad = async ({ params, platform, locals, url }) =>
       approved: approved.has(c.sha256)
     })),
     mayPublish: blocking.length === 0,
+    /** What the hub found wrong with the file, each with its fix (D-88). Advice, never a block. */
+    problems: problemsFrom((system as { problems?: unknown }).problems),
     coverOptions: coverOptionsFrom(system.cover_options),
     // Is the current cover one of the creator's screenshots, or a card the hub drew?
     coverIsScreenshot: !!system.cover_sha256 && shotHashes.includes(system.cover_sha256),
@@ -365,7 +369,9 @@ export const actions: Actions = {
     const gates = await loadGates(sb);
     const system = await ownedSystem(sb, params.id, locals.viewer.id);
 
-    const wantPublic = String((await request.formData()).get('state') ?? '') === 'public';
+    const form = await request.formData();
+    const wantPublic = String(form.get('state') ?? '') === 'public';
+    const problems = problemsFrom((system as { problems?: unknown }).problems);
 
     // Taken down by the hub (D-28): the creator keeps the page, not the switch.
     if (system.state === 'removed') {
@@ -385,6 +391,18 @@ export const actions: Actions = {
           message:
             blocked.length + ' ' + (blocked.length === 1 ? 'picture or model still needs' : 'pictures or models still need') +
             ' a source recorded before this can be shared.'
+        });
+      }
+
+      // ADVISED, NOT REFUSED (D-88). The owner: "advises not to publish until fixed". The credit gate
+      // above is a rule the hub keeps for other people's work; this is the creator's own file, and
+      // they may know something the hub does not. So the button asks once, plainly - and a map
+      // published anyway gets the staff's attention below.
+      if (problems.length && form.get('anyway') !== 'on') {
+        return fail(400, {
+          message: 'The hub found ' + (problems.length === 1 ? 'a problem' : problems.length + ' problems')
+            + ' in this file (listed at the top of this page). We advise fixing '
+            + (problems.length === 1 ? 'it' : 'them') + ' before you publish. If you want to publish anyway, tick the box by the button.'
         });
       }
     }
@@ -419,6 +437,12 @@ export const actions: Actions = {
           await queueShare(sb, locals.viewer.id, full.id,
             buildShare(full, creator?.display_name ?? creator?.handle ?? null, site.url, servable, event),
             gates.discord_share_enabled);
+          // PUBLISHED ANYWAY: the staff hear (D-88). "If published mods/admin get a note that a
+          // 'dodgy' map has been uploaded." Once per map per distinct set of findings.
+          if (problems.length) {
+            await tellStaff(env, sb, gates, site.url, { id: full.id, slug: full.slug, title: full.title },
+              creator?.display_name ?? creator?.handle ?? null, problems);
+          }
           platform?.context?.waitUntil(
             drainOutbox(env, sb, gates, site.name).catch((e) => console.warn('outbox drain failed', e))
           );

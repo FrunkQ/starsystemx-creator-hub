@@ -28,6 +28,8 @@ import { shippedManifest } from './shippedContent';
 import { informationDensity, type Density } from '$lib/bundle/density';
 import { stripGmContent } from '$lib/bundle/strip';
 import { checkFreshness } from '$lib/bundle/freshness';
+import { findProblems, type MapProblem } from '$lib/bundle/problems';
+import { problemColumns } from './problems';
 import { zipSync, strToU8 } from 'fflate';
 import { normalise, creditSlugs, type NormalisedNode } from '$lib/bundle/normalise';
 import { openBundle } from '$lib/bundle/open';
@@ -64,6 +66,8 @@ export type IngestResult =
       stripped: string[];
       /** Would re-saving in a current SSE give this map more to show? A suggestion, never a fault. */
       resave: { worthResaving: boolean; reasons: string[] };
+      /** What the hub found wrong with the file, with the fix for each (D-88). Empty when nothing. */
+      problems: MapProblem[];
     };
 
 interface PendingAsset {
@@ -323,7 +327,10 @@ export async function ingest(
   // own manifest, cached (R-13, D-36). Null when it has never been reachable, and the rules that
   // need it are then skipped rather than run against a guess.
   const facets = computeFacets(doc, undefined, await shippedManifest(env, gates.sse_manifest_url));
-  const autoTags = deriveTags(facets, { hasGmContent: gm.hasGmContent });
+  // WHAT IS WRONG WITH IT, if anything (D-88): read from the same document, so the advice on the
+  // upload page, the pill and the manage page all describe the file that was actually uploaded.
+  const problems = findProblems(doc);
+  const autoTags = deriveTags(facets, { hasGmContent: gm.hasGmContent, needsFix: problems.length > 0 });
   // How much of it is written about (D-30), measured from the same document.
   const density = informationDensity(doc);
   const systemId = opts.replacesSystemId ?? crypto.randomUUID();
@@ -340,8 +347,10 @@ export async function ingest(
   let coverHash = pickCover(doc, pending);
   let generatedCover = false;
   let coverOptions: CoverOptions | null = null;
+  let previousProblems: unknown = null;
   if (opts.replacesSystemId) {
     const { data: prev } = await sb.from('systems').select('*').eq('id', systemId).maybeSingle();
+    previousProblems = prev?.problems ?? null;
     if (prev?.cover_sha256) {
       const { data: chosen } = await sb.from('system_screenshots')
         .select('sha256').eq('system_id', systemId).eq('sha256', prev.cover_sha256).maybeSingle();
@@ -368,7 +377,9 @@ export async function ingest(
     fanSetting: cleanSetting(opts.fanSetting),
     // Read off the DOCUMENT, not off anything the uploader tells us separately - it is part of the
     // save. Absent on most maps and on every single-system save.
-    ruleOverrides: rulePackOverridesOf(doc)
+    ruleOverrides: rulePackOverridesOf(doc),
+    problems,
+    previousProblems
   });
 
   // The original zip is kept for provenance and re-packing, NEVER served raw - serving it would
@@ -391,7 +402,8 @@ export async function ingest(
       createdWith: madeWith.createdWith,
       legacyStamped: format.legacyStamped,
       recommendBelow: gates.recommend_resave_below_version
-    })
+    }),
+    problems
   };
 }
 
@@ -461,6 +473,9 @@ interface WriteArgs {
   attestation: { accepted: boolean; textVersion: number; textShown: string };
   fanSetting: string | null;
   ruleOverrides: unknown;
+  /** What the hub found wrong with the file (D-88), and what was stored before, for "noted". */
+  problems: MapProblem[];
+  previousProblems: unknown;
 }
 
 async function writeRows(sb: Db, a: WriteArgs): Promise<string> {
@@ -512,6 +527,9 @@ async function writeRows(sb: Db, a: WriteArgs): Promise<string> {
     // The GM's custom rules (0037, D-71). Stored whole so a clip can carry them and the browse page
     // can list them; a map that customises nothing stores null rather than an empty object.
     rule_overrides: a.ruleOverrides,
+    // What is wrong with the file, if anything (0040, D-88). Tolerant like the rest of the row: the
+    // columns arrive with the migration and the upload works in the meantime.
+    ...problemColumns(a.problems, a.previousProblems),
     // The derived rows are current as of now (0020); the page's one-shot re-index skips this map.
     reindexed_at: new Date().toISOString()
   }, (row) => Promise.resolve(sb.from('systems').upsert(row as Partial<SystemRow>)));

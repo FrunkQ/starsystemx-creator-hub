@@ -2427,6 +2427,60 @@ their confirmation out of sight. They are enhanced now and answer where they wer
 **A test pins who may call `reindexSystem`**: the one-map API, the creator's manage page, and the map
 page's background re-read of a stale page. A new caller has to be added to that list on purpose.
 
+### D-88. A map with problems: found in the file, explained to its creator, flagged to staff
+
+The owner, 2026-09-11, after D-86: *"Worth having a 'problematic' map status that triggers when it
+spots something like this - with advice on the issue to help them resolve it themselves."* Then,
+as it was being built: *"tags the map with a pill and help"*, *"advises not to publish until fixed.
+And if published mods/admin get a note that a 'dodgy' map has been uploaded"*, and *"A new issues
+tab near reports/takedowns/comments"*.
+
+**Found in the file, not judged.** `bundle/problems.ts` reads the document on every upload and
+re-index. Each finding says what was found, naming the systems and objects, and **how to fix it in
+Star System Explorer, in steps** - a flag that says "invalid" is one the creator can only forward.
+
+**Only what can be stood behind.** The structural checks mirror the engine's own `validateStarmap`
+field for field, so "will not open" is a fact about the app: a missing `id`, `name`, `distanceUnit`,
+`systems` or `routes`; a system entry with no id, no position, no inner system or no nodes list; two
+systems sharing an id (refused before 3.1.66, repaired on open since - A107). The rest are faults
+visible in the file itself: one id used twice inside a system, an object whose parent is not there,
+a loop of parents. **Deliberately not a problem:** the same object ids in two different systems - the
+engine allows that and the hub stores it (D-86). A strange map is not a broken one, and a warning
+that fires on good files is a warning nobody reads. Six real saves the app wrote came out clean.
+
+**The first run found something**, and it was right: the hub's own starmap contract fixture has a
+system entry with no `id` and no `position`. It was built to exercise the bundle layout, not to be
+opened, and the engine would refuse it. A test now says so.
+
+**A column of findings, not a state** (0040). `state` is permission and `hold_note` is a moderator's
+judgement; this is what the hub READ, rewritten from the bytes every time, so it clears itself when a
+fixed version is uploaded and nobody has to remember to take a flag down.
+
+**What the owner asked for, and where it went:**
+
+- **The pill.** `needs-a-fix` is an auto tag, first in the list so a card's four-pill limit can never
+  cut it, and on the map page it links to the help rather than to other broken maps. Public, on
+  purpose: a downloader deserves to know a map may not open before they fetch it.
+- **The help.** On the upload result, the creator's manage page and the map page, each problem with
+  its fix. The creator also gets a link to upload the fixed version.
+- **Advised, not refused.** Publishing a map with problems asks once - a "publish anyway" box beside
+  the button, re-asked by the server if skipped. The credit gate is a rule the hub keeps for other
+  people's work; this is the creator's own file, and they may know something the hub does not.
+- **The note to staff.** When a map with problems is published, or a public map is found to have
+  new ones on re-index, every admin address and every active moderator gets a mail naming the map,
+  the creator, each problem and the Issues tab. Once per map per distinct set of findings, through
+  the outbox's dedupe key.
+- **The Issues tab**, in Moderation beside Reports and Takedowns. Public maps with problems; drafts
+  are counted, not listed, because their creators have already been advised. **"Noted"** takes a map
+  out of the count without pretending it is fixed - a creator may never come back, and a badge that
+  cannot reach zero stops being read. Noting is cleared when the findings change.
+
+**Until 0040 is run** the checks still happen on upload and the pill still appears, but nothing is
+stored for the page, the manage page or the Issues tab, which says so.
+
+**One thing the advice depends on:** the fix for two systems sharing an id is "open it in Star
+System Explorer 3.1.66 or later". Until production reaches that version, it means the beta.
+
 ### D-16. The takedown address is assembled at runtime, never served as text
 
 The owner's instruction was explicit: keep it off the page as scrapable text. It is stored as
