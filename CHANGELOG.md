@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.59.3 - 2026-09-11
+
+### A map with two copies of one system keeps all its bodies
+
+A starmap holding two copies of the same system - both of Star System Explorer's bundled Sols, say -
+was published with every planet, moon and star missing, because the two copies share their object
+ids and the hub could not store both. The upload even said it had worked. The second copy's objects
+are now renamed on the way in, the way the app itself names a second copy, and copying from either
+Sol gives you that Sol. If the hub ever cannot store a map's objects again, the upload says so
+instead of pretending.
+
+Maps already damaged this way come right when re-indexed.
+
+
 ## 0.59.2 - 2026-09-11
 
 ### Multi-star covers, stable addresses, and a Debug file that says what it is

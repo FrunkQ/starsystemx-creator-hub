@@ -593,13 +593,19 @@ export async function writeNodeRows(
     distance: n.distance, map_x: n.map_x, map_y: n.map_y
   });
 
-  await tolerantWriteMany(shaped.bodies.map(nodeRow),
+  // A FAILED WRITE IS AN ERROR, NOT A TOLERANCE (D-86). `tolerantWriteMany` forgives a column the
+  // database does not have yet and RETURNS anything else - and both results were discarded here, so
+  // a unique-key clash lost every body of a 153-body map and the upload reported success. One insert
+  // carries the whole list, so one bad row empties the table: that is a failure to say out loud.
+  const { error: bodyError } = await tolerantWriteMany(shaped.bodies.map(nodeRow),
     (rows) => Promise.resolve(sb.from('bodies').insert(rows as Partial<NodeRow>[])));
-  await tolerantWriteMany(shaped.constructs.map((n) => ({
+  if (bodyError) throw new Error('could not save the bodies: ' + bodyError.message);
+  const { error: constructError } = await tolerantWriteMany(shaped.constructs.map((n) => ({
     ...nodeRow(n),
     // The claim was verified against the bytes on upload, so by here it is safe to record.
     model_sha256: n.model_hash_claim ?? null
   })), (rows) => Promise.resolve(sb.from('constructs').insert(rows as Partial<ConstructRow>[])));
+  if (constructError) throw new Error('could not save the constructs: ' + constructError.message);
 }
 
 /**

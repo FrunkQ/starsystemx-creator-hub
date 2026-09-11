@@ -57,7 +57,13 @@ export async function reindexSystem(
 
   await sb.from('bodies').delete().eq('system_id', systemId);
   await sb.from('constructs').delete().eq('system_id', systemId);
-  await writeNodeRows(sb, systemId, shaped, byPath);
+  try {
+    await writeNodeRows(sb, systemId, shaped, byPath);
+  } catch (e) {
+    // Said, not thrown: the manage page's button and the Config batch both report a message, and a
+    // re-index that could not store the rows must not go on to stamp the map as freshly read (D-86).
+    return { ok: false, message: (e as Error).message };
+  }
 
   const { error } = await tolerantWrite({
     // THE KIND IS RE-READ, not left as uploaded (D-48). Every plain `.json` upload before 0.28.0

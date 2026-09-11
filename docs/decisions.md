@@ -2339,6 +2339,53 @@ pressing Re-index on the config page until it reaches today refreshes every one;
 screenshot is never touched. `tests/cover.multistar.probe.test.ts` draws the real systems into
 `tests/out/` for a person to look at.
 
+### D-86. Two copies of one system on one map: renamed on the way in, and a failed write is a failure
+
+Reported from the engine side, 2026-09-11 (a note left in `docs/`): a public starmap showed its 19
+constructs and **no bodies at all**, while its counts listed 153. The owner chose the fix: *"Rename
+the second copy automatically is indeed the solution SSE just utilised."*
+
+**What happened.** The map carried both of the engine's bundled Sol examples, and those share every
+node id on purpose. The hub keeps all of a map's objects in one table, unique on `(map, node id)`, so
+the second Sol's rows clashed, the ONE insert carrying every body failed with them, and
+`writeNodeRows` threw the returned error away. The upload reported success.
+
+**Two faults, and both are fixed, because either alone would have done it:**
+
+1. **The ids.** `normalise` now gives every object an id of its own across the whole map. The first
+   copy keeps its ids; a later clash takes `-2`, `-3`... — the engine's own spelling for a duplicate
+   system (A107). It happens in `normalise` because upload, re-index and the cover all read through
+   it, so none of them can disagree.
+2. **The silence.** A failed node write now throws on upload and is reported by re-index, instead of
+   stamping the map as freshly read. `tolerantWriteMany` exists to forgive a column the database does
+   not have yet; it was never meant to forgive a row the database refused.
+
+**THIS IS A SHAPE TO STORE, NOT A MISTAKE THAT WILL STOP ARRIVING.** The engine's fix re-ids the
+duplicate SYSTEM and leaves the objects inside it alone, because node ids only need to be unique
+within a system for the engine. Every file with two copies of one system will carry this, fixed or
+not.
+
+**EVERY REFERENCE MOVES WITH THE ID, not only `parentId`.** The stored snippet is what Copy hands the
+engine, and the engine re-mints ids on paste by rewriting every exact-match string anywhere in the
+node (`remapRefsDeep`, io/hubClip.ts) — orbits, docking targets, autopilot legs. If the hub renamed
+the row but not the snippet, a clip's `root` would name an id no node carries and the engine would
+refuse it; if it renamed `parentId` alone, a station copied from the second Sol would paste docked to
+the first. So the same deep walk runs here, scoped to the one system whose references mean its own
+objects. Values only, never keys, and names are left alone. The document itself is not touched: the
+same object goes on to be credited and packed, and the rename is the hub's storage concern, not
+something to put into a file somebody takes away.
+
+**What it cannot do**, and the engine's note says the same about routes: nothing in the file says
+which copy a reference from OUTSIDE a system meant. And the suffix follows file order, so a creator
+who reorders their systems and re-uploads can swap which copy is `-2` — which only changes a deep
+link into the second copy, and only on the hub.
+
+**Verified against the real file** locally (not committed): 180 objects, every id unique, no object
+whose parent is missing. The tests were run against the old code first and seven of nine failed.
+
+**The damaged map heals on re-index**, which reads the stored file again: Config, Re-index, pressed
+until the oldest reading is today. Nobody has to upload anything.
+
 ### D-16. The takedown address is assembled at runtime, never served as text
 
 The owner's instruction was explicit: keep it off the page as scrapable text. It is stored as

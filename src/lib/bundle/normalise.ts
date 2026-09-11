@@ -272,20 +272,87 @@ function snippetFor(node: any): unknown {
   return copy;
 }
 
+// ============================================================================================
+// ONE ID PER OBJECT ACROSS THE WHOLE MAP (D-86).
+//
+// The hub keeps every system's objects in one table keyed on (map, node id). The engine only keeps
+// node ids unique WITHIN a system, so two copies of one bundled system carry identical ids -
+// `solar-system-earth` twice. Its own fix for that (A107, v3.1.66) re-ids the duplicate SYSTEM and
+// leaves the objects inside alone, because that is all the engine needs. So this is not an old
+// mistake that will stop arriving: it is a shape the hub has to be able to store.
+//
+// Before this, the second copy's rows hit the unique key, the whole batch insert failed with them,
+// the error was discarded, and a 153-body map went public with no bodies at all while its counts,
+// read from the file, still listed them.
+//
+// THE RULE IS THE ENGINE'S: the first keeps its id, a later clash takes `-2`, `-3`... And EVERY
+// exact-match string reference to a renamed id inside that system moves with it - the same deep
+// walk the engine's paste does (`remapRefsDeep`, io/hubClip.ts). Renaming only `parentId` would
+// leave the stored snippet's `orbit.hostId`, a docking target or an autopilot leg pointing at the
+// FIRST system's object, and a clip copied from the second would paste wired to the wrong Sol.
+// Scoped to the one system, because its references mean its own objects.
+// ============================================================================================
+
+/** The first free spelling of an id: itself, then `-2`, `-3`... */
+function freeId(id: string, isTaken: (candidate: string) => boolean): string {
+  if (!isTaken(id)) return id;
+  for (let n = 2; ; n++) {
+    const candidate = id + '-' + n;
+    if (!isTaken(candidate)) return candidate;
+  }
+}
+
+/** A copy with every string that IS a renamed id replaced, at any depth. Values only, never keys. */
+function remapIds(value: unknown, remap: Map<string, string>, depth = 0): unknown {
+  if (typeof value === 'string') return remap.get(value) ?? value;
+  if (!value || typeof value !== 'object' || depth > 12) return value;
+  if (Array.isArray(value)) return value.map((v) => remapIds(v, remap, depth + 1));
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(value)) out[k] = remapIds(v, remap, depth + 1);
+  return out;
+}
+
 export function normalise(doc: any): NormalisedBundle {
   const bodies: NormalisedNode[] = [];
   const constructs: NormalisedNode[] = [];
   const systemNames: string[] = [];
+  /** Every id already given to an object on this map. */
+  const taken = new Set<string>();
 
-  const push = (node: any, placement?: Placement) =>
-    (isConstruct(node) ? constructs : bodies).push(toNode(node, placement));
+  const push = (node: any, placement?: Placement) => {
+    const row = toNode(node, placement);
+    // THE LAST GUARD: the same id twice INSIDE one system, which the engine should never write. The
+    // later one gets an id of its own so the rows can be stored, and nothing else is rewritten -
+    // which of the two a reference meant cannot be known.
+    if (taken.has(row.node_id)) {
+      row.node_id = freeId(row.node_id, (s) => taken.has(s));
+      if (row.snippet && typeof row.snippet === 'object') (row.snippet as Record<string, unknown>).id = row.node_id;
+    }
+    taken.add(row.node_id);
+    (isConstruct(node) ? constructs : bodies).push(row);
+  };
 
-  if (Array.isArray(doc?.nodes)) for (const node of doc.nodes) push(node);
+  /** One system's objects, with any id an EARLIER system already holds renamed throughout this one. */
+  const pushSystem = (nodes: unknown, placement?: Placement) => {
+    if (!Array.isArray(nodes)) return;
+    const own = new Set(nodes.map((n) => String(n?.id ?? '')));
+    const remap = new Map<string, string>();
+    const reserved = new Set(own);
+    for (const id of own) {
+      if (!taken.has(id)) continue;
+      const to = freeId(id, (s) => taken.has(s) || reserved.has(s));
+      remap.set(id, to);
+      reserved.add(to);
+    }
+    for (const node of nodes) push(remap.size ? remapIds(node, remap) : node, placement);
+  };
+
+  pushSystem(doc?.nodes);
   const placed = placements(doc);
   for (const entry of doc?.systems ?? []) {
     const name = String(entry?.name ?? entry?.system?.name ?? '');
     if (name) systemNames.push(name);
-    for (const node of entry?.system?.nodes ?? []) push(node, placed.get(entry));
+    pushSystem(entry?.system?.nodes, placed.get(entry));
   }
 
   // THE CREATOR'S WRITE-UP, if the save carries one (docs/sse-integration-spec.md section 1).
