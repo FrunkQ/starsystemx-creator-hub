@@ -79,6 +79,9 @@ const LABELS: Record<string, { verb: string; group: ActionGroup }> = {
   // already in the log still have to read as something better than the fallback.
   'reindex.batch': { verb: 're-indexed the oldest maps from their stored files', group: 'Running the place' },
   'system.reindex': { verb: 're-read a map from its stored file', group: 'Running the place' },
+  // The app's starter list (D-91): what every new GM sees first, so it is the admin's and it is logged.
+  'system.starter-on': { verb: 'put a map on the app\'s starter list', group: 'Running the place' },
+  'system.starter-off': { verb: 'took a map off the app\'s starter list', group: 'Running the place' },
   'mail.test': { verb: 'sent themselves a test email', group: 'Running the place' },
   'discord.test-share': { verb: 'posted a test to Discord', group: 'Running the place' },
   'debug.invite.create': { verb: 'made a debug upload link', group: 'Running the place' },

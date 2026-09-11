@@ -16,6 +16,7 @@ import {
 } from '$lib/server/cover';
 import { reindexSystem } from '$lib/server/reindex';
 import { problemsFrom } from '$lib/bundle/problems';
+import { keepAdminTags } from '$lib/adminTags';
 import { tellStaff } from '$lib/server/problems';
 import { coverOptionsFrom } from '$lib/cover/generate';
 import { MAX_DECODE_BYTES } from '$lib/cover/image';
@@ -171,7 +172,8 @@ export const actions: Actions = {
 
     // Checkboxes from the curated list. Validated server-side against the vocabulary, because a
     // form field is whatever the client decided to send.
-    const tags = sanitiseTags(form.getAll('tags'), await loadVocabulary(sb));
+    // The boxes cannot add or remove an admin tag (D-91): whatever of those the map has, it keeps.
+    const tags = keepAdminTags(sanitiseTags(form.getAll('tags'), await loadVocabulary(sb)), before.tags);
 
     const { error: e } = await sb.from('systems').update({
       title,

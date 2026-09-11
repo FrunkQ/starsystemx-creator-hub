@@ -23,6 +23,7 @@
   import { enhance } from '$app/forms';
   import { invalidateAll } from '$app/navigation';
   import { PROBLEM_TAG } from '$lib/bundle/problems';
+  import { STARTER_TAG } from '$lib/adminTags';
   let { data, form } = $props();
 
   const s = $derived(data.system);
@@ -601,6 +602,19 @@
       </div>
 
       {#if data.isAdmin}
+        <!-- THE APP'S STARTER LIST (D-91), ADMIN ONLY and the only way on or off it. Saves on tick. -->
+        <form method="POST" action="?/starter" class="starter" use:enhance>
+          <label>
+            <input type="checkbox" name="on" checked={(s.tags ?? []).includes(STARTER_TAG)}
+                   onchange={(e) => e.currentTarget.form?.requestSubmit()} />
+            Starter map in Star System Explorer <code>{STARTER_TAG}</code>
+          </label>
+          <p class="muted small">
+            The app offers these in place of its shipped examples. Only an admin can set or clear it;
+            the creator's uploads and tag edits leave it as it is.
+          </p>
+        </form>
+
         <!-- ADMIN ONLY (D-81). A debug upload is an unredacted campaign - GM notes and hidden
              systems intact - and /admin/debug is admin only for that reason. -->
         <form method="POST" action="?/toDebug" class="hold-form to-debug" use:enhance>
@@ -769,6 +783,9 @@
   .count { color: var(--ink-faint); font-size: 0.82rem; margin: 6px 0 0; text-align: right; }
   .to-debug { margin-top: 14px; border-top: 1px solid var(--edge); padding-top: 12px; }
   .reindex { margin-top: 14px; border-top: 1px solid var(--edge); padding-top: 12px; }
+  .starter { margin-top: 14px; border-top: 1px solid var(--edge); padding-top: 12px; }
+  .starter label { display: flex; gap: 8px; align-items: center; cursor: pointer; }
+  .starter .small { margin: 6px 0 0; }
   .reindex .small { display: block; margin-top: 6px; }
   .reindex p { margin: 8px 0 0; }
   .staff .bad-text { color: var(--bad); }

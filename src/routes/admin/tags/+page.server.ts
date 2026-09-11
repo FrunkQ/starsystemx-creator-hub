@@ -5,6 +5,7 @@ import { isStaff } from '$lib/server/auth';
 import * as audit from '$lib/server/audit';
 import { loadVocabulary, pendingProposals } from '$lib/server/tags';
 import { similarTags, readable } from '$lib/tagProposals';
+import { isAdminTag } from '$lib/adminTags';
 
 // TAG REVIEW (D-40). The queue of words creators have asked for, each shown beside the tags that
 // already nearly mean it.
@@ -70,7 +71,8 @@ async function staff(platform: App.Platform | undefined, locals: App.Locals) {
  * Silent when the map has gone or already carries it - neither is a failure of the decision.
  */
 async function applyToMap(sb: ReturnType<typeof db>, systemId: string | null, tag: string) {
-  if (!systemId) return;
+  // Never an admin tag (D-91) - the one door for those is the admin's switch on the map's page.
+  if (!systemId || isAdminTag(tag)) return;
   const { data: map } = await sb.from('systems').select('id, tags').eq('id', systemId).maybeSingle();
   if (!map) return;
   const tags = Array.isArray(map.tags) ? (map.tags as string[]) : [];
@@ -85,6 +87,7 @@ export const actions: Actions = {
     const form = await request.formData();
     const tag = String(form.get('tag') ?? '');
     const group = String(form.get('group') ?? '');
+    if (isAdminTag(tag)) return fail(400, { message: '"' + tag + '" is set by the admin on a map\'s page, not by a tag decision.' });
 
     const { data: row } = await sb.from('tag_proposals').select('*').eq('tag', tag).eq('state', 'pending').maybeSingle();
     if (!row) return fail(404, { message: 'That one has already been decided.' });
@@ -109,6 +112,7 @@ export const actions: Actions = {
     const tag = String(form.get('tag') ?? '');
     const into = String(form.get('into') ?? '');
     if (!into) return fail(400, { message: 'Pick the tag to use instead.' });
+    if (isAdminTag(into)) return fail(400, { message: '"' + into + '" is set by the admin on a map\'s page, not by a tag decision.' });
 
     const { data: row } = await sb.from('tag_proposals').select('*').eq('tag', tag).eq('state', 'pending').maybeSingle();
     if (!row) return fail(404, { message: 'That one has already been decided.' });

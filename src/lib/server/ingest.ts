@@ -30,6 +30,7 @@ import { stripGmContent } from '$lib/bundle/strip';
 import { checkFreshness } from '$lib/bundle/freshness';
 import { findProblems, type MapProblem } from '$lib/bundle/problems';
 import { problemColumns } from './problems';
+import { keepAdminTags } from '$lib/adminTags';
 import { zipSync, strToU8 } from 'fflate';
 import { normalise, creditSlugs, type NormalisedNode } from '$lib/bundle/normalise';
 import { openBundle } from '$lib/bundle/open';
@@ -348,9 +349,11 @@ export async function ingest(
   let generatedCover = false;
   let coverOptions: CoverOptions | null = null;
   let previousProblems: unknown = null;
+  let previousTags: string[] = [];
   if (opts.replacesSystemId) {
     const { data: prev } = await sb.from('systems').select('*').eq('id', systemId).maybeSingle();
     previousProblems = prev?.problems ?? null;
+    previousTags = Array.isArray(prev?.tags) ? (prev.tags as string[]) : [];
     if (prev?.cover_sha256) {
       const { data: chosen } = await sb.from('system_screenshots')
         .select('sha256').eq('system_id', systemId).eq('sha256', prev.cover_sha256).maybeSingle();
@@ -379,7 +382,8 @@ export async function ingest(
     // save. Absent on most maps and on every single-system save.
     ruleOverrides: rulePackOverridesOf(doc),
     problems,
-    previousProblems
+    previousProblems,
+    previousTags
   });
 
   // The original zip is kept for provenance and re-packing, NEVER served raw - serving it would
@@ -476,6 +480,8 @@ interface WriteArgs {
   /** What the hub found wrong with the file (D-88), and what was stored before, for "noted". */
   problems: MapProblem[];
   previousProblems: unknown;
+  /** The map's tags before this upload, so an admin tag it carries survives it (D-91). */
+  previousTags: string[];
 }
 
 async function writeRows(sb: Db, a: WriteArgs): Promise<string> {
@@ -491,7 +497,9 @@ async function writeRows(sb: Db, a: WriteArgs): Promise<string> {
     title: shaped.title,
     summary: shaped.summary,
     description: shaped.description,
-    tags: shaped.tags,
+    // A FILE CANNOT PUT A MAP ON THE APP'S STARTER LIST (D-91), and a new version cannot take it off:
+    // an admin tag in the file's own tags is dropped, and one the map already carries is kept.
+    tags: keepAdminTags(shaped.tags, a.previousTags),
     kind,
     bundle_format: format,
     published_gm_tree: a.publishGmTree,

@@ -19,6 +19,8 @@
 // by the `creator_vocabulary` config row, so it can be changed without a deploy - which it will be,
 // once real maps show which categories people actually reach for.
 
+import { isAdminTag } from './adminTags';
+
 export interface VocabGroup {
   label: string;
   hint: string;
@@ -119,7 +121,9 @@ export const DEFAULT_VOCABULARY: VocabGroup[] = [
 
 /** Flat set, for validating what a creator submitted. */
 export function allowedTags(vocab: VocabGroup[] = DEFAULT_VOCABULARY): Set<string> {
-  return new Set(vocab.flatMap((g) => g.tags));
+  // NEVER AN ADMIN TAG (D-91), even if one reached the vocabulary by a config row or an old
+  // decision: the boxes on the manage page are not the admin's switch.
+  return new Set(vocab.flatMap((g) => g.tags).filter((t) => !isAdminTag(t)));
 }
 
 /**

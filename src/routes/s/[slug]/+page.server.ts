@@ -17,6 +17,7 @@ import { densityFrom, densityLevel, densitySummary } from '$lib/bundle/density';
 import { bestDensity } from '$lib/server/density';
 import { openLink } from '$lib/openInSse';
 import { problemsFrom } from '$lib/bundle/problems';
+import { withAdminTag, STARTER_TAG } from '$lib/adminTags';
 
 export const load: PageServerLoad = async ({ params, platform, setHeaders, url, locals }) => {
   const env = platform?.env;
@@ -268,6 +269,36 @@ export const actions: Actions = {
 
     await audit.record(sb, locals.viewer!.id, 'debug.push', 'system:' + system.id, note || undefined);
     return { holdMessage: 'Copied into the debug store. It is on /admin/debug and goes on the usual retention clock.' };
+  },
+
+  /**
+   * THE APP'S STARTER LIST (D-91). The owner: "only the admin may set the `default` tag. It marks the
+   * maps that replace Star System Explorer's shipped examples."
+   *
+   * THE ONLY DOOR for that tag. Uploads, the manage page and tag decisions all keep whatever this has
+   * set and add nothing (`$lib/adminTags`), so what this switch says is what the app gets. Admin, not
+   * staff: it decides what every new GM sees first.
+   */
+  starter: async ({ request, platform, locals, params }) => {
+    const env = platform?.env;
+    if (!env || !isAdmin(locals.viewer)) throw error(404, 'Not found');
+    const sb = db(env);
+
+    const on = (await request.formData()).get('on') === 'on';
+    const { data: system } = await sb.from('systems').select('id, tags').eq('slug', params.slug).maybeSingle();
+    if (!system) throw error(404, 'Not found');
+
+    const { error: e } = await sb.from('systems')
+      .update({ tags: withAdminTag(system.tags as string[] | null, STARTER_TAG, on) })
+      .eq('id', system.id);
+    if (e) return fail(500, { holdMessage: 'That did not save: ' + e.message });
+
+    await audit.record(sb, locals.viewer!.id, on ? 'system.starter-on' : 'system.starter-off', 'system:' + system.id);
+    return {
+      holdMessage: on
+        ? 'On the starter list: Star System Explorer offers it in place of its shipped examples.'
+        : 'Off the starter list.'
+    };
   },
 
   /** Off hold. The note goes with it - it described a problem that is no longer being claimed. */

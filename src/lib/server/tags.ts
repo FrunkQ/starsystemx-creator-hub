@@ -14,6 +14,7 @@
 import type { Db } from './database.types';
 import { DEFAULT_VOCABULARY, vocabularyFrom, type VocabGroup } from '$lib/vocabulary';
 import { toSlug } from '$lib/tagProposals';
+import { isAdminTag } from '$lib/adminTags';
 
 export interface Proposal {
   tag: string;
@@ -33,7 +34,10 @@ export async function loadVocabulary(sb: Db): Promise<VocabGroup[]> {
     sb.from('config').select('value').eq('key', 'creator_vocabulary').maybeSingle(),
     acceptedTags(sb)
   ]);
-  return mergeAccepted(vocabularyFrom(row?.value ?? null), accepted);
+  // WITHOUT THE ADMIN'S TAGS (D-91): this is the list a creator ticks from and Browse filters by, and
+  // a box that can never stick is worse than no box. The admin sets those from a map's own page.
+  return mergeAccepted(vocabularyFrom(row?.value ?? null), accepted)
+    .map((g) => ({ ...g, tags: g.tags.filter((t) => !isAdminTag(t)) }));
 }
 
 /** Accepted custom tags, as `[tag, group]`. Empty when the table is not there yet. */
@@ -91,6 +95,9 @@ export async function proposeTag(
 ): Promise<ProposeResult> {
   const tag = toSlug(input.text);
   if (!tag) return { kind: 'bad', message: 'That is not a tag. Two to thirty-two letters, and it cannot be all digits.' };
+  // REFUSED, not queued (D-91): a reviewer saying yes would put it on this map and in everybody's
+  // list, and neither is a reviewer's to give.
+  if (isAdminTag(tag)) return { kind: 'bad', message: '"' + tag + '" is set by the hub itself, not chosen - pick another word.' };
 
   const group = input.vocabulary.find((g) => g.label === input.group);
   if (!group) return { kind: 'bad', message: 'That group does not exist.' };

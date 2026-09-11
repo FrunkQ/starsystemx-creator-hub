@@ -2531,7 +2531,37 @@ beside it - it is the database's, not the contract's.
 **What is NOT decided: who may put `default` on a map.** Whatever carries it is the first thing a new
 GM sees in the app. A tag in the ordinary vocabulary would let any cartographer put their own map on
 that screen - the "app content versus somebody's content" line the hub drew in its R-20 note. The
-filter will find `default` the moment a map has it; who can give it is the owner's call.
+filter will find `default` the moment a map has it; who can give it is the owner's call. (Decided the
+same day: D-91.)
+
+### D-91. Only the admin puts a map on the app's starter list
+
+The owner, 2026-09-11: *"only the admin may set the `default` tag. It marks the maps that replace
+Star System Explorer's shipped examples, so it must be stripped or refused when anyone else puts it
+on a map (upload and edit alike) - tag= now matches cartographer tags, so this is the only thing
+keeping other maps off the app's starter list."*
+
+**One door in.** An admin-only switch in the Moderator panel on a map's page adds or removes
+`default`, on any map, and is audited. It is not in the tag vocabulary, so it is never a box a
+creator ticks or a filter Browse offers.
+
+**Every other door is guarded both ways** (`$lib/adminTags`, `keepAdminTags`): it strips an admin tag
+being ADDED and keeps one the map ALREADY HAS. The second half matters as much as the first - a
+creator re-uploading their map or ticking a different box must not quietly take it off the list the
+admin put it on. The doors, each pinned by a test:
+
+- **Upload**: the file's own tags (`meta.tags`) - checked against nothing else before this, so a file
+  could have carried `default` straight onto a map.
+- **The manage page's boxes**: `sanitiseTags` never allows an admin tag, even one that reached the
+  vocabulary by a config row or an old decision, and whatever the map had is kept.
+- **Tag proposals**: refused before anything is written - a reviewer saying yes would have put it in
+  everybody's list.
+- **Tag review**: accepting it, merging into it and applying it to the proposer's map are all refused.
+
+**Spotted on the way, not changed:** an upload's own tags are not checked against the vocabulary at
+all, so a file can carry any word - including ones that look like the hub's derived pills, such as
+`player-safe`, which /browse and `/api/maps` both match in `tags`. The vocabulary's own header says
+that is exactly what the list exists to prevent. Worth deciding separately; `default` is closed.
 
 ### D-16. The takedown address is assembled at runtime, never served as text
 
