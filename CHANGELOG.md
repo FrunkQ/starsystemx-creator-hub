@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.59.1 - 2026-09-11
+
+### Trust an explorer from the list
+
+The explorers list has a Trusted column. Ticking it saves straight away - their pictures go out on
+arrival, still appear in the review queue marked as pre-approved, and they get the roomier daily
+allowance. Your own row is shown but cannot be ticked.
+
+Fixed on the way: the Trust box on an explorer's own page always opened unticked, so saving that
+form to add a note would have untrusted a trusted explorer. It now opens showing what is true.
+
+
 ## 0.59.0 - 2026-09-11
 
 ### Push a map into Debug from its own page

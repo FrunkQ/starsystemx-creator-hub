@@ -39,6 +39,26 @@ export async function setCreatorState(
   await audit.record(sb, actorId, 'creator.' + state, 'creator:' + creatorId, note ?? undefined);
 }
 
+/**
+ * Trust, or stop trusting (D-78): their pictures are approved on arrival and still appear in the
+ * review queue, marked. One function because two pages offer it - the explorer's own page, and a
+ * checkbox on the list (D-82) - and the audit line has to read the same whichever was used.
+ *
+ * NEVER ON YOURSELF, checked here as well as by both callers: a moderator who can widen their own
+ * limits is a moderator with no limits, and a third caller should not have to remember that.
+ */
+export async function setTrusted(
+  sb: Db, actorId: string, creatorId: string, trusted: boolean, note: string | null
+): Promise<void> {
+  if (actorId === creatorId) throw new Error('Not yourself.');
+  const { data, error } = await sb.from('creators').update({ trusted }).eq('id', creatorId).select('id');
+  if (error) throw new Error('could not change trust: ' + error.message);
+  // An id that matches nobody updates nothing and says so by silence. Without this the audit log
+  // would record trusting somebody who does not exist.
+  if (!data?.length) throw new Error('No such explorer.');
+  await audit.record(sb, actorId, trusted ? 'creator.trust' : 'creator.untrust', 'creator:' + creatorId, note ?? undefined);
+}
+
 /** A map taken down by the hub: a 404 to everyone, the reason on its manage page, no republish. */
 export async function takeDownSystem(
   sb: Db, gates: Gates, actorId: string, system: { id: string; creator_id: string }, note: string | null

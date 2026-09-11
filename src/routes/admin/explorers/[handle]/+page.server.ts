@@ -48,7 +48,11 @@ export const load: PageServerLoad = async ({ platform, locals, params }) => {
     person: {
       id: person.id, handle: person.handle, display_name: person.display_name, role: person.role,
       state: person.state, state_note: person.state_note ?? null, account_tier: person.account_tier,
-      created_at: person.created_at
+      created_at: person.created_at,
+      // THE BOX HAS TO START WHERE THE DATABASE IS (D-82). This was missing, so the Trust checkbox
+      // below always opened unticked - and pressing Save to add a note to a trusted explorer
+      // quietly untrusted them. A form that shows a default instead of the truth rewrites the truth.
+      trusted: person.trusted === true
     },
     self: person.id === locals.viewer.id,
     // Only the owner sees the two irreversible controls: the role, and deletion (D-39).
@@ -130,18 +134,11 @@ export const actions: Actions = {
 
     const form = await request.formData();
     const trusted = form.get('trusted') === 'on';
-    const { error: e } = await sb.from('creators').update({ trusted }).eq('id', person.id);
-    if (e) {
-      // Before 0039 the column does not exist, and saying which is more use than "it failed".
-      return fail(500, {
-        message: /column/i.test(e.message)
-          ? 'Trust needs migration 0039, which has not been run yet.'
-          : e.message
-      });
+    try {
+      await accounts.setTrusted(sb, me.id, person.id, trusted, noteOf(form));
+    } catch (e) {
+      return fail(500, { message: (e as Error).message });
     }
-
-    await audit.record(sb, me.id, trusted ? 'creator.trust' : 'creator.untrust',
-      'creator:' + person.id, noteOf(form) ?? undefined);
     return {
       done: trusted
         ? 'Trusted. Their pictures go out on arrival and still appear in the review queue.'

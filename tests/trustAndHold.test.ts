@@ -4,7 +4,7 @@
 // change could quietly undo: the reordering that makes trust safe, and the fact that a held map
 // stays downloadable.
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, globSync } from 'node:fs';
 import { describeAction, isModeratorAction } from '../src/lib/auditLog';
 
 const sql = readFileSync('db/migrations/0039_trusted_and_hold.sql', 'utf8');
@@ -28,6 +28,30 @@ describe('trust is a reordering, not a bypass (D-78)', () => {
   it('the roomier allowance is a config row, as asked', () => {
     const config = readFileSync('src/lib/server/config.ts', 'utf8');
     expect(config).toContain('trusted_uploads_per_user_per_day');
+  });
+
+  it('the explorer page loads the flag its checkbox shows (D-82)', () => {
+    // THE FAULT THIS PINS: the load never returned `trusted`, so the box always opened unticked and
+    // pressing Save to add a note to a trusted explorer quietly untrusted them. A form that shows a
+    // default instead of the truth rewrites the truth the moment somebody submits it.
+    const page = readFileSync('src/routes/admin/explorers/[handle]/+page.server.ts', 'utf8');
+    expect(page).toMatch(/trusted: person\.trusted/);
+    // And the list, which has its own box now.
+    const list = readFileSync('src/routes/admin/explorers/+page.server.ts', 'utf8');
+    expect(list).toMatch(/select\('[^']*\btrusted\b/);
+  });
+
+  it('is set in one place, whichever page it is set from (D-82)', () => {
+    // Two pages offer it. If either wrote the column itself, the audit line and the not-on-yourself
+    // rule would each be one page's to remember.
+    const writers = globSync('src/routes/**/*.ts')
+      .filter((f) => /update\(\{\s*trusted\b/.test(readFileSync(f, 'utf8')));
+    expect(writers).toEqual([]);
+    for (const f of ['src/routes/admin/explorers/+page.server.ts', 'src/routes/admin/explorers/[handle]/+page.server.ts']) {
+      expect(readFileSync(f, 'utf8'), f).toContain('accounts.setTrusted(');
+    }
+    const accounts = readFileSync('src/lib/server/accounts.ts', 'utf8');
+    expect(accounts).toMatch(/actorId === creatorId\) throw/);
   });
 
   it('a flagged upload is never auto-approved', () => {

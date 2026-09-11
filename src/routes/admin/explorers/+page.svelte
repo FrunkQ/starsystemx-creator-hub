@@ -1,5 +1,30 @@
 <script lang="ts">
+  import { enhance } from '$app/forms';
+  import type { SubmitFunction } from '@sveltejs/kit';
   let { data } = $props();
+
+  /** The row being saved, so its box cannot be flicked twice before the first answer lands. */
+  let saving = $state<string | null>(null);
+  /** A refusal, shown on the row it belongs to rather than at the top of a long table. */
+  let refused = $state<{ id: string; message: string } | null>(null);
+
+  // A TICK SAVES AT ONCE (D-82) - no Save button per row. And if the save fails the box goes BACK:
+  // the database did not change, and a box left showing a change that did not happen is the exact
+  // fault this change fixed on the explorer's own page.
+  const saveTrust = (id: string): SubmitFunction => ({ formElement }) => {
+    saving = id;
+    refused = null;
+    return async ({ result, update }) => {
+      if (result.type !== 'success') {
+        const box = formElement.elements.namedItem('trusted') as HTMLInputElement | null;
+        if (box) box.checked = !box.checked;
+        const said = result.type === 'failure' ? result.data?.message : null;
+        refused = { id, message: typeof said === 'string' ? said : 'Could not save.' };
+      }
+      await update({ reset: false });
+      saving = null;
+    };
+  };
 </script>
 
 <svelte:head><title>Explorers</title><meta name="robots" content="noindex" /></svelte:head>
@@ -8,6 +33,10 @@
 <p class="lede">
   Everyone with an account, newest first. Open one to suspend or ban them, take a map down, remove
   everything they have said, or delete the account. The terms say we can; this is where we do.
+</p>
+<p class="lede">
+  <strong>Trusted</strong> saves as soon as you tick it: their pictures go out on arrival, still
+  appear in the review queue marked as pre-approved, and they get the roomier daily allowance.
 </p>
 
 {#if data.flash}
@@ -37,7 +66,9 @@
     <thead><tr>
       <th>Handle</th><th>Name</th>
       {#if data.showEmails}<th>Email</th>{/if}
-      <th>State</th><th>Joined</th><th>Maps</th><th>Comments</th>
+      <th>State</th>
+      <th title="Pictures approved on arrival, still shown in the review queue">Trusted</th>
+      <th>Joined</th><th>Maps</th><th>Comments</th>
     </tr></thead>
     <tbody>
       {#each data.people as p (p.id)}
@@ -71,6 +102,18 @@
             {p.state}
             {#if p.state === 'pending'}<span class="muted small">email not confirmed</span>{/if}
           </td>
+          <td class="trust">
+            <form method="POST" action="?/trust" use:enhance={saveTrust(p.id)}>
+              <input type="hidden" name="id" value={p.id} />
+              <!-- Your own row shows your own answer but cannot change it (D-78: not on yourself). -->
+              <input type="checkbox" name="trusted" checked={p.trusted}
+                     disabled={p.id === data.me || saving === p.id}
+                     aria-label="Trust {p.handle}"
+                     title={p.id === data.me ? 'Not on yourself' : ''}
+                     onchange={(e) => e.currentTarget.form?.requestSubmit()} />
+            </form>
+            {#if refused?.id === p.id}<span class="tag warn">{refused.message}</span>{/if}
+          </td>
           <td class="when">{p.created_at.slice(0, 10)}</td>
           <td>{p.maps.pub} public <span class="muted">of {p.maps.all}</span></td>
           <td>{p.comments}</td>
@@ -83,6 +126,7 @@
 <style>
   h1 { margin: 0 0 6px; }
   .lede { color: var(--ink-dim); margin: 0 0 18px; max-width: 70ch; }
+  .lede:has(+ .lede) { margin-bottom: 8px; }
   .search { display: flex; gap: 8px; align-items: center; margin: 0 0 16px; }
   .search input {
     font: inherit; background: var(--panel-2); color: var(--ink);
@@ -106,4 +150,9 @@
   }
   .role.mod { background: var(--accent); }
   .small { font-size: 0.82rem; display: block; }
+  .trust { text-align: center; }
+  .trust form { display: inline; margin: 0; }
+  .trust input[type='checkbox'] { width: 1.05rem; height: 1.05rem; cursor: pointer; accent-color: var(--accent); }
+  .trust input[type='checkbox']:disabled { cursor: default; }
+  .trust .tag { display: block; margin: 4px 0 0; white-space: nowrap; }
 </style>

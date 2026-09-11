@@ -181,7 +181,7 @@
       it always did. They also get the roomier daily upload allowance.
     </p>
     <label class="check">
-      <input type="checkbox" name="trusted" checked={(p as { trusted?: boolean }).trusted === true} />
+      <input type="checkbox" name="trusted" checked={p.trusted} />
       Trust this explorer
     </label>
     <label>Note (optional) <input name="note" maxlength="500" placeholder="Why" /></label>

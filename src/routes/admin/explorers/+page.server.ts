@@ -1,7 +1,8 @@
-import type { PageServerLoad } from './$types';
-import { error } from '@sveltejs/kit';
+import type { PageServerLoad, Actions } from './$types';
+import { error, fail } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import { isAdmin, isStaff } from '$lib/server/auth';
+import * as accounts from '$lib/server/accounts';
 
 // Everyone, newest first, or a search by handle: the way in to an explorer's own page (D-28).
 export const load: PageServerLoad = async ({ platform, locals, url }) => {
@@ -11,7 +12,7 @@ export const load: PageServerLoad = async ({ platform, locals, url }) => {
 
   const sb = db(env);
   const q = (url.searchParams.get('q') ?? '').replace(/[^a-z0-9_-]/gi, '').slice(0, 40);
-  let query = sb.from('creators').select('id, handle, display_name, role, state, created_at');
+  let query = sb.from('creators').select('id, handle, display_name, role, state, trusted, created_at');
   if (q) query = query.ilike('handle', '%' + q + '%');
   const { data: people } = await query.order('created_at', { ascending: false }).limit(50);
 
@@ -85,10 +86,41 @@ export const load: PageServerLoad = async ({ platform, locals, url }) => {
       // ALWAYS BOTH KEYS, never a spread of "maybe an object": a union of `{}` and `{email}` is a
       // type nothing downstream can read a property off, and null is a clearer answer than absent.
       email: emails.get(p.id)?.email ?? null,
-      confirmed: emails.get(p.id)?.confirmed ?? false
+      confirmed: emails.get(p.id)?.confirmed ?? false,
+      trusted: p.trusted === true
     })),
     /** Whether addresses were even asked for, so the page can tell a moderator why there are none. */
     showEmails: isAdmin(locals.viewer),
+    /** The viewer, so their own row's Trusted box is shown but cannot be ticked. */
+    me: locals.viewer.id,
     flash
   };
+};
+
+const ID = /^[0-9a-f-]{36}$/;
+
+export const actions: Actions = {
+  /**
+   * TRUST FROM THE LIST (D-82). The owner, 2026-09-11: *"Have 'Trust User' as a checkbox on
+   * /admin/explorers."*
+   *
+   * The same act as the Trust panel on an explorer's own page, through the same function, so the
+   * two cannot drift apart and the audit log reads the same whichever was used. Staff, like that
+   * panel: trust can be undone completely (D-78), which is D-39's line for a moderator's power.
+   * No note from here - a tick in a table has nowhere to put one; the explorer's page still does.
+   */
+  trust: async ({ request, platform, locals }) => {
+    const env = platform?.env;
+    if (!env || !isStaff(locals.viewer)) throw error(404, 'Not found');
+    const form = await request.formData();
+    const id = String(form.get('id') ?? '');
+    if (!ID.test(id)) return fail(400, { message: 'No such explorer.' });
+    const trusted = form.get('trusted') === 'on';
+    try {
+      await accounts.setTrusted(db(env), locals.viewer.id, id, trusted, null);
+    } catch (e) {
+      return fail(400, { message: (e as Error).message });
+    }
+    return { trusted };
+  }
 };

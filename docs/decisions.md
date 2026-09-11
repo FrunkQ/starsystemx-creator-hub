@@ -2217,6 +2217,31 @@ invite to satisfy a foreign key would put a fiction into the record of how a fil
 campaign, GM notes and hidden systems intact, and `/admin/debug` is admin-only for that reason. A
 moderator who could put a map there could not then read it.
 
+### D-82. Trust from the explorers list, and the checkbox that lied
+
+The owner, 2026-09-11, after running 0039: *"Have 'Trust User' as a checkbox on /admin/explorers."*
+
+**A tick saves at once.** No Save button per row — a table of fifty rows each with its own button is
+a table nobody uses. If the save fails the box goes back, because the database did not change and a
+box left showing a change that did not happen is exactly the fault below. No note from the list: a
+tick in a table has nowhere to put one, and the explorer's own page still takes one.
+
+**One function, `accounts.setTrusted`, called from both pages.** The not-on-yourself rule and the
+audit line were written inline in the explorer page's action; a second page copying them would have
+made each one a thing two files had to remember. The rule is now checked inside the function too,
+so a third caller cannot forget it.
+
+**THE FAULT FOUND ON THE WAY, and it was mine from D-78.** The explorer page's load returned a
+hand-picked set of fields and `trusted` was not among them, so its Trust checkbox **always opened
+unticked**. The form was built to save the box's state — so pressing Save to add a note to a trusted
+explorer would have quietly untrusted them. It went unnoticed because until 0039 ran nobody could be
+trusted, so the box was always right by accident. **A form that shows a default instead of the truth
+rewrites the truth the moment somebody submits it.** A test now pins that the load carries the flag.
+
+**The migration hint went with it.** The action used to translate a missing-column error into "run
+0039"; 0039 has run, and a message about a state the hub is no longer in is a message that will one
+day mislead somebody.
+
 ### D-16. The takedown address is assembled at runtime, never served as text
 
 The owner's instruction was explicit: keep it off the page as scrapable text. It is stored as
