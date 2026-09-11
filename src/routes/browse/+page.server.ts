@@ -1,7 +1,8 @@
 import type { PageServerLoad } from './$types';
 import { db } from '$lib/server/db';
 import { tolerantSelect } from '$lib/server/tolerant';
-import { CARD_COLUMNS, CARD_OPTIONAL, type CardRow } from '$lib/server/cards';
+import { CARD_COLUMNS, CARD_OPTIONAL, orderCards, type CardRow } from '$lib/server/cards';
+import { PROBLEM_TAG } from '$lib/bundle/problems';
 import { bestDensity } from '$lib/server/density';
 import { loadGates } from '$lib/server/config';
 import { loadVocabulary } from '$lib/server/tags';
@@ -57,12 +58,8 @@ export const load: PageServerLoad = async ({ platform, url, setHeaders }) => {
     // real text index is the answer when the library is big enough to need one.
     if (q) query = query.or('title.ilike.%' + q + '%,blurb.ilike.%' + q + '%');
 
-    query = sort === 'new'
-      ? query.order('created_at', { ascending: false })
-      : sort === 'detailed'
-        ? query.order('info_density', { ascending: false, nullsFirst: false }).order('hearts_count', { ascending: false })
-        : query.order('hearts_count', { ascending: false }).order('created_at', { ascending: false });
-    return query.limit(60);
+    // The order, with maps that need a fix after the rest (D-89) - one definition for every list.
+    return orderCards(query, sort).limit(60);
   };
 
   const [{ data, error }, vocabulary, best, gates] = await Promise.all([
@@ -98,7 +95,9 @@ export const load: PageServerLoad = async ({ platform, url, setHeaders }) => {
   // some; one that every result carries, or none does, separates nothing.
   const total = (data ?? []).length;
   const narrow = Object.entries(counts)
-    .filter(([t, n]) => !selected.includes(t) && n > 0 && n < total)
+    // Never suggested as a way to narrow a crowd (D-89): nobody is looking for a map that needs a fix,
+    // and offering it beside "oceans" and "life" would put broken maps one click from the top.
+    .filter(([t, n]) => t !== PROBLEM_TAG && !selected.includes(t) && n > 0 && n < total)
     .sort((a, b) => Math.abs(a[1] - total / 2) - Math.abs(b[1] - total / 2) || a[0].localeCompare(b[0]))
     .slice(0, 10)
     .map(([t]) => t);

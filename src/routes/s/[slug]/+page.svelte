@@ -223,6 +223,14 @@
   {#if fanSetting}
     <p class="fan-pill"><a href="#fan-work">{FAN_WORK_BADGE}: {fanSetting}</a></p>
   {/if}
+  <!-- IN THE SUMMARY, NOT ONLY IN THE TAGS AT THE FOOT (owner, 2026-09-11: "carry the problem pill to
+       its summary"; D-89). Beside the title, where somebody deciding whether to download is reading. -->
+  {#if data.problems.length}
+    <p class="problem-pill">
+      <a class="tag warn" href="#problems">{PROBLEM_TAG}</a>
+      <span class="muted">{data.problems.some((p) => p.severity === 'refuses') ? 'Star System Explorer may not open this map' : 'Part of this map is broken'} - <a href="#problems">how to fix it</a></span>
+    </p>
+  {/if}
 
   <!-- ON A WIDE SCREEN the words sit beside the picture; on a narrow one they stack (owner,
        2026-09-05). The download stays first in reading order either way (design 2). -->
@@ -634,6 +642,8 @@
   /* Quiet, not a warning. This is a fact about the map, not a problem with it - a red banner would
      read as "something is wrong here" and put people off sharing fan work at all. */
   .fan-pill { margin: 0 0 12px; }
+  .problem-pill { margin: 0 0 12px; display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+  .problem-pill .muted { margin: 0; font-size: 0.9rem; }
   .fan-pill a {
     display: inline-block; padding: 2px 9px; border-radius: 999px; text-decoration: none;
     font-size: 0.8rem; color: var(--ink-faint); border: 1px solid var(--rule);

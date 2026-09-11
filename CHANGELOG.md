@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.61.1 - 2026-09-11
+
+### Maps that need a fix go to the back
+
+On the front page, in Browse and in search, and in the list the app shows, a map with a known
+problem now comes after every map without one, whatever order you picked. It is still there to find,
+wearing its `needs-a-fix` pill - which also now sits under the map's title on its page, beside a link
+to how to fix it.
+
+
 ## 0.61.0 - 2026-09-11
 
 ### Maps that need a fix say so, and say how

@@ -8,7 +8,7 @@ import { json, error } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import { PUBLIC_CORS, preflight } from '$lib/server/cors';
 import { tolerantSelect } from '$lib/server/tolerant';
-import { CARD_COLUMNS, CARD_OPTIONAL, type CardRow } from '$lib/server/cards';
+import { CARD_COLUMNS, CARD_OPTIONAL, orderCards, type CardRow } from '$lib/server/cards';
 import { bestDensity } from '$lib/server/density';
 import { densityLevel } from '$lib/bundle/density';
 import { loadSite } from '$lib/server/site';
@@ -57,19 +57,10 @@ export const GET: RequestHandler = async ({ platform, url, setHeaders }) => {
       // OPEN the first (R-18) - so a panel offering "open this" wants to be able to say which.
       if (kind) query = query.eq('kind', kind);
 
-      // `discussed` orders on `comments_count`, which arrived with 0021 - long run everywhere. Note
-      // that ORDERING on a column is not something `tolerantSelect` can rescue: it drops a column
-      // from the projection and re-runs, it cannot unpick an order clause (D-71). If 0021 were ever
-      // in doubt this sort would have to be gated rather than tolerated.
-      query = sort === 'new'
-        ? query.order('created_at', { ascending: false })
-        : sort === 'detailed'
-          ? query.order('info_density', { ascending: false, nullsFirst: false }).order('hearts_count', { ascending: false })
-          : sort === 'discussed'
-            ? query.order('comments_count', { ascending: false, nullsFirst: false }).order('created_at', { ascending: false })
-            : query.order('hearts_count', { ascending: false }).order('created_at', { ascending: false });
-
-      return query.range((page - 1) * size, page * size - 1);
+      // THE SAME ORDER AS THE WEB (D-89), from the one definition - maps that need a fix after every
+      // map that does not, on every page. `discussed` orders on `comments_count` (0021, long run);
+      // an ORDER on a column is not something `tolerantSelect` can rescue (D-71).
+      return orderCards(query, sort).range((page - 1) * size, page * size - 1);
     }),
     // What a 5 on the information meter means today (D-30).
     bestDensity(sb)

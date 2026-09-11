@@ -2481,6 +2481,34 @@ stored for the page, the manage page or the Issues tab, which says so.
 **One thing the advice depends on:** the fix for two systems sharing an id is "open it in Star
 System Explorer 3.1.66 or later". Until production reaches that version, it means the beta.
 
+### D-89. Maps that need a fix come last, and say so beside their title
+
+The owner, 2026-09-11, after the first real one reached the Issues tab: *"Problem maps should be
+deprioritised on searches/browsing"*, and *"perhaps carry the problem pill to its summary"*.
+
+**Last, not hidden.** A map that half-works may still be what somebody is looking for, and it wears
+its pill wherever it appears. But a browser should meet every map that opens before any map that
+might not.
+
+**In the query, because every list is cut short there** - twenty-four on the front page, sixty on
+/browse, a page of ten for the app. Reordering rows after they arrive would only reshuffle a page, and
+a healthy map just past the cut would lose its place to a broken one inside it. `orderCards` in
+`server/cards.ts` orders on `problems` ascending with nulls first, so every healthy map comes ahead;
+among the maps with problems Postgres orders the lists themselves (a shorter list first), then the
+chosen sort. It is ONE definition now: the front page, /browse and `/api/maps` each had their own copy
+of the sort clauses.
+
+**It orders on a column only because 0040 has run.** An order clause cannot be tolerated the way a
+missing projected column can (D-71), which is why the function lives in the library beside that note
+rather than in a route, where the tolerant-pages scan would rightly refuse it.
+
+**Browse no longer suggests `needs-a-fix` as a way to narrow a crowd** - offering it beside "oceans"
+and "life" would have put broken maps one click from the top of the page this is pushing them down.
+
+**The pill sits under the title** on the map page, where somebody deciding whether to download is
+reading, with a line saying which kind of trouble it is and a link to the fix - the same place the
+fan-work pill goes, for the same reason.
+
 ### D-16. The takedown address is assembled at runtime, never served as text
 
 The owner's instruction was explicit: keep it off the page as scrapable text. It is stored as

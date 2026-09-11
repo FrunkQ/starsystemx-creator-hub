@@ -1,7 +1,7 @@
 import type { PageServerLoad } from './$types';
 import { db } from '$lib/server/db';
 import { tolerantSelect } from '$lib/server/tolerant';
-import { CARD_COLUMNS, CARD_OPTIONAL, type CardRow } from '$lib/server/cards';
+import { CARD_COLUMNS, CARD_OPTIONAL, orderCards, type CardRow } from '$lib/server/cards';
 import { bestDensity } from '$lib/server/density';
 import { loadGates } from '$lib/server/config';
 
@@ -15,10 +15,8 @@ export const load: PageServerLoad = async ({ platform, setHeaders, url }) => {
   const sb = db(env);
   const [{ data, error }, best, gates] = await Promise.all([
     tolerantSelect<CardRow[]>(CARD_COLUMNS, CARD_OPTIONAL, (cols) =>
-      sb.from('systems').select(cols)
-        .eq('state', 'public').eq('visibility', 'public')
-        .order('hearts_count', { ascending: false })
-        .order('created_at', { ascending: false })
+      // Most loved first, and maps that need a fix after every one that does not (D-89).
+      orderCards(sb.from('systems').select(cols).eq('state', 'public').eq('visibility', 'public'), 'loved')
         .limit(24)
     ),
     // What a 5 on the information meter means today (D-30).
