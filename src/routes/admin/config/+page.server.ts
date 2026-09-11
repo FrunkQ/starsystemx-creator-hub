@@ -1,7 +1,7 @@
 import type { PageServerLoad, Actions } from './$types';
 import { error, fail } from '@sveltejs/kit';
 import { db, linkClient } from '$lib/server/db';
-import { reindexBatch } from '$lib/server/reindex';
+import { mapsBehind } from '$lib/server/reindex';
 import { loadGates, setConfigRow } from '$lib/server/config';
 import { loadSite } from '$lib/server/site';
 import * as audit from '$lib/server/audit';
@@ -16,11 +16,14 @@ export const load: PageServerLoad = async ({ platform, locals, url }) => {
   if (locals.viewer?.role !== 'admin') throw error(404, 'Not found');
 
   const sb = db(env);
-  const [{ data }, gates, cache, site] = await Promise.all([
+  const [{ data }, gates, cache, site, unread] = await Promise.all([
     sb.from('config').select('key, value, note, updated_at').order('key'),
     loadGates(sb),
     readCache(env),
-    loadSite(sb, url)
+    loadSite(sb, url),
+    // How many maps an older build read (D-87) - said on the page, so the button is never pressed
+    // blind and never claims there is nothing to do when there is.
+    mapsBehind(sb).catch(() => null)
   ]);
   // WHO THE HUB WOULD WRITE TO, shown rather than left to be guessed at (D-50). The owner asked
   // "where?" when told to set `mail_admin`, which is a fair question about a row nobody can see
@@ -40,6 +43,8 @@ export const load: PageServerLoad = async ({ platform, locals, url }) => {
     // The exact URL the test email's link comes back to. Shown so it can be COPIED into Supabase's
     // redirect allow-list rather than retyped - a URL typed twice is a URL wrong once.
     resetRedirect: site.url + '/login',
+    /** Maps last read by an older build of the hub. Null when that could not be worked out. */
+    unreadMaps: unread ? unread.length : null,
     shipped: {
       url: gates.sse_manifest_url,
       appVersion: cache?.manifest?.appVersion ?? null,
@@ -55,21 +60,6 @@ function admin(platform: App.Platform | undefined, locals: App.Locals) {
   if (!env) throw error(500, 'not configured');
   if (locals.viewer?.role !== 'admin') throw error(404, 'Not found');
   return { env, me: locals.viewer };
-}
-
-/**
- * Whether the library still has reading to do, in words rather than a date to compare.
- *
- * A batch takes the oldest first, so "everything was read today" is the same statement as "there is
- * nothing left behind" - and it is one the hub can make on the reader's behalf.
- */
-function staleness(oldest: string | null): string {
-  if (!oldest) return 'Every map has been read at least once.';
-  const today = new Date().toISOString().slice(0, 10);
-  const when = oldest.slice(0, 10);
-  return when >= today
-    ? 'Every map on the hub has now been read today - nothing is behind.'
-    : 'The oldest reading on the hub is ' + when + ', so there is more to do. Press again.';
 }
 
 export const actions: Actions = {
@@ -136,41 +126,6 @@ export const actions: Actions = {
     }
     await audit.record(sb, me.id, 'discord.test-share', 'config:discord_share_webhook');
     return { tested: 'A test post went to the sharing channel.' };
-  },
-
-  /**
-   * RE-INDEX A FEW MAPS FROM THE FILES THE HUB ALREADY HOLDS (D-73).
-   *
-   * The owner asked for this beside the test buttons, and it belongs there: those are "do the real
-   * thing once", and so is this. It exists for the moment after the READER improves - the hub
-   * learns to see something new in a save, and every map already stored needs reading again. The
-   * standing rule is that the hub re-reads its own files rather than asking anybody to upload
-   * theirs a second time (D-26).
-   *
-   * A FEW AT A TIME, because a Worker gets 10ms of CPU and each map means fetching a bundle from
-   * R2, unzipping it and parsing the document (D-53). Press it again; it always takes the oldest.
-   */
-  reindexBatch: async ({ platform, locals, url }) => {
-    const { env, me } = admin(platform, locals);
-    const sb = db(env);
-    const [gates, site] = await Promise.all([loadGates(sb), loadSite(sb, url)]);
-
-    const result = await reindexBatch(env, sb, site, gates);
-    if (!result.done && !result.failed) return { tested: 'There are no maps to re-index.' };
-
-    await audit.record(sb, me.id, 'reindex.batch', 'config:reindex', undefined,
-      { done: result.done, failed: result.failed });
-
-    const said = [
-      result.done + ' map' + (result.done === 1 ? '' : 's') + ' re-indexed from the stored file.',
-      result.failed ? result.failed + ' could not be read (' + result.firstProblem + ').' : '',
-      // THE DATE, NOT A COUNT - staleness has no definition without knowing when the reader last
-      // changed. But the hub knows today, so it does the comparison rather than printing a date and
-      // "press again if that is behind", which asks the reader to work out something the machine
-      // already knows. It said exactly that to the owner and he had to check the date himself.
-      staleness(result.oldest)
-    ].filter(Boolean).join(' ');
-    return { tested: said };
   },
 
   /**

@@ -20,9 +20,45 @@
   import { COMMENT_MAX } from '$lib/comments';
   import { FAN_WORK_BADGE, fanWorkNotice, cleanSetting } from '$lib/fanWork';
   import { customCalendars, calendarCaveat } from '$lib/bundle/overrides';
+  import { enhance } from '$app/forms';
+  import { invalidateAll } from '$app/navigation';
   let { data, form } = $props();
 
   const s = $derived(data.system);
+
+  // ============================================================================================
+  // RE-INDEX THIS MAP (D-87). The owner, 2026-09-11: "does it make sense that the mod/admin controls
+  // on each map let you run it for just that 1 map to fix." It does: a reader fix reaches a map only
+  // when the map is read again, and the Config page's sweep walks the whole library to reach one.
+  //
+  // IN PLACE, NOT A FORM POST. The Moderator panel is at the bottom of a long page and a post reloads
+  // at the top, so its answer landed out of sight - the same "nothing appeared to happen" that
+  // started this. The answer says what was FOUND, because a re-read that stores nothing looks exactly
+  // like one that did nothing; and the page's own data is refreshed, so the tree shows it too.
+  // ============================================================================================
+  let reindexing = $state(false);
+  let reindexSaid = $state<{ ok: boolean; text: string } | null>(null);
+
+  async function reindexThis() {
+    reindexing = true;
+    reindexSaid = null;
+    try {
+      const res = await fetch('/api/reindex', {
+        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: s.id })
+      });
+      const out = (await res.json().catch(() => null)) as
+        { ok?: boolean; message?: string; bodies?: number | null; constructs?: number | null } | null;
+      reindexSaid = out?.ok
+        ? { ok: true, text: 'Re-read from the stored file: ' + out.bodies + ' bodies, ' + out.constructs + ' constructs.' }
+        : { ok: false, text: 'Could not re-index: ' + (out?.message ?? 'the server answered ' + res.status) + '.' };
+      if (out?.ok) await invalidateAll();
+    } catch {
+      reindexSaid = { ok: false, text: 'Could not re-index: the request did not complete.' };
+    } finally {
+      reindexing = false;
+    }
+  }
+
   const total = $derived(data.bodies.length + data.constructs.length);
 
   // ============================================================================================
@@ -493,11 +529,11 @@
       {#if form?.holdMessage}<p class="ok">{form.holdMessage}</p>{/if}
       {#if holdNote}
         <p class="muted">On hold: "{holdNote}"</p>
-        <form method="POST" action="?/unhold">
+        <form method="POST" action="?/unhold" use:enhance>
           <button type="submit">Take it off hold</button>
         </form>
       {:else}
-        <form method="POST" action="?/hold" class="hold-form">
+        <form method="POST" action="?/hold" class="hold-form" use:enhance>
           <label>
             Put this map on hold
             <input name="note" maxlength="500" required
@@ -511,10 +547,25 @@
         </p>
       {/if}
 
+      <!-- STAFF (D-87): it rebuilds what the hub derives from the file it holds and changes nothing
+           anybody made, so a moderator may; doing it twice is harmless. -->
+      <div class="reindex">
+        <button type="button" onclick={reindexThis} disabled={reindexing}>
+          {reindexing ? 'Re-reading...' : 'Re-index this map'}
+        </button>
+        <span class="muted small">
+          Reads the stored file again and rebuilds the tree, the counts and a drawn cover - for when the
+          hub has learned to read something better. Nothing the creator wrote changes.
+        </span>
+        {#if reindexSaid}
+          <p class={reindexSaid.ok ? 'ok' : 'bad-text'} aria-live="polite">{reindexSaid.text}</p>
+        {/if}
+      </div>
+
       {#if data.isAdmin}
         <!-- ADMIN ONLY (D-81). A debug upload is an unredacted campaign - GM notes and hidden
              systems intact - and /admin/debug is admin only for that reason. -->
-        <form method="POST" action="?/toDebug" class="hold-form to-debug">
+        <form method="POST" action="?/toDebug" class="hold-form to-debug" use:enhance>
           <label>
             Copy it into Debug to look inside
             <input name="note" maxlength="1000" placeholder="What to look for (optional)" />
@@ -677,4 +728,8 @@
   }
   .count { color: var(--ink-faint); font-size: 0.82rem; margin: 6px 0 0; text-align: right; }
   .to-debug { margin-top: 14px; border-top: 1px solid var(--edge); padding-top: 12px; }
+  .reindex { margin-top: 14px; border-top: 1px solid var(--edge); padding-top: 12px; }
+  .reindex .small { display: block; margin-top: 6px; }
+  .reindex p { margin: 8px 0 0; }
+  .staff .bad-text { color: var(--bad); }
 </style>

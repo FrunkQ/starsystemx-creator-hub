@@ -1,5 +1,54 @@
 <script lang="ts">
+  import { invalidateAll } from '$app/navigation';
   let { data, form } = $props();
+
+  // ============================================================================================
+  // RE-READ EVERY MAP AN OLDER BUILD READ, ONE REQUEST PER MAP (D-87).
+  //
+  // This was a form that asked the server for eight at once. A free Worker has the CPU for one, so
+  // the request was cut off after two and the page said nothing. The loop lives HERE now: each map is
+  // its own request, the page names the one it is on, and a map that fails is named rather than lost
+  // in a count. Leaving the page stops it; pressing again carries on from whatever is still behind.
+  // ============================================================================================
+  let sweep = $state<{ at: number; of: number; title: string } | null>(null);
+  let sweepSaid = $state<string | null>(null);
+
+  async function rereadAll() {
+    sweepSaid = null;
+    let maps: { id: string; title: string }[] = [];
+    try {
+      const res = await fetch('/api/reindex');
+      maps = ((await res.json()) as { maps?: { id: string; title: string }[] } | null)?.maps ?? [];
+    } catch {
+      sweepSaid = 'Could not ask which maps are behind.';
+      return;
+    }
+    if (!maps.length) {
+      sweepSaid = 'Every map has already been read by this version of the hub.';
+      return;
+    }
+
+    let done = 0;
+    const failed: string[] = [];
+    for (let i = 0; i < maps.length; i++) {
+      sweep = { at: i + 1, of: maps.length, title: maps[i].title };
+      try {
+        const res = await fetch('/api/reindex', {
+          method: 'POST', headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ id: maps[i].id })
+        });
+        const out = (await res.json().catch(() => null)) as { ok?: boolean; message?: string } | null;
+        if (out?.ok) done++;
+        else failed.push(maps[i].title + ' (' + (out?.message ?? 'the server answered ' + res.status) + ')');
+      } catch {
+        failed.push(maps[i].title + ' (the request did not complete)');
+      }
+    }
+    sweep = null;
+    sweepSaid = done + ' of ' + maps.length + ' re-read from their stored files.'
+      + (failed.length ? ' Could not read: ' + failed.join('; ') + '.' : '');
+    await invalidateAll();
+  }
 </script>
 
 <svelte:head><title>Gates</title><meta name="robots" content="noindex" /></svelte:head>
@@ -36,13 +85,26 @@
     <form method="POST" action="?/refreshShipped">
       <button type="submit">Ask the engine what it ships</button>
     </form>
-    <!-- For the moment after the READER improves: the hub learns to see something new in a save and
-         every stored map needs reading again (D-73). A few at a time - a Worker has 10ms of CPU. -->
-    <form method="POST" action="?/reindexBatch">
-      <button type="submit" title="Re-read the oldest few maps from the files the hub already holds. Press again to keep going.">Re-index the oldest maps</button>
-    </form>
+    <!-- For the moment after the READER improves: every stored map needs reading again (D-73). One
+         request per map, walked from the browser, because a Worker has the CPU for one (D-87). -->
+    <button type="button" onclick={rereadAll} disabled={!!sweep}
+            title="Re-read every map an older version of the hub read, one at a time, from the files the hub already holds.">
+      {sweep ? 'Re-reading...' : 'Re-index every map'}
+    </button>
   </div>
   {#if form?.tested}<p class="ok">{form.tested}</p>{/if}
+  <!-- Said before it is pressed, so it is never pressed blind. -->
+  {#if sweep}
+    <p class="ok" aria-live="polite">Re-reading {sweep.at} of {sweep.of}: {sweep.title}</p>
+  {:else if sweepSaid}
+    <p class="ok" aria-live="polite">{sweepSaid}</p>
+  {:else if data.unreadMaps !== null}
+    <p class="muted">
+      {data.unreadMaps === 0
+        ? 'Every map has been read by this version of the hub.'
+        : data.unreadMaps + (data.unreadMaps === 1 ? ' map was' : ' maps were') + ' last read by an older version of the hub.'}
+    </p>
+  {/if}
   <p class="muted foot">
     The test email's link comes back to <code>{data.resetRedirect}</code>. That exact URL has to be
     in Supabase's <strong>Authentication &rarr; URL Configuration &rarr; Redirect URLs</strong>, and

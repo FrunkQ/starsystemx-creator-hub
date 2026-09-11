@@ -12,8 +12,9 @@
 // reads the STORED bytes, which are already the stripped version when GM material was stripped on
 // upload, so nothing withheld can come back through here.
 //
-// TRIGGERED three ways: the map page's first view of rows written before the current reader
-// (`reindexed_at` null), the creator's button on the manage page, and an admin.
+// TRIGGERED four ways: the map page's first view of rows written before the current reader
+// (`reindexed_at` null), the creator's button on the manage page, a moderator's button on the map
+// page, and the Config page walking every map an older build read (`/api/reindex`, D-87).
 // ============================================================================================
 import type { Db, SystemRow } from './database.types';
 import type { HubEnv } from './db';
@@ -98,75 +99,49 @@ export async function reindexSystem(
 }
 
 // ============================================================================================
-// RE-INDEXING SEVERAL AT ONCE, from the Config page (D-73).
+// EVERY MAP, AFTER THE READER CHANGES - ONE MAP PER REQUEST (D-73, rebuilt as D-87).
 //
-// The owner, 2026-09-08: *"Is there a reindex button on the config admin screen like the test
-// buttons?"* There was not - re-index was per-map, on the creator's own manage page, which is the
-// right place for a creator and the wrong place for the owner after the READER has improved.
+// The owner asked on 2026-09-08 for a re-index button beside the Config page's test buttons, and got
+// one that re-read eight maps a press. On 2026-09-11 he pressed it after a reader fix and *"nothing
+// appeared to happen"*: two maps were re-read, the rest were not, and no message came back.
+// Measured afterwards, ONE map costs 20-45ms of CPU, nearly all of it drawing the cover - so eight
+// in one request is 200-350ms against a free Worker's 10ms, the same wall D-53 hit decoding a single
+// screenshot. The old comment's "a few at a time" was the right idea at the wrong size. The size
+// that fits is one.
 //
-// That happens often enough to deserve a button: 0015 taught the hub about distances, 0023 about
-// information density, D-48 about what a bare `.json` really is, and 0037 about custom rules. Each
-// time, every map already stored needs reading again - and the standing rule (D-26) is that the hub
-// re-reads its own files rather than asking anybody to upload theirs a second time.
+// SO THE SERVER DOES ONE MAP A REQUEST AND THE BROWSER DOES THE LOOP (`/api/reindex`), naming the
+// map it is on. A loop that stops part-way now stops visibly, on a named map, and the next press
+// starts from whatever is still behind.
 //
-// A FEW AT A TIME, AND THE NUMBER IS THE WHOLE DESIGN. Re-indexing one map fetches a bundle from
-// R2, unzips it, parses the document and rewrites its rows. A Worker gets 10ms of CPU (D-53), and
-// "re-index everything" on a library of any size is a 1102 rather than a long wait. So this does a
-// bounded batch, says exactly what it did, and is meant to be pressed again - a button that reports
-// "8 done, 12 to go" is honest about being a loop, where a spinner that dies at 30 seconds is not.
-//
-// OLDEST FIRST, by `reindexed_at`, so pressing it repeatedly always advances and never re-does the
-// map it just did.
+// AND "BEHIND" MEANS READ BY AN OLDER BUILD. The old button compared the oldest reading with TODAY,
+// which is wrong on precisely the day it is needed: a map uploaded this morning, a reader fixed this
+// afternoon, and it would report "nothing is behind". `__HUB_BUILT_AT__` is when the running code
+// was built (vite.config.ts).
 // ============================================================================================
 
-export interface BatchResult {
-  done: number;
-  failed: number;
-  /**
-   * WHEN THE OLDEST MAP ON THE HUB WAS LAST READ, which is the honest signal for "press it again".
-   *
-   * A plain "N remaining" cannot be computed: staleness has no definition without knowing when the
-   * READER last changed, and after one batch every map has a timestamp so a null-count reads zero
-   * while half the library is still behind. The oldest date says what is true - if it is still old,
-   * there is more to do.
-   */
-  oldest: string | null;
-  /** The first thing that went wrong, if anything did. One example beats a list nobody reads. */
-  firstProblem?: string;
+export interface MapToRead { id: string; slug: string; title: string; reindexed_at: string | null }
+
+/** When the running code was built. */
+export const builtAt = (): string => __HUB_BUILT_AT__;
+
+/**
+ * The maps last read before `since`, oldest first, never-read ones before all of them.
+ *
+ * A reading that will not parse counts as behind: re-reading a map that did not need it costs a
+ * moment, and calling a stale one current is the fault this replaced.
+ */
+export function behind(rows: MapToRead[], since: string): MapToRead[] {
+  const cutoff = Date.parse(since);
+  const at = (r: MapToRead) => {
+    const t = r.reindexed_at ? Date.parse(r.reindexed_at) : 0;
+    return Number.isFinite(t) ? t : 0;
+  };
+  return rows.filter((r) => !(at(r) >= cutoff)).sort((a, b) => at(a) - at(b));
 }
 
-export async function reindexBatch(
-  env: HubEnv, sb: Db, site: Site, gates: Gates, limit = 8
-): Promise<BatchResult> {
-  // `nullsFirst` matters: a map indexed before `reindexed_at` existed has null, and those are
-  // exactly the ones furthest behind the current reader.
-  const { data: rows } = await sb.from('systems')
-    .select('id')
-    .order('reindexed_at', { ascending: true, nullsFirst: true })
-    .limit(limit);
-
-  let done = 0;
-  let failed = 0;
-  let firstProblem: string | undefined;
-
-  for (const row of rows ?? []) {
-    // NEVER THROWS OUT OF THE LOOP. One map with a missing or unreadable bundle must not stop the
-    // other seven - the whole point of a batch is that it makes progress.
-    try {
-      const result = await reindexSystem(env, sb, row.id as string, site, gates);
-      if (result.ok) done++;
-      else { failed++; firstProblem ??= result.message; }
-    } catch (e) {
-      failed++;
-      firstProblem ??= (e as Error)?.message ?? 'unknown';
-    }
-  }
-
-  // One row, not a count: after this batch, what is the oldest reading left on the hub?
-  const { data: next } = await sb.from('systems')
-    .select('reindexed_at')
-    .order('reindexed_at', { ascending: true, nullsFirst: true })
-    .limit(1).maybeSingle();
-
-  return { done, failed, oldest: (next?.reindexed_at as string | null) ?? null, firstProblem };
+/** Every map the running build has not read yet. The table is small, and the rule stays testable in JS. */
+export async function mapsBehind(sb: Db, since: string = builtAt()): Promise<MapToRead[]> {
+  const { data } = await sb.from('systems').select('id, slug, title, reindexed_at').limit(5000);
+  return behind((data ?? []) as MapToRead[], since);
 }
+

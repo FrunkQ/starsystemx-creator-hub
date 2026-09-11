@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.60.0 - 2026-09-11
+
+### Re-index one map from its page, and a Config button that shows its work
+
+**Moderators and admins can re-index a single map** from the Moderator panel at the foot of its page.
+It reads the stored file again, rebuilds the tree, the counts and a drawn cover, and says what it
+found - so many bodies, so many constructs. Nothing the creator wrote changes.
+
+**The Config page's re-index now works through every map, one at a time, and says which one it is
+on.** The old button tried to do eight maps in one go, which is more than the hub's server allows in a
+single request - it got two done and stopped without saying so. It also thought a map read earlier
+the same day was up to date even when the hub had been improved since. It now counts a map as behind
+if an older version of the hub read it, and tells you how many there are before you press.
+
+**The Moderator panel's other buttons answer where you pressed them.** Putting a map on hold, taking
+it off, and pushing it to Debug used to reload the page at the top, with the confirmation far below.
+
+
 ## 0.59.3 - 2026-09-11
 
 ### A map with two copies of one system keeps all its bodies

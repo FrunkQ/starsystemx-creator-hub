@@ -73,7 +73,10 @@ const LABELS: Record<string, { verb: string; group: ActionGroup }> = {
   'config.set': { verb: 'set', group: 'Running the place' },
   'backup.write': { verb: 'took a backup', group: 'Running the place' },
   'shipped.refresh': { verb: 'asked the engine what it ships', group: 'Running the place' },
+  // No longer written - the batch it named was replaced by one map a request (D-87) - but rows
+  // already in the log still have to read as something better than the fallback.
   'reindex.batch': { verb: 're-indexed the oldest maps from their stored files', group: 'Running the place' },
+  'system.reindex': { verb: 're-read a map from its stored file', group: 'Running the place' },
   'mail.test': { verb: 'sent themselves a test email', group: 'Running the place' },
   'discord.test-share': { verb: 'posted a test to Discord', group: 'Running the place' },
   'debug.invite.create': { verb: 'made a debug upload link', group: 'Running the place' },

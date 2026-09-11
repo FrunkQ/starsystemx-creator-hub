@@ -18,6 +18,8 @@ declare global {
       code?: string;
     }
   }
+  /** When this build was made, ISO 8601. Set in vite.config.ts (D-87). */
+  const __HUB_BUILT_AT__: string;
 }
 
 export {};

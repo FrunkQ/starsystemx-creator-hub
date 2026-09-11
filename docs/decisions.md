@@ -2383,8 +2383,49 @@ link into the second copy, and only on the hub.
 **Verified against the real file** locally (not committed): 180 objects, every id unique, no object
 whose parent is missing. The tests were run against the old code first and seven of nine failed.
 
-**The damaged map heals on re-index**, which reads the stored file again: Config, Re-index, pressed
-until the oldest reading is today. Nobody has to upload anything.
+**The damaged map heals on re-index**, which reads the stored file again. Nobody has to upload
+anything. (That sentence first said "Config, Re-index, pressed until the oldest reading is today" -
+which is the advice D-87 found to be wrong.)
+
+### D-87. Re-indexing is one map per request, and "behind" means read by an older build
+
+The owner, 2026-09-11, after D-86 shipped: *"I hit 'Re-index the oldest maps' and nothing appeared
+to happen - does it make sense that the mod/admin controls on each map let you run it for just that
+1 map to fix."*
+
+**It did make sense, and the batch was broken in two ways.**
+
+**1. It asked one request to do eight maps, and a free Worker has the CPU for one.** The public
+list afterwards showed exactly two maps re-read, two seconds apart, and none of the next in line.
+Measured locally, one map costs 20-45ms of CPU, nearly all of it drawing the cover; eight is
+200-350ms against 10ms - the wall D-53 hit decoding one screenshot. D-73 had written "a few at a
+time" and chosen eight. The size that fits is one.
+
+**2. It judged "behind" against today.** It reported the oldest reading and said "nothing is
+behind" once that was today's date. On the day a reader changes, that is wrong about every map
+uploaded that morning - including the one D-86 was fixing, which would never have been reached.
+
+**So:**
+
+- **`/api/reindex` does ONE map per POST** and says what it found — bodies and constructs, not
+  "done", because a re-read that stores nothing looks exactly like one that did nothing. Staff may
+  call it: it rebuilds what the hub derives from a file it already holds, changes nothing anybody
+  made, and is harmless twice. Each call is audited as `system.reindex`.
+- **The map page's Moderator panel has "Re-index this map"**, running in place and refreshing the
+  page's own data so the tree shows the result.
+- **The Config page walks the list from the browser**, one request per map, naming the map it is on
+  and every map that failed. Leaving the page stops it; pressing again carries on from whatever is
+  still behind. The page says how many maps are behind before anybody presses anything.
+- **"Behind" is `reindexed_at` earlier than `__HUB_BUILT_AT__`**, the time the running code was built
+  (a Vite `define`). Every deploy counts, including ones that did not touch the reader: re-reading a
+  map that did not need it costs a moment, and calling a stale map current cost a map its bodies.
+
+**The same "nothing happened" was hiding in the Moderator panel's forms.** The panel is at the bottom
+of a long page and a form post reloads at the top, so Hold, Take off hold and Push to Debug all put
+their confirmation out of sight. They are enhanced now and answer where they were pressed.
+
+**A test pins who may call `reindexSystem`**: the one-map API, the creator's manage page, and the map
+page's background re-read of a stale page. A new caller has to be added to that list on purpose.
 
 ### D-16. The takedown address is assembled at runtime, never served as text
 
