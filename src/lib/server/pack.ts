@@ -22,7 +22,7 @@ import type { HubEnv } from './db';
 import * as r2 from './r2';
 import * as ledger from './ledger';
 import { readZip } from '$lib/bundle/read';
-import { isZip, README_NAME, ATTRIBUTIONS_NAME, DOC_NAME, detectKind } from '$lib/bundle/contract';
+import { isZip, savedFileName, README_NAME, ATTRIBUTIONS_NAME, DOC_NAME, detectKind } from '$lib/bundle/contract';
 import { creditedDoc, type ClaimsByPath } from '$lib/bundle/credits';
 import { fanWorkFileNotice } from '$lib/fanWork';
 
@@ -56,7 +56,7 @@ export async function packForDownload(
   // document the engine parses, and adding a key to somebody's save to carry a legal notice would
   // be editing their file. For those, the notice lives on the page the download came from and in
   // the response header the route sets.
-  if (!isZip(raw)) return { bytes: raw, withheld: [], filename: slug + '.json' };
+  if (!isZip(raw)) return { bytes: raw, withheld: [], filename: savedFileName(slug, raw) };
 
   const { data: rows, error } = await sb.from('system_assets')
     .select('sha256, bundle_path').eq('system_id', systemId);
@@ -117,7 +117,8 @@ export async function packForDownload(
 
   out[README_NAME] = strToU8(appendNotice(out[README_NAME], fanWorkFileNotice(fanSetting)));
 
-  return { bytes: zipSync(out), withheld, filename: slug + '.sse.zip' };
+  const packed = zipSync(out);
+  return { bytes: packed, withheld, filename: savedFileName(slug, packed) };
 }
 
 /**

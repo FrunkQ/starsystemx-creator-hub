@@ -2242,6 +2242,28 @@ rewrites the truth the moment somebody submits it.** A test now pins that the lo
 0039"; 0039 has run, and a message about a state the hub is no longer in is a message that will one
 day mislead somebody.
 
+### D-83. A saved map is named from its bytes, everywhere
+
+The owner, 2026-09-11: *"a json file is relabelled to a zip on a copy to Debug and downloads as an
+invalid zip file. it is just json. why has it been renamed?"*
+
+**Because D-81 wrote `.sse.zip` by hand.** A map saved without pictures is a bare JSON document, and
+the download route has always known that — `pack.ts` checked the magic number and named it `.json`.
+The push to Debug did not ask; it assumed. The file in the store was intact; only its name was wrong,
+and the name is what the browser and the unzipper believed.
+
+**The likely source of the guess is worth writing down**: `r2.bundleKey` stores both kinds under
+`bundles/<id>.sse.zip`. That key cannot be renamed without orphaning every stored map, so it now
+carries a comment saying its extension describes nothing — and the contract file's own first rule
+already said so: *"The extension is never evidence of anything; `isZip` is."*
+
+**`savedFileName` in `bundle/contract.ts` is the one place that decides**, from the bytes, and both
+the download and the push call it. A test refuses a hand-written `+ '.sse.zip'` or `+ '.json'`
+anywhere else in `src`.
+
+**An entry already pushed keeps its wrong name** — the row was written before this. Delete it and
+push the map again, or rename the downloaded file to `.json`; the bytes are exactly right.
+
 ### D-16. The takedown address is assembled at runtime, never served as text
 
 The owner's instruction was explicit: keep it off the page as scrapable text. It is stored as

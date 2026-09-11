@@ -6,7 +6,8 @@
 import { describe, it, expect } from 'vitest';
 import { zipSync, strToU8 } from 'fflate';
 import { readZip, BundleReadError, DEFAULT_ZIP_LIMITS } from '../src/lib/bundle/read';
-import { isZip, extOf } from '../src/lib/bundle/contract';
+import { readFileSync, globSync } from 'node:fs';
+import { isZip, extOf, savedFileName } from '../src/lib/bundle/contract';
 import { sha256Hex, claimedHashFromModelPath } from '../src/lib/bundle/hash';
 import { MODELS_DIR } from '../src/lib/bundle/contract';
 
@@ -15,6 +16,23 @@ describe('sniffing', () => {
     expect(isZip(zipSync({ 'a.txt': strToU8('hi') }))).toBe(true);
     expect(isZip(strToU8('{"not":"a zip"}'))).toBe(false);
     expect(isZip(new Uint8Array([]))).toBe(false);
+  });
+
+  it('names a saved map from its bytes (D-83)', () => {
+    // The owner, 2026-09-11: a map pushed to Debug "is relabelled to a zip ... and downloads as an
+    // invalid zip file. it is just json." A map saved without pictures is a bare document.
+    expect(savedFileName('my-starmap', strToU8('{"systems":[]}'))).toBe('my-starmap.json');
+    expect(savedFileName('my-starmap', zipSync({ 'starmap.json': strToU8('{}') }))).toBe('my-starmap.sse.zip');
+  });
+
+  it('nothing outside contract.ts writes a saved map extension by hand (D-83)', () => {
+    // The push to Debug did, and guessed wrong. The storage key says .sse.zip for both kinds, so a
+    // name copied from habit or from the key will be wrong for every picture-less save.
+    const handWritten = globSync('src/**/*.ts')
+      .map((f) => f.split('\\').join('/'))
+      .filter((f) => f !== 'src/lib/bundle/contract.ts')
+      .filter((f) => /\+ '\.sse\.zip'|\+ '\.json'/.test(readFileSync(f, 'utf8')));
+    expect(handWritten).toEqual([]);
   });
 
   it('reads an extension without tripping on a dotless name', () => {

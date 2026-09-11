@@ -5,6 +5,7 @@
 // parse it - so nothing here reads, hashes, indexes or publishes anything. It stores bytes.
 import type { Db } from './database.types';
 import { sha256Hex } from '$lib/bundle/hash';
+import { savedFileName } from '$lib/bundle/contract';
 import type { HubEnv } from './db';
 import * as r2 from './r2';
 
@@ -128,7 +129,8 @@ export async function pushMapToDebug(
   const { error } = await sb.from('debug_uploads').insert({
     id,
     invite_id: null,
-    filename: slug + '.sse.zip',
+    // From the bytes, not assumed (D-83): a map saved without pictures is a bare .json.
+    filename: savedFileName(slug, bytes),
     byte_size: bytes.length,
     user_note: note.slice(0, 1000) || null,
     storage_key: debugKey(id)

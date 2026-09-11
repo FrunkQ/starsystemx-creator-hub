@@ -13,6 +13,11 @@ import type { Db } from './database.types';
 
 /** Objects are keyed by hash alone. No user prefix - that would defeat cross-user dedup. */
 export const assetKey = (sha256: string) => `sha256/${sha256}`;
+/**
+ * THE `.sse.zip` HERE IS NOT A DESCRIPTION. A map saved without pictures is stored under this key
+ * as bare JSON. Renaming the key would orphan every stored map, so it stays - but never name a file
+ * after it; `savedFileName` reads the bytes (D-83).
+ */
 export const bundleKey = (systemId: string) => `bundles/${systemId}.sse.zip`;
 
 /** The HEAD-and-skip. Cheap, and it is most uploads once the library has any size. */

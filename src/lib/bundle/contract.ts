@@ -57,6 +57,19 @@ export function isZip(bytes: Uint8Array): boolean {
   return bytes.length > 4 && bytes[0] === 0x50 && bytes[1] === 0x4b && bytes[2] === 0x03 && bytes[3] === 0x04;
 }
 
+/**
+ * What to call a saved map when it leaves the hub: `.sse.zip` for a bundle, `.json` for a bare save.
+ *
+ * FROM THE BYTES, and the only place that decides it (D-83). The push to Debug wrote `.sse.zip` by
+ * hand, so a map saved without pictures - a bare JSON document - arrived in the debug store
+ * labelled a zip and downloaded as a "broken" archive. Nothing was wrong with the file; the name
+ * was a guess. The storage key (`r2.bundleKey`) says `.sse.zip` for both kinds, which is the likely
+ * source of the guess and is exactly why a name must never be read off it.
+ */
+export function savedFileName(slug: string, bytes: Uint8Array): string {
+  return slug + (isZip(bytes) ? BUNDLE_EXT : '.json');
+}
+
 export const MIME_BY_EXT: Record<string, string> = {
   jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png',
   webp: 'image/webp', gif: 'image/gif', svg: 'image/svg+xml',
