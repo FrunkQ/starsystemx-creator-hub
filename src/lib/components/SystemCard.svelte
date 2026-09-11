@@ -14,6 +14,7 @@
   import { densityLevel } from '$lib/bundle/density';
   import { FAN_WORK_BADGE } from '$lib/fanWork';
   import { PROBLEM_TAG } from '$lib/bundle/problems';
+  import type { SseLink } from '$lib/openInSse';
   interface System {
     slug: string;
     title: string;
@@ -37,8 +38,9 @@
     system_count?: number;
   }
   // `best`: the top raw density on the hub, which is what a 5 means (server/density.ts).
-  // `open`: the one-click link into the app (lib/openInSse.ts), or null until the engine has it.
-  let { system, best = null, open = null }: { system: System; best?: number | null; open?: string | null } = $props();
+  // `open`: the one-click link into the app (lib/openInSse.ts) - "Open in SSE" for a campaign, "Add
+  // System to SSE" for a single system (D-92) - or null where there is none.
+  let { system, best = null, open = null }: { system: System; best?: number | null; open?: SseLink | null } = $props();
 
   const isStarmap = $derived(system.kind === 'starmap');
 
@@ -87,9 +89,7 @@
     <span class="kind"><PixelText text={isStarmap ? 'Starmap' : 'System'} scale={1.5} /></span>
     {#if open}
       <!-- The dream (owner, 2026-09-05): see a banner, open it in the app, new tab. -->
-      <a class="open" href={open} target="_blank" rel="noopener" title="Open this map in Star System Explorer, in a new tab">
-        Open in SSE
-      </a>
+      <a class="open" href={open.href} target="_blank" rel="noopener" title={open.title}>{open.short}</a>
     {/if}
   </div>
   <div class="body">

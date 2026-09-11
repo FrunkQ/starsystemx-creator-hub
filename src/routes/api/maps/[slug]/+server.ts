@@ -29,6 +29,9 @@ export const GET: RequestHandler = async ({ platform, params, setHeaders }) => {
   setHeaders({ 'cache-control': 'public, max-age=60', ...PUBLIC_CORS });
   return json({
     slug: map.slug,
+    // `title` AND `by` ARE CONTRACT (engine R-18, D-92): when the app adds a single system from a
+    // link, this is the only place it learns what it is adding and who made it, for the credit it
+    // writes on the campaign. Rename either and systems arrive uncredited. tests/openInSse.test.ts.
     title: map.title,
     blurb: map.blurb,
     description: map.description,

@@ -56,6 +56,14 @@ export const SSE_ORIGIN = SSE_BETA_ORIGIN;
 /** R-17: what the percent-encoded download URL is appended to. Overridden by `open_in_sse_url`. */
 export const DEFAULT_OPEN_IN_SSE_URL = SSE_ORIGIN + '/?open=';
 
+/**
+ * R-18: the same, for a SINGLE SYSTEM - "Add System to SSE" (D-92). Overridden by
+ * `add_system_in_sse_url`. BETA BY NAME, not `SSE_ORIGIN`: production (v3.1.48) still refuses a
+ * single system, so moving the campaign default to production must not move this one with it. It
+ * moves when the owner releases R-18 and sets the row.
+ */
+export const DEFAULT_ADD_SYSTEM_IN_SSE_URL = SSE_BETA_ORIGIN + '/?open=';
+
 /** R-13: what the engine says it ships. Overridden by `sse_manifest_url`. */
 export const DEFAULT_SSE_MANIFEST_URL = SSE_ORIGIN + '/shipped-content.json';
 

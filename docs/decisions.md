@@ -2563,6 +2563,33 @@ all, so a file can carry any word - including ones that look like the hub's deri
 `player-safe`, which /browse and `/api/maps` both match in `tags`. The vocabulary's own header says
 that is exactly what the list exists to prevent. Worth deciding separately; `default` is closed.
 
+### D-92. "Add System to SSE": a link for a single system, on the beta until production has it
+
+The engine stream's note (R-18, beta v3.1.69), relayed with the owner's decision on 2026-09-11: fill
+`openUrl` for single systems, labelled "Add System to SSE" - *"on the beta prefix only until the owner
+releases SSE to production (production still refuses a single system)"*.
+
+**Until now a system got no link, and that was right.** The engine refused one through `?open=`, and
+a button that cannot keep its promise should not be offered. The beta now takes a system and offers
+to place it on the open campaign - so it is ADDED, not opened, and the owner named the button for
+that: *"instead of it saying 'Open Map in SSE' - it would be 'Add System to SSE'"*.
+
+**Two prefixes, because two builds keep the two promises.** Campaigns open against production through
+`open_in_sse_url` (the owner moved that row there). Production still refuses a system, so systems get
+their own row, `add_system_in_sse_url` (migration 0041), whose code default is the beta BY NAME - not
+`SSE_ORIGIN`, so moving the campaign default can never drag systems with it. When the owner releases
+R-18, that row is set to the production prefix; no deploy. "off" turns system links off and leaves
+campaigns alone.
+
+**One function, `sseLink`, gives the address and the words** for the card, the map page and the
+app's list, so no caller can pair a campaign prefix with a system or the wrong label with the right
+link. The map page keeps **Copy** beside "Add System to SSE" (D-56): it pastes into whatever is open,
+and it is the only way in when the system link is off.
+
+**`title` and `by` on `GET /api/maps/<slug>` are held as contract**, pinned by a test: a link names
+only a download, so that is where the app learns what it is adding and who made it, for the credit it
+writes on the campaign.
+
 ### D-16. The takedown address is assembled at runtime, never served as text
 
 The owner's instruction was explicit: keep it off the page as scrapable text. It is stored as

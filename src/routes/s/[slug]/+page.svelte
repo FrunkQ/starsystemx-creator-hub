@@ -242,15 +242,17 @@
         <a class="download" href="/api/download/{s.slug}" data-sveltekit-reload>
           Download for Star System Explorer
         </a>
-        <!-- One click into the app (D-35): shown once the engine can receive a URL (R-17). -->
-        {#if data.openInSse}
-          <a class="download open" href={data.openInSse} target="_blank" rel="noopener">Open in Star System Explorer</a>
-        {:else if copyable}
-          <!-- A SYSTEM CANNOT BE OPENED, BUT IT CAN BE PASTED (owner, 2026-09-06; D-56). The
-               engine's `?open=` takes a campaign and refuses a single system, so the button that
-               would have opened it copies it instead - the same clip every row of the tree below
-               already offers, rooted at the whole thing. White rather than blue, because that is
-               what a system is called on a card. -->
+        <!-- One click into the app (D-35): "Open in Star System Explorer" for a campaign, and "Add
+             System to SSE" for a single system (D-92, R-18) - the owner's words for what the app
+             now does with one, which is to offer to place it rather than to open it. -->
+        {#if data.sse}
+          <a class="download open" href={data.sse.href} target="_blank" rel="noopener" title={data.sse.title}>{data.sse.label}</a>
+        {/if}
+        {#if copyable}
+          <!-- COPY STAYS for a system (D-56): it pastes into whatever is open, or anywhere the link
+               cannot reach - an older app, a row of the tree - and it is the only way in when the
+               system link is switched off. White rather than blue, because that is what a system is
+               called on a card. -->
           <button class="download paste" type="button" onclick={copyWhole}>
             {copied ? 'Copied - paste it into SSE' : 'Copy for Star System Explorer'}
           </button>
@@ -333,9 +335,9 @@
     <aside class="visual">
       <!-- 3. The cover image, and it is the only picture on the page. -->
       {#if data.coverServable && s.cover_sha256}
-        {#if data.openInSse}
+        {#if data.sse}
           <!-- The dream (owner, 2026-09-05): see the banner, open it in the app, new tab. -->
-          <a class="cover-link" href={data.openInSse} target="_blank" rel="noopener" title="Open this map in Star System Explorer, in a new tab">
+          <a class="cover-link" href={data.sse.href} target="_blank" rel="noopener" title={data.sse.title}>
             <img class="cover" src="/asset/{s.cover_sha256}" alt="Cover image for {s.title}" />
           </a>
         {:else}

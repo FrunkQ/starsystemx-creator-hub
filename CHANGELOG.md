@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.62.0 - 2026-09-11
+
+### "Add System to SSE", and a starter list only the admin can change
+
+**A single system can go straight into Star System Explorer.** Its card and page now have an **Add
+System to SSE** button, which opens the app ready to place the system on your campaign. For now it
+uses the beta version of Star System Explorer, because the main one cannot take a single system yet.
+Campaigns keep their **Open in Star System Explorer** button, and **Copy** is still there for systems.
+
+**Only the admin decides which maps Star System Explorer offers as starters.** A map is put on (or
+taken off) that list from a switch on its page. Nobody else's upload, tag choices or tag suggestions
+can add it - or remove it from a map the admin chose.
+
+
 ## 0.61.2 - 2026-09-11
 
 ### The app's map list finds your tags and says who made each map

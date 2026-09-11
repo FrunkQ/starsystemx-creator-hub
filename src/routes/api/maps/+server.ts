@@ -13,7 +13,7 @@ import { bestDensity } from '$lib/server/density';
 import { densityLevel } from '$lib/bundle/density';
 import { loadSite } from '$lib/server/site';
 import { loadGates } from '$lib/server/config';
-import { openLink } from '$lib/openInSse';
+import { openLink, ssePrefixes } from '$lib/openInSse';
 
 const DEFAULT_PAGE = 30;
 /** Ten is what Star System Explorer asks for; fifty is as much as one screen can use (R-20). */
@@ -65,8 +65,8 @@ export const GET: RequestHandler = async ({ platform, url, setHeaders }) => {
       // header's promise is that this mirrors /browse; on tags it did not.
       for (const t of tags) query = query.or('auto_tags.cs.{' + t + '},tags.cs.{' + t + '}');
       if (q) query = query.ilike('title', '%' + q + '%');
-      // A campaign and a single system are different things to ask for, and the engine can only
-      // OPEN the first (R-18) - so a panel offering "open this" wants to be able to say which.
+      // A campaign and a single system are different things to ask for: the engine OPENS the first
+      // and ADDS the second to an open campaign (R-18) - so a panel wants to be able to say which.
       if (kind) query = query.eq('kind', kind);
 
       // THE SAME ORDER AS THE WEB (D-89), from the one definition - maps that need a fix after every
@@ -93,12 +93,13 @@ export const GET: RequestHandler = async ({ platform, url, setHeaders }) => {
   // differently, and each one is a chance to get the hostname wrong. `site.url` is the address the
   // hub gives out everywhere else (D-41), so it is the address it hands out here.
   //
-  // `openUrl` IS NULL FOR A SINGLE SYSTEM, deliberately and not as an omission: the engine refuses
-  // one through `?open=` (R-18), and a link that opens the app to an error is worse than no link.
-  // A caller can offer Copy for those, which is what the hub's own page does (D-56).
+  // `openUrl` FOR A SINGLE SYSTEM IS "ADD SYSTEM TO SSE" (D-92, R-18). It was null until the engine
+  // could take one through `?open=`; its beta now can, and places it where the GM chooses. It uses its
+  // OWN prefix (`add_system_in_sse_url`), on beta until production has R-18, because a link that
+  // opens the app to its old refusal is worse than no link. Null again if that row is set to "off".
   // ============================================================================================
   const site = await loadSite(sb, url);
-  const openPrefix = gates.open_in_sse_url;
+  const prefixes = ssePrefixes(gates);
 
   // WHO MADE EACH MAP (R-20 seam report: "The list sends no creator, so the card shows none"). The
   // name the hub puts on the map's own page - the display name, or the handle - in ONE read for the
@@ -121,7 +122,7 @@ export const GET: RequestHandler = async ({ platform, url, setHeaders }) => {
       url: site.url + '/s/' + m.slug,
       downloadUrl: site.url + '/api/download/' + m.slug,
       coverUrl: m.cover_sha256 ? site.url + '/asset/' + m.cover_sha256 : null,
-      openUrl: openLink(openPrefix, site.url, m.slug, m.kind)
+      openUrl: openLink(prefixes, site.url, m.slug, m.kind)
     })),
     page,
     pageSize: size,

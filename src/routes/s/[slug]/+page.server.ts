@@ -15,7 +15,7 @@ import { tolerantWrite } from '$lib/server/tolerant';
 import { isBadge } from '$lib/badges';
 import { densityFrom, densityLevel, densitySummary } from '$lib/bundle/density';
 import { bestDensity } from '$lib/server/density';
-import { openLink } from '$lib/openInSse';
+import { sseLink, ssePrefixes } from '$lib/openInSse';
 import { problemsFrom } from '$lib/bundle/problems';
 import { withAdminTag, STARTER_TAG } from '$lib/adminTags';
 
@@ -153,7 +153,8 @@ export const load: PageServerLoad = async ({ params, platform, setHeaders, url, 
   const [best, pageSite, gates] = await Promise.all([bestDensity(sb), loadSite(sb, url), loadGates(sb)]);
   // "OPEN IN STAR SYSTEM EXPLORER" (D-35): the engine URL with the download URL appended, once the
   // engine can receive one (R-17). The download route already answers cross-origin.
-  const openInSse = openLink(gates.open_in_sse_url, pageSite.url, system.slug, system.kind);
+  // "Add System to SSE" for a single system, on its own prefix (D-92, R-18).
+  const sse = sseLink(ssePrefixes(gates), pageSite.url, system.slug, system.kind);
   const detail = densityFrom(system.info_density, system.info_detail);
   const level = densityLevel(system.info_density, best);
   const density = { level, summary: densitySummary(level, detail), measured: detail !== null };
@@ -170,7 +171,7 @@ export const load: PageServerLoad = async ({ params, platform, setHeaders, url, 
     constructs: constructs ?? [],
     usedIn,
     density,
-    openInSse,
+    sse,
     starred,
     comments,
     commentsAvailable: !commentsErr,

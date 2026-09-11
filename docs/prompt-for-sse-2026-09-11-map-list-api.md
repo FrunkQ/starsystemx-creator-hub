@@ -103,16 +103,20 @@ and safe to scale down hard; the card designs on the hub use it at about 240px w
 
 ## The one field with a trap in it
 
-**`openUrl` is `null` for every single system, and that is deliberate.**
+**`openUrl` for a single system is "Add System to SSE", and it points at the BETA** (hub 0.62.0, D-92).
 
-The engine refuses a single system through `?open=` — it says *"That link points at a single system
-rather than a campaign"* (R-18, still open). So the hub does not hand out a link that would open the
-app to an error. For those maps the hub's own page offers **Copy** instead (D-56), and a panel can
-do the same: fetch `downloadUrl` and paste it in, or offer the download.
+Until R-18 it was null for every system, because the engine refused one through `?open=`. The beta
+(v3.1.69) now takes a system and offers to place it, so the hub fills the field in - on its own
+config row, `add_system_in_sse_url`, which defaults to `https://beta.starsystemx.com/?open=`.
+Campaigns keep `open_in_sse_url`, which points at production. **Production (v3.1.48) still refuses a
+single system**, so until the owner releases R-18 and moves that row, a system's `openUrl` opens the
+beta. The hub labels the button "Add System to SSE"; a campaign's stays "Open in Star System Explorer".
 
-If R-18 ever ships, the hub starts filling that field in for systems and nothing else changes.
+The row can be set to "off", and then `openUrl` is null for systems again - so a panel should still
+handle null.
 
-**`kind=starmap`** is therefore the filter to use if your panel is strictly "click to open".
+**The credit for an added system comes from `GET /api/maps/<slug>`: `title` and `by`**, which the hub
+holds as contract.
 
 ---
 
@@ -150,9 +154,9 @@ the owner says so** — it is his call, not the hub's.
 - **`tag=` now matches the creator's own tags too**, the same clause /browse uses. A hand-added tag is
   found; `tag=real-astronomy&kind=starmap` returns Local Neighbourhood.
 - **`creator` is on every map** - `{ name, url }`, `url` null for now.
-- **`default` is not settled.** The tag filter will find it the moment a map carries it, but who may
-  put it on a map is the owner's decision and has not been made. Until it is, treat `tag=default`
-  as "whatever the hub returns", as the engine already does.
+- **`default` is settled (hub D-91): only the admin sets it**, from a switch on the map's page. An
+  upload's own tags, the creator's tag boxes and tag proposals can neither add it nor take it off, so
+  `tag=default` returns exactly the maps the admin chose.
 
 ---
 

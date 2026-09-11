@@ -6,6 +6,7 @@ import { PROBLEM_TAG } from '$lib/bundle/problems';
 import { bestDensity } from '$lib/server/density';
 import { loadGates } from '$lib/server/config';
 import { loadVocabulary } from '$lib/server/tags';
+import { ssePrefixes, NO_PREFIXES, type SsePrefixes } from '$lib/openInSse';
 
 /** Pills the hub DERIVES from the file, grouped - see 0007's note on why these are kept apart. */
 const FACET_GROUPS = [
@@ -35,7 +36,7 @@ export const load: PageServerLoad = async ({ platform, url, setHeaders }) => {
     systems: [], groups: FACET_GROUPS, mine: [] as { label: string; tags: string[] }[],
     selected, q, sort, kind, counts: {} as Record<string, number>, narrow: [] as string[],
     best: null as number | null,
-    openPrefix: null as string | null
+    openPrefixes: NO_PREFIXES as SsePrefixes
   };
   if (!env?.SUPABASE_URL) return { ...empty, configured: false, failed: false };
 
@@ -69,7 +70,7 @@ export const load: PageServerLoad = async ({ platform, url, setHeaders }) => {
     loadVocabulary(sb),
     // What a 5 on the information meter means today (D-30).
     bestDensity(sb),
-    // The engine prefix for "Open in SSE" on a card (D-35); empty until the engine has R-17.
+    // The engine prefixes for a card's "Open in SSE" and "Add System to SSE" (D-35, D-92).
     loadGates(sb)
   ]);
   const mine = vocabulary.map((g) => ({ label: g.label, tags: g.tags }));
@@ -103,5 +104,5 @@ export const load: PageServerLoad = async ({ platform, url, setHeaders }) => {
     .map(([t]) => t);
 
   setHeaders({ 'cache-control': 'public, max-age=60' });
-  return { ...empty, systems: data ?? [], mine, counts, narrow: total >= 4 ? narrow : [], best, openPrefix: gates.open_in_sse_url, configured: true, failed: false };
+  return { ...empty, systems: data ?? [], mine, counts, narrow: total >= 4 ? narrow : [], best, openPrefixes: ssePrefixes(gates), configured: true, failed: false };
 };

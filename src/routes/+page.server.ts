@@ -4,13 +4,14 @@ import { tolerantSelect } from '$lib/server/tolerant';
 import { CARD_COLUMNS, CARD_OPTIONAL, orderCards, type CardRow } from '$lib/server/cards';
 import { bestDensity } from '$lib/server/density';
 import { loadGates } from '$lib/server/config';
+import { ssePrefixes, NO_PREFIXES } from '$lib/openInSse';
 
 // SSR, one query, no engine. The page must be fast at LOADING (design 2).
 export const load: PageServerLoad = async ({ platform, setHeaders, url }) => {
   const env = platform?.env;
   // Where a deleted account lands. Said once, kindly, on a page that is otherwise the same for everyone.
   const bye = url.searchParams.has('bye');
-  if (!env?.SUPABASE_URL) return { systems: [], configured: false, failed: false, bye, best: null, openPrefix: null };
+  if (!env?.SUPABASE_URL) return { systems: [], configured: false, failed: false, bye, best: null, openPrefixes: NO_PREFIXES };
 
   const sb = db(env);
   const [{ data, error }, best, gates] = await Promise.all([
@@ -21,7 +22,7 @@ export const load: PageServerLoad = async ({ platform, setHeaders, url }) => {
     ),
     // What a 5 on the information meter means today (D-30).
     bestDensity(sb),
-    // The engine prefix for "Open in SSE" on a card (D-35); empty until the engine has R-17.
+    // The engine prefixes for a card's "Open in SSE" and "Add System to SSE" (D-35, D-92).
     loadGates(sb)
   ]);
 
@@ -29,11 +30,11 @@ export const load: PageServerLoad = async ({ platform, setHeaders, url }) => {
   // failure either - a 60-second cache on a broken read turns a blip into a minute of wrong page.
   if (error) {
     console.error('front page query failed', error.message);
-    return { systems: [], configured: true, failed: true, bye, best: null, openPrefix: null };
+    return { systems: [], configured: true, failed: true, bye, best: null, openPrefixes: NO_PREFIXES };
   }
 
   // Short edge cache: the front page is the same for everybody and is the most-hit route.
   setHeaders({ 'cache-control': 'public, max-age=60' });
 
-  return { systems: data ?? [], configured: true, failed: false, bye, best, openPrefix: gates.open_in_sse_url };
+  return { systems: data ?? [], configured: true, failed: false, bye, best, openPrefixes: ssePrefixes(gates) };
 };
