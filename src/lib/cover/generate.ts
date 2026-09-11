@@ -230,6 +230,85 @@ function primaryOf(roots: TreeNode[]): TreeNode | null {
   return [...pool].sort((a, b) => b.total - a.total)[0];
 }
 
+// ---- multi-star systems: which star is in the middle ---------------------------------------------
+//
+// The owner, 2026-09-11: *"do we need a slight tweak to the system view default cover image ... to
+// cope with multistar systems?"* (D-85). The engine roots a multiple system at a BARYCENTRE - a point
+// in space, `kind: 'barycenter'`, with no roleHint - and hangs the stars beneath it, nested when the
+// system is hierarchical (Alpha Centauri: a barycentre over the AB pair's barycentre and Proxima).
+// The diagram took that root as "the star", so a binary drew:
+//   - a sun in the middle that is not there - the barycentre, in the palette's default colour;
+//   - its real stars as small dots on rings, or NOT AT ALL when they sat one barycentre deeper, which
+//     is how Alpha Centauri lost both A and B;
+//   - and any barycentre on a ring as a construct's square, having no roleHint to switch on - which
+//     even put an orange "space station" where Pluto and Charon are on Sol's card.
+//
+// Now the middle is a real star: walk down from the root, taking the HEAVIEST stellar member at each
+// barycentre, until a star is reached. Every other stellar member met on the way is a COMPANION and
+// gets a ring, as does anything orbiting a barycentre directly (a circumbinary planet). That is how
+// the system is arranged - the lighter star goes round the heavier - and with the rings ordered by
+// real distance, S-type planets land inside the companion's orbit and circumbinary ones outside it
+// without a rule having to say so.
+
+const isBarycentre = (n: CoverNode): boolean => n.kind === 'barycenter';
+const isStar = (n: CoverNode): boolean => n.role_hint === 'star';
+
+/** The stars a node stands for: itself, or every star beneath it through barycentres alone. */
+function starsWithin(n: TreeNode): TreeNode[] {
+  if (isStar(n)) return [n];
+  return isBarycentre(n) ? n.children.flatMap(starsWithin) : [];
+}
+
+/**
+ * Heaviest first. Real mass when every contender has one - a pair weighs what both its stars weigh -
+ * and the class's chart size cubed otherwise, as a rough stand-in for mass that still lets one G star
+ * outweigh a pair of red dwarfs.
+ */
+function heaviestFirst(members: TreeNode[]): TreeNode[] {
+  const mass = (n: TreeNode) => starsWithin(n).reduce((kg, s) => kg + (s.mass_kg ?? 0), 0);
+  const bulk = (n: TreeNode) => starsWithin(n).reduce((sum, s) => sum + starSize(s.star_class) ** 3, 0);
+  const byMass = members.every((m) => mass(m) > 0);
+  return [...members].sort((a, b) => (byMass ? mass(b) - mass(a) : bulk(b) - bulk(a)) || b.total - a.total);
+}
+
+/**
+ * What sits in the middle, what orbits it, and which companions must be drawn whatever else is cut.
+ * Exported for the tests: this is the decision, and the pixels are only its consequence.
+ */
+export function systemLayout(nodes: CoverNode[]): { centre: string | null; orbiting: string[]; companions: string[] } {
+  const layout = layoutOf(buildTree(nodes));
+  return {
+    centre: layout.centre?.node_id ?? null,
+    orbiting: layout.orbiting.map((n) => n.node_id),
+    companions: layout.companions.map((n) => n.node_id)
+  };
+}
+
+function layoutOf(roots: TreeNode[]): { centre: TreeNode | null; orbiting: TreeNode[]; companions: TreeNode[] } {
+  const stellar = roots.filter((r) => starsWithin(r).length > 0);
+  if (!stellar.length) {
+    // No star anywhere a barycentre could lead to: the old rule, unchanged.
+    const centre = primaryOf(roots);
+    return { centre, orbiting: centre ? centre.children : [], companions: [] };
+  }
+
+  // Several roots with stars in them (a multi-root import): the heaviest is the system and the rest
+  // are companions - outermost, since nothing records how far away they are.
+  const [first, ...otherRoots] = heaviestFirst(stellar);
+  const groups: TreeNode[][] = [otherRoots];
+  const circumbinary: TreeNode[] = [];
+  let node = first;
+  while (isBarycentre(node)) {
+    const members = node.children.filter((c) => starsWithin(c).length > 0);
+    circumbinary.push(...node.children.filter((c) => starsWithin(c).length === 0));
+    const [heaviest, ...rest] = heaviestFirst(members);
+    // Deeper is closer in, so each level's companions go in front of the ones found above it.
+    groups.unshift(rest);
+    node = heaviest;
+  }
+  return { centre: node, orbiting: [...node.children, ...circumbinary], companions: groups.flat() };
+}
+
 // ---- what a thing looks like, from what the file says it is -------------------------------------
 
 const EARTH_KG = 5.972e24;
@@ -297,8 +376,7 @@ function starfield(r: Raster, seedText: string, count: number, p: Palette): void
 
 /** The orbital diagram. `box` is where it may sit; the diagram fills it. */
 function drawSystem(r: Raster, facts: CoverFacts, p: Palette, box: { cx: number; cy: number; inner: number; outer: number }): void {
-  const roots = buildTree(facts.nodes);
-  const primary = primaryOf(roots);
+  const { centre: primary, orbiting: around, companions } = layoutOf(buildTree(facts.nodes));
   const { cx, cy } = box;
   const KY = 0.55;
 
@@ -308,10 +386,12 @@ function drawSystem(r: Raster, facts: CoverFacts, p: Palette, box: { cx: number;
     return;
   }
 
-  // Up to eight orbits: the children with the most beneath them. Ordered by real distance when the
-  // file says, by file order otherwise.
-  const chosen = new Set([...primary.children].sort((a, b) => b.total - a.total).slice(0, 8).map((c) => c.node_id));
-  const orbiting = primary.children.filter((c) => chosen.has(c.node_id));
+  // Up to eight orbits. Companion stars always keep theirs - a binary drawn without its second star
+  // is the fault D-85 fixed - and the rest go to the children with the most beneath them. Ordered by
+  // real distance when the file says, by file order otherwise.
+  const kept = companions.slice(0, 3);
+  const chosen = new Set([...around].sort((a, b) => b.total - a.total).slice(0, 8 - kept.length).map((c) => c.node_id));
+  const orbiting = [...around.filter((c) => chosen.has(c.node_id)), ...kept];
   const known = orbiting.filter((c) => (c.distance ?? 0) > 0);
   if (known.length >= 2) orbiting.sort((a, b) => (a.distance ?? Infinity) - (b.distance ?? Infinity));
 
@@ -353,6 +433,9 @@ function drawSystem(r: Raster, facts: CoverFacts, p: Palette, box: { cx: number;
     const radius = radii[i];
     const angle = ((fnv(child.node_id) % 3600) / 3600) * Math.PI * 2;
     const x = cx + radius * Math.cos(angle), y = cy + radius * Math.sin(angle) * KY;
+    // A barycentre has no roleHint, so it is caught by KIND before the switch - it used to fall
+    // through to the construct square.
+    if (isBarycentre(child)) { pairOnRing(r, child, x, y, p); return; }
     switch (child.role_hint) {
       case 'planet': {
         const { r: pr, c } = planetStyle(child, p);
@@ -372,21 +455,60 @@ function drawSystem(r: Raster, facts: CoverFacts, p: Palette, box: { cx: number;
       case 'small object': r.circle(x, y, 1.8, p.dim, 0.9); break;
       case 'belt': break; // the orbit IS the belt
       case 'ring': r.circle(x, y, 2.5, p.dim, 0.8); break;
-      case 'star': {
-        const c = starColour(child.star_class, p);
-        r.glow(x, y, 26, c, 0.4); r.circle(x, y, 8, c); break;
-      }
-      case 'barycenter': r.ring(x, y, 5, 1.4, p.dim); break;
+      case 'star': companionStar(r, child, x, y, p); break;
       default: r.rect(x - 3.5, y - 3.5, 7, 7, p.warn); // a construct: station, ship, habitat
     }
   });
 }
 
-/** A system's star colour and size: the root's own class, or the brightest child's for a barycentre. */
+/**
+ * A companion star on its ring: sized by class, so a white dwarf reads smaller than the star it
+ * circles, and wearing up to four of its own worlds as specks - Proxima's planets are hers, not the
+ * middle star's, and drawing them on the middle star's rings would say otherwise.
+ */
+function companionStar(r: Raster, star: TreeNode, x: number, y: number, p: Palette): void {
+  const c = starColour(star.star_class, p);
+  const s = 2 + starSize(star.star_class) * 1.8;
+  r.glow(x, y, s * 3.2, c, 0.4);
+  r.circle(x, y, s, c);
+  const worlds = star.children.filter((k) => !isStar(k) && !isBarycentre(k)).slice(0, 4);
+  if (worlds.length) r.ring(x, y, s + 8, 0.8, p.edge, 0.8);
+  worlds.forEach((w, k) => {
+    const a = ((fnv(w.node_id) % 360) / 360) * Math.PI * 2 + k;
+    r.circle(x + (s + 8) * Math.cos(a), y + (s + 8) * Math.sin(a), 2, p.dim);
+  });
+}
+
+/** A barycentre on a ring is its members side by side: a pair of stars, or Pluto and Charon. */
+function pairOnRing(r: Raster, bary: TreeNode, x: number, y: number, p: Palette): void {
+  const stars = starsWithin(bary);
+  const shown = (stars.length ? heaviestFirst(stars) : bary.children).slice(0, 3);
+  if (!shown.length) { r.ring(x, y, 5, 1.4, p.dim); return; } // an empty barycentre: the old marker
+  const gap = stars.length ? 15 : 6;
+  const x0 = x - ((shown.length - 1) * gap) / 2;
+  shown.forEach((m, k) => {
+    const mx = x0 + k * gap;
+    if (isStar(m)) {
+      const c = starColour(m.star_class, p);
+      const s = 1.5 + starSize(m.star_class) * 1.4;
+      r.glow(mx, y, s * 3, c, 0.35);
+      r.circle(mx, y, s, c);
+    } else {
+      const { r: pr, c } = planetStyle(m, p);
+      r.circle(mx, y, Math.max(2, pr * 0.5), c);
+    }
+  });
+}
+
+/**
+ * A system's star colour and size on the starmap card: the root's own class, or the heaviest star
+ * beneath a barycentre - through nested ones too (D-85). Direct children only used to be read, so
+ * Alpha Centauri, whose A and B sit one barycentre down, was charted as its red dwarf.
+ */
 function systemClass(root: TreeNode): string | null {
   if (root.star_class) return root.star_class;
-  const stars = root.children.filter((c) => c.star_class);
-  return stars.length ? stars.sort((a, b) => starSize(b.star_class) - starSize(a.star_class))[0].star_class ?? null : null;
+  const stars = starsWithin(root).filter((s) => s.star_class);
+  return stars.length ? heaviestFirst(stars)[0].star_class ?? null : null;
 }
 
 /** What to call a system on the chart: the star's name, or a barycentre's name without the scaffolding. */

@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.59.2 - 2026-09-11
+
+### Multi-star covers, stable addresses, and a Debug file that says what it is
+
+**A binary's cover has its real stars on it.** The drawn cover used to put a sun in the middle of a
+multi-star system that is not there, and could leave the actual stars out entirely - Alpha Centauri
+lost both A and B. Now the heaviest star is in the middle and its companions orbit it, the way the
+system is actually arranged. Sol's card also loses the orange "space station" it was drawing where
+Pluto and Charon are. Covers already drawn update when a map is re-indexed.
+
+**A map keeps its address when you upload a new version.** Renaming a map in the app and uploading it
+again used to move its page, breaking every link already shared and the QR code on its cover. Two
+maps with the same name still get their own addresses - the second is `-2`.
+
+**Pushing a map into Debug names the file properly.** A map saved without pictures is plain JSON, and
+it was arriving labelled as a zip. An entry pushed before this keeps the old name: delete it and push
+again, or rename the download to `.json`.
+
+
 ## 0.59.1 - 2026-09-11
 
 ### Trust an explorer from the list

@@ -2296,6 +2296,49 @@ moved it to `local-neighbourhood-default`.
 instant can both find `my-starmap` free, and the second then fails on the unique column. Uploading
 again works.
 
+### D-85. A multi-star system's cover has a real star in the middle
+
+The owner, 2026-09-11: *"do we need a slight tweak to the system view default cover image need a
+tweak to cope with multistar systems?"*
+
+**Yes, and it was more than a tweak.** Fourteen of the Local Neighbourhood's systems have more than
+one star, and drawing them showed what the diagram did with every one. The engine roots a multiple
+system at a BARYCENTRE — a point in space, `kind: 'barycenter'`, no roleHint — and the diagram took
+the root as "the star". So:
+
+- **a sun was drawn in the middle that is not there** — the barycentre, in the palette's default
+  colour;
+- **the real stars were small dots on rings, or missing entirely** when they sat one barycentre
+  deeper — Alpha Centauri lost both A and B;
+- **a barycentre on a ring became a construct's orange square**, having no roleHint to draw it by.
+  That one reached single-star systems too: Sol's card had a "space station" where Pluto and Charon
+  are.
+
+**The rule now:** walk down from the root, at each barycentre taking the heaviest stellar member,
+until a star is reached. That star is the middle. Every other stellar member met on the way is a
+companion and gets a ring; anything orbiting a barycentre directly (a circumbinary planet) gets a
+ring too. Heaviest by real mass when every contender has one, by the class's chart size cubed
+otherwise — so one G star still outweighs a pair of red dwarfs.
+
+**Why that picture and not a pair side by side in the middle:** it is how the system is arranged — the
+lighter star goes round the heavier — and it needs no second rule. With the rings ordered by real
+distance, S-type planets land inside the companion's orbit and circumbinary ones outside it on their
+own. Alpha Centauri draws A in the middle, B on the inner ring, Proxima on the outer ring wearing her
+own two planets; Sirius draws the blue-white A with the white dwarf beside it; a barycentre on a ring
+draws as its members side by side.
+
+**Companions always keep their ring** when the eight-ring limit cuts, because a binary drawn without
+its second star is the fault being fixed.
+
+**The starmap card had the same blind spot, smaller.** It read a barycentre's direct children only,
+so Alpha Centauri was charted in Proxima's red. It now looks through nested barycentres for the
+heaviest star.
+
+**Covers already drawn stay as they are until redrawn.** Re-indexing redraws a generated cover, so
+pressing Re-index on the config page until it reaches today refreshes every one; a creator's chosen
+screenshot is never touched. `tests/cover.multistar.probe.test.ts` draws the real systems into
+`tests/out/` for a person to look at.
+
 ### D-16. The takedown address is assembled at runtime, never served as text
 
 The owner's instruction was explicit: keep it off the page as scrapable text. It is stored as
