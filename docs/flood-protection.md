@@ -64,9 +64,17 @@ They are not under *Workers & Pages*.
    network and would be challenged (they cannot reach the live site through their proxy today in
    any case); verify a deploy from the owner's browser or the Workers Builds log instead.
 5. **One rate limiting rule** (the free plan has one): *Security rules* > *Create rule* > *Rate
-   limiting rule*. Name "Explorers: per address". If incoming requests match `(http.host eq
-   "explorers.starsystemx.com" and not starts_with(http.request.uri.path, "/api/webhooks/"))`, counted by **IP**, when rate exceeds **100 requests per 10
-   seconds**, then **Block** for **10 seconds**.
+   limiting rule*. Name "Explorers: per address". The free plan allows only the path (not the
+   host) in this rule, so it matches the paths only the hub has; SSE4 and the converter use none:
+
+   ```
+   (starts_with(http.request.uri.path, "/asset/") or starts_with(http.request.uri.path, "/api/maps") or starts_with(http.request.uri.path, "/api/download/") or starts_with(http.request.uri.path, "/s/") or http.request.uri.path eq "/browse")
+   ```
+
+   Counted by **IP**, **60 requests per 10 seconds**, then **Block** for **10 seconds** (IP, 10 s
+   and 10 s are the free plan's only choices). Webhooks are not on these paths, so are never counted.
+   **If a new public hub route is added, add it here**, and never give SSE4 or the converter a
+   path that starts with one of these.
 6. **Check it worked** next day: *Security* > *Analytics* (or *Events*) shows what was challenged
    and blocked, by country, network (ASN) and agent. The hub's own *Admin* > *Stats* page shows the
    requests that still reached the Worker.

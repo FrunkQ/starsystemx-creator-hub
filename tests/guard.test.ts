@@ -37,7 +37,12 @@ describe('webhooks', () => {
   it('are never refused as scrapers or rate limited, whatever agent the sender uses', () => {
     const hook = readFileSync('src/hooks.server.ts', 'utf8');
     expect(hook).toContain("const ip = event.url.pathname.startsWith('/api/webhooks/')\n    ? null");
-    expect(readFileSync('docs/flood-protection.md', 'utf8')).toContain('not starts_with(http.request.uri.path, "/api/webhooks/")');
+    const doc = readFileSync('docs/flood-protection.md', 'utf8');
+    expect(doc).toContain('not starts_with(http.request.uri.path, "/api/webhooks/")');
+    // The free plan's rate limiting rule may match the path only, never the host.
+    const rate = doc.slice(doc.indexOf('5. **One rate limiting rule**'), doc.indexOf('6. **Check it worked**'));
+    expect(rate).not.toContain('http.host');
+    expect(rate).not.toContain('/api/webhooks/"');
   });
 });
 
