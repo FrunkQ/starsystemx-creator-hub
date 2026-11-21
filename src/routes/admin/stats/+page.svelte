@@ -48,7 +48,7 @@
       })
     };
   });
-  const COLOURS: Record<string, string> = { page: 'var(--accent)', api: '#9aa6bf', asset: '#7fd1a8', download: '#ffe08a', upload: '#ff8080' };
+  const COLOURS: Record<string, string> = { page: 'var(--accent)', api: 'var(--ink-faint)', asset: 'var(--cr-zone-ink)', download: 'var(--warn)', upload: 'var(--bad)' };
   const project = (used: number) => {
     const elapsed = Math.max(1, Number(month?.days_elapsed ?? 1));
     return Math.round((used / elapsed) * Number(month?.days_in_month ?? 30));
@@ -210,9 +210,9 @@
         <line x1="0" y1={chart.base} x2={chart.W} y2={chart.base} class="axis" />
         {#each chart.cols as col (col.day)}
           {#each col.segments as seg (seg.c)}
-            {#if seg.h > 0}<rect x={col.x} y={seg.y} width={col.w} height={seg.h} fill={COLOURS[seg.c]}><title>{col.day} {seg.c}</title></rect>{/if}
+            {#if seg.h > 0}<rect x={col.x} y={seg.y} width={col.w} height={seg.h} style:fill={COLOURS[seg.c]}><title>{col.day} {seg.c}</title></rect>{/if}
           {/each}
-          {#if col.inH > 0}<rect x={col.x} y={chart.base + 1} width={col.w} height={col.inH} fill={COLOURS.upload}><title>{col.day} in</title></rect>{/if}
+          {#if col.inH > 0}<rect x={col.x} y={chart.base + 1} width={col.w} height={col.inH} style:fill={COLOURS.upload}><title>{col.day} in</title></rect>{/if}
         {/each}
       </svg>
       <div class="legend">
@@ -291,7 +291,7 @@
   .meter .head { display: flex; justify-content: space-between; gap: 10px; font-size: 0.9rem; color: var(--ink-dim); }
   .meter .head b { color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
   .meter .head em { color: var(--ink-faint); font-style: normal; font-weight: 400; }
-  .track { position: relative; height: 10px; background: var(--panel-2); border: 1px solid var(--edge); border-radius: 6px; margin: 8px 0 6px; overflow: hidden; }
+  .track { position: relative; height: 10px; background: var(--panel-2); border: 1px solid var(--edge); border-radius: var(--radius); margin: 8px 0 6px; overflow: hidden; }
   .fill { height: 100%; background: var(--accent); }
   .meter.warn .fill { background: var(--warn); }
   .meter.bad .fill { background: var(--bad); }
@@ -303,6 +303,6 @@
   .chart svg { width: 100%; height: 150px; display: block; }
   .chart .axis { stroke: var(--edge); stroke-width: 1; }
   .legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 8px; color: var(--ink-faint); font-size: 0.8rem; }
-  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
-  code { background: var(--panel-2); border: 1px solid var(--edge); border-radius: 4px; padding: 1px 5px; font-size: 0.85em; }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: var(--radius); margin-right: 5px; vertical-align: -1px; }
+  code { background: var(--panel-2); border: 1px solid var(--edge); border-radius: var(--radius); padding: 1px 5px; font-size: 0.85em; }
 </style>

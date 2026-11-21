@@ -216,7 +216,7 @@
   label { display: block; margin: 6px 0; color: var(--ink-dim); }
   label.note input, .row input {
     display: block; width: min(100%, 420px); margin-top: 4px; font: inherit;
-    background: var(--panel-2); color: var(--ink); border: 1px solid var(--edge); border-radius: 8px; padding: 6px 8px;
+    background: var(--panel-2); color: var(--ink); border: 1px solid var(--edge); border-radius: var(--radius); padding: 6px 8px;
   }
   .row { display: flex; gap: 6px; align-items: center; margin: 0; }
   .row input { display: inline-block; width: 160px; margin: 0; }
@@ -226,13 +226,13 @@
   tr.off td { color: var(--ink-faint); }
   .danger-zone { border-color: var(--bad); margin-top: 32px; }
   .tag.mod { background: var(--accent); color: var(--accent-ink); }
-  code { background: var(--panel-2); border: 1px solid var(--edge); border-radius: 4px; padding: 1px 5px; }
+  code { background: var(--panel-2); border: 1px solid var(--edge); border-radius: var(--radius); padding: 1px 5px; }
   /* THE SAME TWO COLOURS AS THE BANNER (app.css `header .role`): admin amber, moderator blue.
      A role badge that reads differently here from the one over somebody's own name is a small way
      to make people doubt both of them. */
   .role {
     font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.07em; font-weight: 700;
-    padding: 1px 6px; border-radius: 999px; margin-left: 6px;
+    padding: 1px 6px; border-radius: var(--radius); margin-left: 6px;
     background: var(--warn); color: var(--accent-ink); border: 0;
   }
   .role.mod { background: var(--accent); }

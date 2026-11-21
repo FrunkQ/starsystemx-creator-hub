@@ -400,12 +400,12 @@
      never zooms back out (D-65). This is the only field in the hub that was under the line. */
   .q {
     font: inherit; width: min(100%, 360px);
-    background: var(--panel-2); color: var(--ink); border: 1px solid var(--edge); border-radius: 8px; padding: 6px 10px;
+    background: var(--panel-2); color: var(--ink); border: 1px solid var(--edge); border-radius: var(--radius); padding: 6px 10px;
   }
   .chips { display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; }
   .lbl { color: var(--ink-faint); font-size: 0.8rem; margin-right: 4px; }
   .groups { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
-  .tagbox { border: 1px solid var(--edge); border-radius: 8px; padding: 6px 10px; background: var(--panel); }
+  .tagbox { border: 1px solid var(--edge); border-radius: var(--radius); padding: 6px 10px; background: var(--panel); }
   .tagbox summary { cursor: pointer; color: var(--ink-dim); font-size: 0.9rem; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
   .tagbox summary:hover { color: var(--ink); }
   .group .lbl { min-width: 84px; text-transform: lowercase; letter-spacing: 0.02em; }
@@ -413,7 +413,7 @@
   .chip {
     display: inline-flex; align-items: center; gap: 5px;
     font: inherit; font-size: 0.8rem; padding: 2px 9px; cursor: pointer;
-    background: var(--panel-2); color: var(--ink-dim); border: 1px solid var(--edge); border-radius: 999px;
+    background: var(--panel-2); color: var(--ink-dim); border: 1px solid var(--edge); border-radius: var(--radius);
   }
   .chip:hover { color: var(--ink); border-color: var(--ink-faint); }
   .chip.on { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); }
@@ -423,14 +423,14 @@
 
   .bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 0 0 8px; }
   .hint { color: var(--ink-faint); font-size: 0.9rem; margin-right: auto; }
-  .seg { display: inline-flex; border: 1px solid var(--edge); border-radius: 8px; overflow: hidden; }
+  .seg { display: inline-flex; border: 1px solid var(--edge); border-radius: var(--radius); overflow: hidden; }
   .seg button, .ghost {
     font: inherit; font-size: 0.85rem; padding: 5px 10px; cursor: pointer;
     background: var(--panel); color: var(--ink-dim); border: none;
   }
   .seg button + button { border-left: 1px solid var(--edge); }
   .seg button.on { background: var(--panel-2); color: var(--ink); }
-  .ghost { border: 1px solid var(--edge); border-radius: 8px; }
+  .ghost { border: 1px solid var(--edge); border-radius: var(--radius); }
   .ghost:hover, .seg button:hover { color: var(--ink); }
 
   .tree { border: 1px solid var(--edge); border-radius: var(--radius); overflow: hidden; }
@@ -460,7 +460,7 @@
   .acts button {
     display: inline-flex; align-items: center; gap: 5px;
     font: inherit; font-size: 0.78rem; padding: 3px 7px; cursor: pointer;
-    background: transparent; color: var(--ink-faint); border: 1px solid transparent; border-radius: 6px;
+    background: transparent; color: var(--ink-faint); border: 1px solid transparent; border-radius: var(--radius);
     opacity: 0.55;
   }
   summary:hover .acts button, .acts button:focus-visible, .acts button.on, .acts button.done { opacity: 1; }
@@ -490,7 +490,7 @@
   pre {
     margin: 0 12px 10px calc(10px + var(--depth) * 16px);
     padding: 10px 12px; max-height: 360px; overflow: auto;
-    background: var(--bg); border: 1px solid var(--edge); border-radius: 8px;
+    background: var(--bg); border: 1px solid var(--edge); border-radius: var(--radius);
     font-size: 0.8rem; line-height: 1.45;
   }
 

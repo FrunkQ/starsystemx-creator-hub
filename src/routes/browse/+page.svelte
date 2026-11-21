@@ -188,7 +188,7 @@
   .search { display: flex; gap: 6px; margin-bottom: 20px; }
   .search input {
     min-width: 0; flex: 1; font: inherit; background: var(--panel-2); color: var(--ink);
-    border: 1px solid var(--edge); border-radius: 8px; padding: 6px 8px;
+    border: 1px solid var(--edge); border-radius: var(--radius); padding: 6px 8px;
   }
   .bar { display: flex; align-items: center; gap: 14px; margin-bottom: 14px;
          color: var(--ink-faint); font-size: 0.9rem; }

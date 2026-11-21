@@ -116,7 +116,7 @@
   input {
     display: block; width: 100%; margin-top: 4px; font: inherit;
     background: var(--panel-2); color: var(--ink);
-    border: 1px solid var(--edge); border-radius: 8px; padding: 10px 12px;
+    border: 1px solid var(--edge); border-radius: var(--radius); padding: 10px 12px;
   }
   .hint { margin: 5px 0 0; color: var(--ink-faint); font-size: 0.88rem; }
   .bad { color: var(--bad); }

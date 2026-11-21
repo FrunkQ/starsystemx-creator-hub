@@ -201,7 +201,7 @@
   .inline { display: flex; gap: 6px; }
   input {
     font: inherit; background: var(--panel-2); color: var(--ink);
-    border: 1px solid var(--edge); border-radius: 6px; padding: 4px 8px;
+    border: 1px solid var(--edge); border-radius: var(--radius); padding: 4px 8px;
   }
   .note { color: var(--ink-dim); font-size: 0.88rem; max-width: 46ch; }
   .when { color: var(--ink-faint); font-size: 0.85rem; white-space: nowrap; }

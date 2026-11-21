@@ -2590,6 +2590,42 @@ and it is the only way in when the system link is off.
 only a download, so that is where the app learns what it is adding and who made it, for the credit it
 writes on the campaign.
 
+### D-93. The chart room skin: one shared file, the device's light or dark, and a remembered toggle
+
+The owner, 2026-11-21: the hub is to be an "SSE native" tool for Star System Explorer 4 and needs
+"a v4 beautification too - or a skin to match". Decided the same day: **skin now, fuller rework
+later** (SSE4 design, top-level UI section 17).
+
+**One file carries the skin: `static/skin/chart-room.css`.** Typefaces, colour tokens (`--cr-*`) and
+the light/dark switch, and nothing else. The converter site copies the same file, so the StarSystemX
+sites read as one product. The values are SSE4's own (`packages/skins/chart-room/src/themes.ts`),
+COPIED rather than linked: each site deploys on its own, and a skin hot-linked from another site
+breaks when that site moves. `tests/skin.test.ts` pins the identity values.
+
+**The hub's own variable names stay**, and `src/app.css` maps them onto the skin, so no component
+names a theme. One trap is named in the file: the hub's `--accent-ink` has always meant text ON the
+accent, while SSE4's token of that name is the accent dark enough to be text; that one is `--link`.
+
+**Light or dark follows the device**, with Chart room when the device says nothing. A toggle in the
+banner sets a remembered override (`localStorage` `sx-theme`), applied by a few lines in `app.html`
+before the first paint so a Night chart reader never sees a flash of paper. Storage refused means
+the device setting stands.
+
+**Fonts, against the "no webfonts" rule of the original stylesheet.** The rule existed to keep pages
+fast at loading. Three self-hosted latin subsets (about 150 KB, SIL OFL, licences beside the files)
+with `font-display: swap` keep that promise: text paints at once in the system face and nothing waits
+for a font. Only the body face is preloaded.
+
+**Square corners everywhere**, including tags and count badges (the chart room radius is 0), and
+frames in ink rather than in the divider colour. Controls answer a touch with a 1px lift and a small
+hard shadow (SSE4 interface style 5); `prefers-reduced-motion` removes the movement and keeps the
+feedback.
+
+**Kept for the rework, on purpose:** the pixel wordmark and the pixel lettering on generated covers.
+Covers are baked into share images already posted elsewhere, so changing their face is a bigger
+decision than a skin. The review stage's near-black backdrop also stays: a picture under review is
+judged against a neutral dark ground whatever the theme.
+
 ### D-16. The takedown address is assembled at runtime, never served as text
 
 The owner's instruction was explicit: keep it off the page as scrapable text. It is stored as

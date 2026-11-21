@@ -72,9 +72,9 @@
   label { display: block; margin: 4px 0 12px; color: var(--ink-dim); }
   input {
     display: block; width: 100%; max-width: 260px; margin-top: 4px;
-    font: 1.3rem ui-monospace, Consolas, monospace; letter-spacing: 0.12em; text-transform: uppercase;
+    font: 1.3rem var(--font-mono); letter-spacing: 0.12em; text-transform: uppercase;
     background: var(--panel-2); color: var(--ink);
-    border: 1px solid var(--edge); border-radius: 8px; padding: 10px;
+    border: 1px solid var(--edge); border-radius: var(--radius); padding: 10px;
   }
   .what { margin: 8px 0 16px; }
   .what ul { margin: 0; padding-left: 20px; color: var(--ink-dim); }

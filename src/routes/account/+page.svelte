@@ -228,7 +228,7 @@
   .name label { display: block; margin: 8px 0; color: var(--ink-dim); }
   .name input {
     display: block; width: min(100%, 320px); margin-top: 4px; font: inherit;
-    background: var(--panel-2); color: var(--ink); border: 1px solid var(--edge); border-radius: 8px; padding: 8px;
+    background: var(--panel-2); color: var(--ink); border: 1px solid var(--edge); border-radius: var(--radius); padding: 8px;
   }
   .name p { margin: 6px 0 10px; max-width: 62ch; }
   ul { margin: 0; padding-left: 18px; }
@@ -242,9 +242,9 @@
   .danger-zone label { display: block; margin: 6px 0; color: var(--ink-dim); }
   .danger-zone .confirm input {
     display: block; width: min(100%, 320px); margin-top: 4px; font: inherit;
-    background: var(--panel-2); color: var(--ink); border: 1px solid var(--edge); border-radius: 8px; padding: 8px;
+    background: var(--panel-2); color: var(--ink); border: 1px solid var(--edge); border-radius: var(--radius); padding: 8px;
   }
-  .danger-zone code { background: var(--panel-2); border: 1px solid var(--edge); border-radius: 4px; padding: 1px 5px; }
+  .danger-zone code { background: var(--panel-2); border: 1px solid var(--edge); border-radius: var(--radius); padding: 1px 5px; }
   .ok { color: var(--accent); margin: 8px 0 0; }
   .small { font-size: 0.85rem; }
 </style>

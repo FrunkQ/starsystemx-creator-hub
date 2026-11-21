@@ -133,7 +133,7 @@
     font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.07em; font-weight: 700;
     color: var(--ink-faint);
   }
-  .head code { background: var(--panel-2); border: 1px solid var(--edge); border-radius: 4px; padding: 0 5px; font-size: 0.8rem; color: var(--ink-faint); }
+  .head code { background: var(--panel-2); border: 1px solid var(--edge); border-radius: var(--radius); padding: 0 5px; font-size: 0.8rem; color: var(--ink-faint); }
   .muted-tag { color: var(--ink-faint); font-size: 0.72rem; }
   .version { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--edge); }
   .version:first-of-type { border-top: 0; }

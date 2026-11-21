@@ -129,7 +129,7 @@
   .close select, .close input {
     display: block; margin-top: 3px; font: inherit;
     background: var(--panel-2); color: var(--ink);
-    border: 1px solid var(--edge); border-radius: 8px; padding: 8px 10px;
+    border: 1px solid var(--edge); border-radius: var(--radius); padding: 8px 10px;
   }
   .close input { min-width: 30ch; }
   .tag.warn { border-color: var(--warn); color: var(--warn); }

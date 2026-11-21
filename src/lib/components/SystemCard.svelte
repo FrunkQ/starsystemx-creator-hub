@@ -141,15 +141,15 @@
   .kind {
     position: absolute; right: 8px; top: 8px; line-height: 0;
     font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600;
-    color: var(--ink); background: rgba(10, 13, 20, 0.72);
-    border: 1px solid var(--ink); border-radius: 6px; padding: 2px 7px;
+    color: var(--ink); background: var(--panel);
+    border: 1px solid var(--ink); border-radius: var(--radius); padding: 2px 7px;
   }
   .card.starmap .kind { border-color: var(--accent); color: var(--accent); }
   .open {
     position: absolute; right: 8px; bottom: 8px; z-index: 1;
     font-size: 0.78rem; font-weight: 600; text-decoration: none;
     color: var(--accent-ink); background: var(--accent);
-    border-radius: 6px; padding: 4px 9px; opacity: 0.92;
+    border-radius: var(--radius); padding: 4px 9px; opacity: 0.92;
   }
   .open:hover { opacity: 1; text-decoration: none; filter: brightness(1.08); }
   /* On a phone this is a 27px target sitting on top of a picture that is itself a link to the map -
