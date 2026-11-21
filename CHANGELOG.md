@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.63.0 - 2026-11-21
+
+### The chart room look, to match Star System Explorer 4
+
+**The site now looks like Star System Explorer 4.** Warm paper, dark ink, one rust accent, square
+corners and hard shadows, with headings in Newsreader and text in IBM Plex. It follows your device:
+a light Chart room by day and a dark Night chart when your device is set to dark. The half-filled
+circle at the top right switches between them, and the site remembers your choice.
+
+Buttons lift slightly when you point at them and settle when pressed. If your device asks for less
+motion, they stay still.
+
+Nothing else changed: the same pages, the same buttons in the same places, and the same maps.
+
 ## 0.62.0 - 2026-09-11
 
 ### "Add System to SSE", and a starter list only the admin can change

@@ -106,7 +106,7 @@
   form input, form textarea {
     display: block; width: 100%; margin-top: 4px; font: inherit;
     background: var(--panel-2); color: var(--ink);
-    border: 1px solid var(--edge); border-radius: 8px; padding: 8px;
+    border: 1px solid var(--edge); border-radius: var(--radius); padding: 8px;
   }
   .prose h1 { margin: 0 0 6px; }
   .lede { color: var(--ink-dim); margin: 0 0 20px; }

@@ -80,6 +80,6 @@
      moderator clearing reports on a phone is exactly who this page is for. */
   .row input {
     font: inherit; width: min(180px, 100%);
-    background: var(--panel-2); color: var(--ink); border: 1px solid var(--edge); border-radius: 8px; padding: 5px 8px;
+    background: var(--panel-2); color: var(--ink); border: 1px solid var(--edge); border-radius: var(--radius); padding: 5px 8px;
   }
 </style>

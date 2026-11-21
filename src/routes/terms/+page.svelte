@@ -155,6 +155,6 @@
   .prose strong { color: var(--ink); }
   .prose code {
     background: var(--panel-2); border: 1px solid var(--edge);
-    border-radius: 4px; padding: 1px 5px; font-size: 0.9em; color: var(--ink);
+    border-radius: var(--radius); padding: 1px 5px; font-size: 0.9em; color: var(--ink);
   }
 </style>

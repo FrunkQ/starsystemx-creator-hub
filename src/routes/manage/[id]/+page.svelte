@@ -756,14 +756,14 @@
   /* A picture that cannot be used is SHOWN and greyed, with the reason, rather than left out. */
   .thumb {
     position: relative; margin: 0; padding: 0; overflow: hidden; cursor: pointer;
-    border: 2px solid var(--edge); border-radius: 6px; background: var(--panel-2);
+    border: 2px solid var(--edge); border-radius: var(--radius); background: var(--panel-2);
   }
   .thumb.on { border-color: var(--accent); }
   .thumb:disabled { cursor: not-allowed; opacity: 0.4; }
   .thumb.card { display: grid; place-items: center; aspect-ratio: 16 / 9; color: var(--ink-dim); font-size: 0.85rem; }
   .thumb .why {
     position: absolute; left: 0; right: 0; bottom: 0; padding: 2px 4px;
-    background: rgba(0, 0, 0, 0.72); color: var(--ink-dim); font-size: 0.72rem;
+    background: var(--panel); color: var(--ink-dim); font-size: 0.72rem; opacity: 0.94;
   }
   h2 { margin: 0 0 10px; font-size: 1.1rem; }
   .muted { color: var(--ink-dim); margin: 0 0 12px; max-width: 62ch; }
@@ -771,7 +771,7 @@
   input[name], textarea {
     display: block; width: 100%; margin-top: 4px; font: inherit;
     background: var(--panel-2); color: var(--ink);
-    border: 1px solid var(--edge); border-radius: 8px; padding: 8px;
+    border: 1px solid var(--edge); border-radius: var(--radius); padding: 8px;
   }
   .file input { display: block; margin-top: 6px; color: var(--ink); }
   .vocab { border: 1px solid var(--edge); border-radius: var(--radius); padding: 12px 14px; margin: 18px 0; }
@@ -781,12 +781,12 @@
   .group h3 span { color: var(--ink-faint); font-weight: 400; margin-left: 8px; font-size: 0.85rem; }
   .pills { display: flex; flex-wrap: wrap; gap: 6px; }
   .pick { display: inline-flex; align-items: center; gap: 6px; margin: 0;
-          padding: 3px 10px; border-radius: 999px; cursor: pointer;
+          padding: 3px 10px; border-radius: var(--radius); cursor: pointer;
           background: var(--panel-2); border: 1px solid var(--edge); font-size: 0.85rem; }
   .pick.on { border-color: var(--accent); }
   /* The "+": the same size and shape as a pill, so it reads as one more thing you can pick. */
   .add {
-    padding: 2px 10px; border-radius: 999px; line-height: 1.5;
+    padding: 2px 10px; border-radius: var(--radius); line-height: 1.5;
     border: 1px dashed var(--edge); background: none; color: var(--ink-faint);
   }
   .add:hover { border-color: var(--accent); color: var(--accent); background: none; }
@@ -797,7 +797,7 @@
   .pick input { margin: 0; }
   .shots { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); margin-top: 14px; }
   figure { margin: 0; }
-  figure img { width: 100%; border-radius: 8px; border: 1px solid var(--edge); display: block; }
+  figure img { width: 100%; border-radius: var(--radius); border: 1px solid var(--edge); display: block; }
   .waiting { color: var(--warn); font-size: 0.82rem; margin: 4px 0; }
   .bad { color: var(--bad); font-size: 0.85rem; margin: 8px 0 0; }
   .slide { display: block; margin: 10px 0 0; color: var(--ink-dim); font-size: 0.9rem; }
@@ -812,7 +812,7 @@
   .problem .lbl { color: var(--ink-faint); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; }
   .sev {
     font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700;
-    border: 1px solid var(--warn); color: var(--warn); border-radius: 999px; padding: 0 6px; margin-right: 6px;
+    border: 1px solid var(--warn); color: var(--warn); border-radius: var(--radius); padding: 0 6px; margin-right: 6px;
   }
   .sev.refuses { border-color: var(--bad); color: var(--bad); }
   .tag.warn { border-color: var(--warn); color: var(--warn); }
@@ -824,16 +824,16 @@
   .credit.blocked { border-left: 2px solid var(--bad); padding-left: 12px; }
   .noshot {
     aspect-ratio: 16 / 9; display: grid; place-items: center; text-align: center;
-    background: var(--panel-2); border: 1px solid var(--edge); border-radius: 8px;
+    background: var(--panel-2); border: 1px solid var(--edge); border-radius: var(--radius);
     color: var(--ink-faint); font-size: 0.78rem; padding: 4px;
   }
   .foot { margin-top: 14px; }
-  .credit img { width: 100%; border-radius: 8px; border: 1px solid var(--edge); display: block; }
+  .credit img { width: 100%; border-radius: var(--radius); border: 1px solid var(--edge); display: block; }
   .credit label { display: block; margin: 0 0 8px; color: var(--ink-dim); font-size: 0.9rem; }
   .credit input {
     display: block; width: 100%; margin-top: 3px; font: inherit;
     background: var(--panel-2); color: var(--ink); border: 1px solid var(--edge);
-    border-radius: 6px; padding: 6px 8px;
+    border-radius: var(--radius); padding: 6px 8px;
   }
   .slide input { display: block; width: 100%; margin-top: 4px; }
   .designer { display: grid; grid-template-columns: minmax(0, 1fr) 250px; gap: 16px; align-items: start; }
@@ -842,7 +842,7 @@
   .controls label { margin: 8px 0; }
   .controls select {
     display: block; width: 100%; margin-top: 4px; font: inherit;
-    background: var(--panel-2); color: var(--ink); border: 1px solid var(--edge); border-radius: 8px; padding: 6px 8px;
+    background: var(--panel-2); color: var(--ink); border: 1px solid var(--edge); border-radius: var(--radius); padding: 6px 8px;
   }
   .checks { display: grid; gap: 4px; margin: 12px 0; }
   .check { display: flex; align-items: center; gap: 8px; margin: 0; color: var(--ink); }

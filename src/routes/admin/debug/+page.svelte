@@ -149,11 +149,11 @@
   input[name] {
     display: block; width: 100%; max-width: 480px; margin-top: 4px; font: inherit;
     background: var(--panel-2); color: var(--ink);
-    border: 1px solid var(--edge); border-radius: 8px; padding: 8px;
+    border: 1px solid var(--edge); border-radius: var(--radius); padding: 8px;
   }
   .link code {
     word-break: break-all; background: var(--panel-2); border: 1px solid var(--edge);
-    border-radius: 6px; padding: 4px 8px; display: inline-block; color: var(--ink);
+    border-radius: var(--radius); padding: 4px 8px; display: inline-block; color: var(--ink);
   }
   .note { color: var(--ink-dim); max-width: 40ch; }
   .when { color: var(--ink-faint); white-space: nowrap; }

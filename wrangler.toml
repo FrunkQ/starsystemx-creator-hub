@@ -15,6 +15,15 @@ compatibility_flags = ["nodejs_compat"]
 # plus a `scheduled` handler so the Cron Triggers below have something to call (D-33).
 main = "worker/index.mjs"
 
+# WRANGLER BUILDS FIRST, on every deploy and every `versions upload`. Workers Builds runs only
+# `npm clean-install` and then the deploy command; a branch build (`npx wrangler versions upload`)
+# had no build step at all, so `.svelte-kit/cloudflare` did not exist and the upload failed on
+# `assets.directory` (first branch build, 2026-11-21). With the build here, no dashboard field has
+# to remember it. If the production deploy command also runs `npm run build`, it builds twice -
+# slower, never wrong.
+[build]
+command = "npm run build"
+
 # THE CLOCK. The outbox (Discord shares and roles) drains every fifteen minutes; a backup of every
 # table is taken weekly, Monday 03:00 UTC. Both run inside this Worker; no external scheduler and
 # no secret are needed. Times are UTC.

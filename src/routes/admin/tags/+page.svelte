@@ -103,7 +103,7 @@
   .similar form { margin: 0; }
   /* The suggestions look like the tags they are, not like buttons: what you get is a pill. */
   .similar button {
-    border-radius: 999px; padding: 4px 12px;
+    border-radius: var(--radius); padding: 4px 12px;
     border-color: var(--accent); color: var(--accent); background: none;
   }
   .similar button:hover { background: var(--accent); color: var(--accent-ink); }
@@ -112,7 +112,7 @@
   .decide form { display: flex; gap: 8px; align-items: center; margin: 0; }
   select, input {
     font: inherit; background: var(--panel-2); color: var(--ink);
-    border: 1px solid var(--edge); border-radius: 6px; padding: 5px 8px;
+    border: 1px solid var(--edge); border-radius: var(--radius); padding: 5px 8px;
   }
   .decide input[name='note'] { min-width: 280px; }
   .recent-head { font-size: 1rem; margin: 28px 0 8px; color: var(--ink-dim); }

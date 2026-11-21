@@ -661,12 +661,12 @@
   .problem-pill { margin: 0 0 12px; display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
   .problem-pill .muted { margin: 0; font-size: 0.9rem; }
   .fan-pill a {
-    display: inline-block; padding: 2px 9px; border-radius: 999px; text-decoration: none;
+    display: inline-block; padding: 2px 9px; border-radius: var(--radius); text-decoration: none;
     font-size: 0.8rem; color: var(--ink-faint); border: 1px solid var(--rule);
   }
   .fan-pill a:hover { color: var(--ink); border-color: var(--ink-faint); }
   .fan-work {
-    margin: 18px 0; padding: 12px 14px; border: 1px solid var(--rule); border-radius: 8px;
+    margin: 18px 0; padding: 12px 14px; border: 1px solid var(--rule); border-radius: var(--radius);
     color: var(--ink-faint); font-size: 0.86rem; line-height: 1.5;
   }
   .fan-work b { color: var(--ink); }
@@ -695,7 +695,7 @@
   .by .badges { display: inline-flex; gap: 4px; vertical-align: middle; margin: 0 4px; }
   .star {
     display: inline-flex; align-items: center; gap: 8px; font: inherit; font-size: 0.92rem;
-    background: var(--panel); color: var(--ink-dim); border: 1px solid var(--edge); border-radius: 8px;
+    background: var(--panel); color: var(--ink-dim); border: 1px solid var(--edge); border-radius: var(--radius);
     padding: 6px 12px; cursor: pointer;
   }
   .star svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linejoin: round; }
@@ -740,7 +740,7 @@
   select, textarea {
     display: block; width: 100%; margin-top: 4px; font: inherit;
     background: var(--panel-2); color: var(--ink);
-    border: 1px solid var(--edge); border-radius: 8px; padding: 8px;
+    border: 1px solid var(--edge); border-radius: var(--radius); padding: 8px;
   }
   /* Quiet and beside the copy controls: a fact about what copying does, not a warning. */
   .caveat {
@@ -750,7 +750,7 @@
   /* A commenter's role, in the banner's colours. */
   .who .role {
     font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.07em; font-weight: 700;
-    padding: 1px 6px; border-radius: 999px;
+    padding: 1px 6px; border-radius: var(--radius);
     background: var(--warn); color: var(--accent-ink);
   }
   .who .role.mod { background: var(--accent); }
@@ -761,7 +761,7 @@
   .hold-form input {
     display: block; width: 100%; margin-top: 3px; font: inherit;
     background: var(--panel-2); color: var(--ink);
-    border: 1px solid var(--edge); border-radius: 8px; padding: 8px 10px;
+    border: 1px solid var(--edge); border-radius: var(--radius); padding: 8px 10px;
   }
   .staff .ok { color: var(--accent); }
   .staff .small { font-size: 0.85rem; margin-top: 8px; }
@@ -773,14 +773,14 @@
   .reel { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
   .thumbs { display: flex; gap: 6px; overflow-x: auto; flex: 1; padding-bottom: 2px; }
   .pick {
-    padding: 0; border: 1px solid var(--edge); border-radius: 6px; overflow: hidden;
+    padding: 0; border: 1px solid var(--edge); border-radius: var(--radius); overflow: hidden;
     background: var(--panel-2); cursor: pointer; flex: 0 0 auto;
   }
   .pick.on { border-color: var(--accent); }
   .pick img { width: 64px; height: 40px; object-fit: cover; display: block; }
   .step {
     flex: 0 0 auto; padding: 6px 10px; font-size: 1.1rem; line-height: 1;
-    background: var(--panel-2); border: 1px solid var(--edge); border-radius: 8px; cursor: pointer;
+    background: var(--panel-2); border: 1px solid var(--edge); border-radius: var(--radius); cursor: pointer;
   }
   .count { color: var(--ink-faint); font-size: 0.82rem; margin: 6px 0 0; text-align: right; }
   .to-debug { margin-top: 14px; border-top: 1px solid var(--edge); padding-top: 12px; }

@@ -294,7 +294,7 @@
   .keys { color: var(--ink-faint); font-size: 0.88rem; margin: 0 0 20px; }
   kbd {
     background: var(--panel-2); border: 1px solid var(--edge);
-    border-radius: 4px; padding: 1px 6px; font-size: 0.85em;
+    border-radius: var(--radius); padding: 1px 6px; font-size: 0.85em;
   }
   .review { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(260px, 1fr); gap: 20px; }
   @media (max-width: 780px) { .review { grid-template-columns: 1fr; } }
@@ -316,13 +316,13 @@
   .facts { display: grid; grid-template-columns: max-content 1fr; gap: 2px 12px; margin: 0 0 10px; font-size: 0.9rem; }
   .facts dt { color: var(--ink-faint); }
   .facts dd { margin: 0; }
-  .mono { font-family: ui-monospace, Consolas, monospace; font-size: 0.85rem; word-break: break-all; }
+  .mono { font-family: var(--font-mono); font-size: 0.85rem; word-break: break-all; }
   .uses { list-style: none; padding: 0; margin: 0; }
   .uses li { margin: 0 0 4px; }
   /* The banner's two colours, so a role reads the same wherever it appears (D-74). */
   .role {
     font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.07em; font-weight: 700;
-    padding: 1px 6px; border-radius: 999px; margin-left: 4px;
+    padding: 1px 6px; border-radius: var(--radius); margin-left: 4px;
     background: var(--warn); color: var(--accent-ink);
   }
   .role.mod { background: var(--accent); }
@@ -331,7 +331,7 @@
   .strip-head { margin: 26px 0 10px; font-size: 1rem; }
   .strip { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
   .thumb {
-    padding: 0; background: var(--panel); border: 1px solid var(--edge); border-radius: 8px;
+    padding: 0; background: var(--panel); border: 1px solid var(--edge); border-radius: var(--radius);
     overflow: hidden; cursor: pointer; text-align: left; display: block;
   }
   .thumb.on { border-color: var(--accent); }

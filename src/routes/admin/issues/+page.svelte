@@ -82,7 +82,7 @@
   li { margin: 0 0 8px; max-width: 80ch; }
   .sev {
     font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700;
-    border: 1px solid var(--warn); color: var(--warn); border-radius: 999px; padding: 0 6px; margin-right: 6px;
+    border: 1px solid var(--warn); color: var(--warn); border-radius: var(--radius); padding: 0 6px; margin-right: 6px;
   }
   .sev.refuses { border-color: var(--bad); color: var(--bad); }
   details summary { cursor: pointer; color: var(--ink-faint); font-size: 0.88rem; }

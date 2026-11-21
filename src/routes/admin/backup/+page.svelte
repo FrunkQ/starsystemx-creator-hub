@@ -55,5 +55,5 @@
   form { margin: 0 0 16px; }
   .muted { color: var(--ink-dim); }
   .bad { color: var(--bad); }
-  code { background: var(--panel-2); border: 1px solid var(--edge); border-radius: 4px; padding: 1px 5px; font-size: 0.85em; }
+  code { background: var(--panel-2); border: 1px solid var(--edge); border-radius: var(--radius); padding: 1px 5px; font-size: 0.85em; }
 </style>

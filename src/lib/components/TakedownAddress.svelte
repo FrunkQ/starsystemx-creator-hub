@@ -76,6 +76,6 @@
   .hint { margin: 10px 0 0; color: var(--ink-faint); font-size: 0.9rem; }
   code {
     background: var(--panel-2); border: 1px solid var(--edge);
-    border-radius: 4px; padding: 1px 6px; color: var(--ink);
+    border-radius: var(--radius); padding: 1px 6px; color: var(--ink);
   }
 </style>

@@ -18,6 +18,21 @@
   // nowhere else; the tier decides which areas of it they are offered.
   const tier = $derived(data?.viewer?.role === 'admin' ? 'admin' : data?.viewer?.role === 'moderator' ? 'moderator' : null);
   const staff = $derived(!!tier && page.url.pathname.startsWith('/admin'));
+
+  // CHART ROOM OR NIGHT CHART (the chart room skin, static/skin/chart-room.css). The device's own
+  // setting is the default; this button sets a remembered override, applied before paint by the
+  // script in app.html. `null` until mounted, because the server cannot know which one is showing.
+  let night = $state<boolean | null>(null);
+  $effect(() => {
+    const set = document.documentElement.dataset.theme;
+    night = set ? set === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+  });
+  function toggleTheme() {
+    night = !night;
+    const t = night ? 'dark' : 'light';
+    document.documentElement.dataset.theme = t;
+    try { localStorage.setItem('sx-theme', t); } catch { /* refused storage: it lasts this page only */ }
+  }
 </script>
 
 <!-- Cloudflare Web Analytics. `defer` and nothing else: no third-party script gets to block a page
@@ -79,6 +94,17 @@
            extra steps. `Sign in` stays first for the people who already have an account. -->
       <a href="/login">Sign in</a>
       <a class="join" href="/join">Join</a>
+    {/if}
+    {#if night !== null}
+      <button class="theme" type="button" onclick={toggleTheme}
+        title={night ? 'Switch to the light Chart room' : 'Switch to the dark Night chart'}
+        aria-label={night ? 'Switch to the light Chart room' : 'Switch to the dark Night chart'}>
+        <!-- A half-filled disc: the same mark either way, the filled half says which is showing. -->
+        <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+          <circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.2" />
+          <path d="M8 1.5 A6.5 6.5 0 0 1 8 14.5 Z" fill="currentColor" />
+        </svg>
+      </button>
     {/if}
     <!-- NO "Open Star System Explorer" HERE (owner, 2026-09-06: "we have it at the bottom and on
          every map"). The banner's job is to get out of the way; a general link to the app competes

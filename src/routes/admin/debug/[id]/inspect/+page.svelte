@@ -142,8 +142,8 @@
   dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; margin: 0; }
   dt { color: var(--ink-faint); }
   dd { margin: 0; overflow-wrap: anywhere; }
-  .mono { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 0.85em; }
-  .near { display: block; white-space: pre-wrap; background: var(--bg); border: 1px solid var(--edge); border-radius: 6px; padding: 6px 8px; }
+  .mono { font-family: var(--font-mono); font-size: 0.85em; }
+  .near { display: block; white-space: pre-wrap; background: var(--bg); border: 1px solid var(--edge); border-radius: var(--radius); padding: 6px 8px; }
   .num { text-align: right; white-space: nowrap; color: var(--ink-faint); }
   details { margin-top: 10px; }
   summary { cursor: pointer; color: var(--ink-dim); }

@@ -112,19 +112,19 @@
   .filters .check { flex-direction: row; align-items: center; gap: 6px; }
   select {
     font: inherit; background: var(--panel-2); color: var(--ink);
-    border: 1px solid var(--edge); border-radius: 6px; padding: 5px 8px;
+    border: 1px solid var(--edge); border-radius: var(--radius); padding: 5px 8px;
   }
   .muted { color: var(--ink-dim); margin: 0; }
   .when { color: var(--ink-faint); white-space: nowrap; font-size: 0.88rem; }
   .who { white-space: nowrap; }
   .verb { color: var(--ink); }
   .reason { color: var(--ink-dim); max-width: 40ch; }
-  .mono { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 0.85em; color: var(--ink-faint); }
+  .mono { font-family: var(--font-mono); font-size: 0.85em; color: var(--ink-faint); }
   .detail { color: var(--ink-faint); font-size: 0.82rem; margin-left: 8px; }
   /* The same two colours the staff nav uses, for the same two roles. */
   .role {
     font-size: 0.64rem; text-transform: uppercase; letter-spacing: 0.07em; font-weight: 700;
-    padding: 1px 5px; border-radius: 999px; margin-left: 6px;
+    padding: 1px 5px; border-radius: var(--radius); margin-left: 6px;
     background: var(--warn); color: var(--accent-ink);
   }
   .role.mod { background: var(--accent); }

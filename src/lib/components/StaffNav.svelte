@@ -99,9 +99,9 @@
     min-width: 18px;
     height: 18px;
     padding: 0 5px;
-    border-radius: 9px;
+    border-radius: var(--radius);
     background: var(--bad);
-    color: #1a0606;
+    color: var(--accent-ink);
     font-size: 0.74rem;
     font-weight: 700;
     line-height: 18px;
@@ -109,7 +109,7 @@
   }
 
   .key { margin: 0 0 0 auto; color: var(--ink-faint); font-size: 0.78rem; display: flex; align-items: center; gap: 6px; }
-  .dot { width: 10px; height: 0; border-top: 3px solid; border-radius: 2px; display: inline-block; }
+  .dot { width: 10px; height: 0; border-top: 3px solid; border-radius: var(--radius); display: inline-block; }
   .key .tier-moderator { color: var(--accent); border-color: var(--accent); }
   .key .tier-admin { color: var(--warn); border-color: var(--warn); margin-left: 10px; }
   .key .group-debug { color: var(--bad); border-color: var(--bad); margin-left: 10px; }

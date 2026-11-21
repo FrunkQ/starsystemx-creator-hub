@@ -85,7 +85,7 @@
   textarea {
     display: block; width: 100%; margin-top: 4px; font: inherit;
     background: var(--panel-2); color: var(--ink);
-    border: 1px solid var(--edge); border-radius: 8px; padding: 8px;
+    border: 1px solid var(--edge); border-radius: var(--radius); padding: 8px;
   }
   .hint { color: var(--ink-faint); font-size: 0.9rem; margin: 0 0 12px; }
 </style>

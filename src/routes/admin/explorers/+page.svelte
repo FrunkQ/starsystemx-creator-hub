@@ -130,7 +130,7 @@
   .search { display: flex; gap: 8px; align-items: center; margin: 0 0 16px; }
   .search input {
     font: inherit; background: var(--panel-2); color: var(--ink);
-    border: 1px solid var(--edge); border-radius: 8px; padding: 7px 10px; width: min(100%, 240px);
+    border: 1px solid var(--edge); border-radius: var(--radius); padding: 7px 10px; width: min(100%, 240px);
   }
   .when { color: var(--ink-faint); white-space: nowrap; }
   .muted { color: var(--ink-faint); }
@@ -145,7 +145,7 @@
      to make people doubt both of them. */
   .role {
     font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.07em; font-weight: 700;
-    padding: 1px 6px; border-radius: 999px; margin-left: 6px;
+    padding: 1px 6px; border-radius: var(--radius); margin-left: 6px;
     background: var(--warn); color: var(--accent-ink); border: 0;
   }
   .role.mod { background: var(--accent); }
