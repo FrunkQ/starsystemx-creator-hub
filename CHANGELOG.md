@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.65.1 - 2026-11-21
+
+**Webhooks are never turned away by the flood protection**, so Patreon pledges (and payments,
+when they come) always arrive, whichever server sends them.
+
 ## 0.65.0 - 2026-11-21
 
 ### Protection from request floods

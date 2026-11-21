@@ -28,8 +28,16 @@ describe('scrapers', () => {
 
   it('is skipped for the Worker\'s own clock calls, which carry no address and no agent', () => {
     const hook = readFileSync('src/hooks.server.ts', 'utf8');
-    expect(hook).toContain("const ip = event.request.headers.get('cf-connecting-ip');");
+    expect(hook).toContain(": event.request.headers.get('cf-connecting-ip');");
     expect(hook.indexOf('if (ip) {')).toBeLessThan(hook.indexOf('isScraper('));
+  });
+});
+
+describe('webhooks', () => {
+  it('are never refused as scrapers or rate limited, whatever agent the sender uses', () => {
+    const hook = readFileSync('src/hooks.server.ts', 'utf8');
+    expect(hook).toContain("const ip = event.url.pathname.startsWith('/api/webhooks/')\n    ? null");
+    expect(readFileSync('docs/flood-protection.md', 'utf8')).toContain('not starts_with(http.request.uri.path, "/api/webhooks/")');
   });
 });
 
