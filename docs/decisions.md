@@ -2626,6 +2626,41 @@ Covers are baked into share images already posted elsewhere, so changing their f
 decision than a skin. The review stage's near-black backdrop also stays: a picture under review is
 judged against a neutral dark ground whatever the theme.
 
+### D-94. Paid packs, first slice: the split, the price rule and the switch, with no table and no route
+
+The owner, 2026-11-21: build all of the charging so it can be tried and tested, with "a master
+switch under admin that turns on the monetisation features"; free is always free; the cut is shown
+openly; fan work can never carry a price. Design: SSE4 project file `SSE4-explorers-paid-packs.md`,
+accepted the same day (Stripe Connect, and yes to every recommendation). This is package PP1.
+
+**`src/lib/paid/split.ts` is the one place money is divided.** Whole pence only, no floating point:
+VAT inside the price and the fees are rounded to the nearest penny, the creator's share is rounded,
+and the site gets exactly the remainder, so the parts always add back to the price. The design's
+table is reproduced to the penny (£3: 50p VAT, 26p fees, £1.79, 45p) and a sweep of every price to
+£50 over every fee schedule and share proves no leak. The fee schedule is Stripe UK's, read
+2026-11-21, passed in rather than built in. `splitLine` is the one sentence buyer and seller both see.
+
+**`src/lib/paid/mayCarryPrice.ts` refuses a price itself**, listing every reason at once with what
+caused it: the fan-work field filled or a moderator's fan-work mark; a fan pack included or
+required; any asset non-commercial (NC in any spelling, "not for commercial use"), "used with
+permission" without a commercial permission, or with no licence recorded (the seller's own in-app
+screenshot excepted, as C-07); measured values still carried from a non-commercial catalogue
+(Gaia; CNS5 and AT-HYG until confirmed); and work credited to anyone but the seller. Every input
+only ever makes a refusal more likely: nothing opens on a claim.
+
+**`src/lib/paid/switch.ts`**: the switch is a literal `true` and nothing else, and a money route
+behind it is a plain 404 while it is off. The settled values are config rows with the design's
+numbers as fallbacks (`paid_packs_site_share_bp` 2000, `paid_packs_min_price_pence` 200,
+`paid_packs_price_steps`, `paid_packs_payout_floor_pence` 2500, `paid_packs_hold_days` 30), plus
+`paid_packs_sell_eu`, off and independent of the master switch until the EU One Stop Shop
+registration exists (design 3.4).
+
+**The config rows themselves come in a separate migration (0042) that the owner runs.** Until then
+the fallbacks stand, which means off; this release therefore changes nothing a visitor can see.
+
+**The seller declaration** (`declaration.ts`) is versioned and stored with each answer, as the
+provenance attestation is.
+
 ### D-16. The takedown address is assembled at runtime, never served as text
 
 The owner's instruction was explicit: keep it off the page as scrapable text. It is stored as
