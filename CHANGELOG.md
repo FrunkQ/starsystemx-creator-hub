@@ -7,6 +7,12 @@
 Migrations 0042 and 0043 add the paid-packs settings and five new, empty tables for sellers, prices,
 purchases and payouts. They change no existing table and no map. Paid packs stay switched off.
 
+### Stripe test-mode checkout, webhook and refunds (nothing visible)
+
+The code for taking a payment, recording its split, holding the creator's share for 30 days, and
+reversing it on a refund or a lost chargeback. Test keys only: a live key is refused before any
+request is made. Everything answers "not found" while paid packs are switched off.
+
 ## 0.65.0 - 2026-11-21
 
 ### Protection from request floods
