@@ -127,3 +127,22 @@ export function splitLine(s: Split): string {
   if (s.loss) return `${price}: ${money(s.vat)} VAT and ${money(s.fees)} card fees use up the whole price, so nothing is left for the creator. Choose a higher price.`;
   return `${price}: ${money(s.vat)} VAT, ${money(s.fees)} card fees, ${money(s.creator)} to the creator, ${money(s.site)} to Explorers for hosting`;
 }
+
+/**
+ * THE SPLIT OF A SALE THAT HAS HAPPENED, from the figures Stripe actually charged: the tax Stripe Tax
+ * worked out for that buyer's country, and the fee on that charge's balance transaction (which
+ * differs for an EEA or international card). Same rule and same rounding as `splitSale`: whatever
+ * tax and fees really were come off first, then the share. Used by the webhook (PP3) so a receipt
+ * and a statement carry what happened, not an estimate.
+ */
+export function splitActual(pricePence: number, vatPence: number, feePence: number, siteShareBp: number): Split {
+  wholeNonNegative('pricePence', pricePence);
+  wholeNonNegative('vatPence', vatPence);
+  wholeNonNegative('feePence', feePence);
+  wholeNonNegative('siteShareBp', siteShareBp);
+  if (siteShareBp > 10000) throw new RangeError('siteShareBp cannot exceed 10000 (100%)');
+  const net = pricePence - vatPence - feePence;
+  if (net <= 0) return { price: pricePence, vat: vatPence, fees: feePence, net, creator: 0, site: net, loss: true };
+  const creator = roundDiv(net * (10000 - siteShareBp), 10000);
+  return { price: pricePence, vat: vatPence, fees: feePence, net, creator, site: net - creator, loss: false };
+}

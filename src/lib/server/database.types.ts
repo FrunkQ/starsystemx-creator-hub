@@ -437,6 +437,94 @@ export type AdminActionRow = {
   created_at: string;
 }
 
+// PAID PACKS (0043, D-95). Money is whole pence. Every reference to an account or a map is nullable:
+// the record outlives both (tax law), with the handle and title kept as text.
+export type PurchaseState = 'pending' | 'paid' | 'refunded' | 'disputed' | 'dispute_lost';
+export type ListingState = 'draft' | 'review' | 'listed' | 'delisted';
+export type LedgerKind = 'sale_share' | 'refund_reversal' | 'dispute_reversal' | 'payout' | 'adjustment';
+
+export type SellerAccountRow = {
+  id: string;
+  creator_id: string | null;
+  handle: string;
+  stripe_account_id: string | null;
+  payouts_ready: boolean;
+  country: string | null;
+  declaration_version: number | null;
+  declared_at: string | null;
+  invited_by: string | null;
+  invited_at: string | null;
+  suspended_at: string | null;
+  suspended_reason: string | null;
+  created_at: string;
+};
+
+export type PaidListingRow = {
+  id: string;
+  system_id: string | null;
+  title: string;
+  seller_account_id: string;
+  price_pence: number;
+  currency: 'GBP';
+  state: ListingState;
+  approved_sha256: string | null;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  delisted_reason: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type PurchaseRow = {
+  id: string;
+  order_no: string;
+  listing_id: string | null;
+  system_id: string | null;
+  item_title: string;
+  item_sha256: string | null;
+  buyer_id: string | null;
+  buyer_handle: string;
+  seller_account_id: string | null;
+  seller_handle: string;
+  price_pence: number;
+  vat_pence: number;
+  vat_country: string | null;
+  vat_bp: number | null;
+  fee_pence: number;
+  creator_pence: number;
+  site_pence: number;
+  site_share_bp: number;
+  stripe_checkout_session_id: string | null;
+  stripe_payment_intent_id: string | null;
+  state: PurchaseState;
+  waived_cancellation_at: string | null;
+  first_download_at: string | null;
+  created_at: string;
+  paid_at: string | null;
+  refunded_at: string | null;
+  refund_reason: string | null;
+};
+
+export type PayoutLedgerRow = {
+  id: string;
+  seller_account_id: string;
+  purchase_id: string | null;
+  kind: LedgerKind;
+  amount_pence: number;
+  available_at: string | null;
+  stripe_transfer_id: string | null;
+  note: string | null;
+  created_by: string | null;
+  created_at: string;
+};
+
+export type StripeEventRow = {
+  id: string;
+  type: string;
+  received_at: string;
+  processed_at: string | null;
+};
+
 export interface Database {
   public: {
     Tables: {
@@ -479,6 +567,11 @@ export interface Database {
       debug_invites: Table<DebugInviteRow>;
       debug_uploads: Table<DebugUploadRow>;
       tag_proposals: Table<TagProposalRow>;
+      seller_accounts: Table<SellerAccountRow>;
+      paid_listings: Table<PaidListingRow>;
+      purchases: Table<PurchaseRow>;
+      payout_ledger: Table<PayoutLedgerRow>;
+      stripe_events: Table<StripeEventRow>;
     };
     Views: { [_ in never]: never };
     Functions: {

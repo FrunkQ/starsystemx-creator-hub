@@ -2680,6 +2680,50 @@ a ban (design 6.2) reaches a new visitor within ten minutes rather than on the n
 that is the dashboard's job, and docs/flood-protection.md lists the settings, with Workers Paid as
 the one change that stops one site's flood from taking the others down.
 
+### D-96. Paid packs PP2: the switch rows and five empty money tables, adding only
+
+Package PP2 of the paid-packs design. Two migrations for the owner to run; nothing else changes.
+
+**0042** adds the `paid_packs*` config rows at the values the code already falls back to, so running
+it changes nothing anyone sees; it lets the admin Config page set them (setConfigRow refuses to
+invent a row). The master switch row starts `false`.
+
+**0043** creates `seller_accounts`, `paid_listings`, `purchases`, `payout_ledger` and
+`stripe_events`, empty. **It alters nothing that exists**, and `tests/paidPacksSchema.test.ts`
+holds both files to that: no drop, delete, update or truncate, no `alter` of a table they did not
+create, no policy, RLS on every new table, and no cascade.
+
+**Records outlive accounts and maps** (6 years for UK VAT, 10 for an EU sale): references are
+`on delete set null` and the handle and title are copied in as text, as `takedowns` did (D-69).
+**Money is whole pence**, and `purchases` carries a check that VAT, fee, creator and site add up to
+the price, the same rule as `split.ts`. **A webhook cannot pay twice**: `payout_ledger` is unique on
+(purchase, kind) and `stripe_events` remembers every Stripe event id already handled. **Balances are
+sums over the ledger**, never a number kept and nudged (the lesson of the comment count, D-27).
+States are text with a check rather than enums, so both files stay safe to run twice; checked by
+running each twice on an empty Postgres.
+
+### D-97. Paid packs PP3: Stripe in test mode, with every money rule in one pure file
+
+**Test keys only, enforced in code** (`server/paid/stripe.ts`): a key that is not `sk_test_` or
+`rk_test_` is refused before any request; live keys wait for the owner's yes (PP8). No SDK: four
+calls, fetch and form encoding. Keys are Worker secrets and never appear in an error or a log.
+
+**The rules are pure** (`$lib/paid/events.ts`) and the routes only do I/O (`server/paid/apply.ts`).
+Every rule acts only from the state it expects, the update is conditional on that state, and the
+ledger's unique (purchase, kind) refuses a second share: a replayed webhook changes nothing.
+
+**An EU buyer while EU sales are off, or a total that differs from the price, is refunded at once**
+and the purchase goes straight to refunded, so Stripe's own refund event reverses nothing. Stripe
+Checkout cannot restrict billing country, so this is where the refusal has to live.
+
+**One path for every refund:** the admin route and the automatic refusals ask Stripe to refund
+(idempotent by purchase id); the ledger moves only on Stripe's `charge.refunded`. Partial refunds
+are not made by the site and are left for an admin adjustment.
+
+**The cancellation waiver is our own tick box** on the checkout form, stored as
+`waived_cancellation_at`, rather than Stripe's consent collection, which needs a terms URL set in
+Stripe.
+
 ### D-16. The takedown address is assembled at runtime, never served as text
 
 The owner's instruction was explicit: keep it off the page as scrapable text. It is stored as
