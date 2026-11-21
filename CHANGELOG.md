@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.66.1 - 2026-11-21
+
+**Webhooks are never turned away by the flood protection**, so Patreon pledges (and payments,
+when they come) always arrive, whichever server sends them.
+
 ## 0.66.0 - 2026-11-21
 
 ### Two database migrations for paid packs (nothing visible)
