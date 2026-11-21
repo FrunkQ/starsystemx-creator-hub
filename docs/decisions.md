@@ -2661,6 +2661,28 @@ the fallbacks stand, which means off; this release therefore changes nothing a v
 **The seller declaration** (`declaration.ts`) is versioned and stored with each answer, as the
 provenance attestation is.
 
+### D-95. Paid packs PP2: the switch rows and five empty money tables, adding only
+
+Package PP2 of the paid-packs design. Two migrations for the owner to run; nothing else changes.
+
+**0042** adds the `paid_packs*` config rows at the values the code already falls back to, so running
+it changes nothing anyone sees; it lets the admin Config page set them (setConfigRow refuses to
+invent a row). The master switch row starts `false`.
+
+**0043** creates `seller_accounts`, `paid_listings`, `purchases`, `payout_ledger` and
+`stripe_events`, empty. **It alters nothing that exists**, and `tests/paidPacksSchema.test.ts`
+holds both files to that: no drop, delete, update or truncate, no `alter` of a table they did not
+create, no policy, RLS on every new table, and no cascade.
+
+**Records outlive accounts and maps** (6 years for UK VAT, 10 for an EU sale): references are
+`on delete set null` and the handle and title are copied in as text, as `takedowns` did (D-69).
+**Money is whole pence**, and `purchases` carries a check that VAT, fee, creator and site add up to
+the price, the same rule as `split.ts`. **A webhook cannot pay twice**: `payout_ledger` is unique on
+(purchase, kind) and `stripe_events` remembers every Stripe event id already handled. **Balances are
+sums over the ledger**, never a number kept and nudged (the lesson of the comment count, D-27).
+States are text with a check rather than enums, so both files stay safe to run twice; checked by
+running each twice on an empty Postgres.
+
 ### D-16. The takedown address is assembled at runtime, never served as text
 
 The owner's instruction was explicit: keep it off the page as scrapable text. It is stored as

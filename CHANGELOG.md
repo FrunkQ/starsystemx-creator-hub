@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.64.1 - 2026-11-21
+
+### Two database migrations for paid packs (nothing visible)
+
+Migrations 0042 and 0043 add the paid-packs settings and five new, empty tables for sellers, prices,
+purchases and payouts. They change no existing table and no map. Paid packs stay switched off.
+
 ## 0.64.0 - 2026-11-21
 
 ### Groundwork for paid packs, switched off
