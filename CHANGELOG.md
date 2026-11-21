@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.65.0 - 2026-11-21
+
+### Protection from request floods
+
+**Crawlers that collect sites for AI training are turned away.** The site's robots file now tells
+about thirty of them to stay out entirely, and the ones that ignore it are refused at the door
+before the site reads anything.
+
+**One address asking too fast is slowed down.** More than 300 requests a minute from one place gets
+a short "please slow down" instead of a page.
+
+**Public pages and pictures are kept at Cloudflare's edge for a few minutes** for anyone who is not
+signed in, so the same files asked for thousands of times are read from the database and storage
+only a few times. Signed-in pages and downloads are never kept. A picture an admin bans now takes up
+to ten minutes to disappear for everyone, instead of the next request.
+
+Nothing changes for people using the site or Star System Explorer.
+
 ## 0.64.0 - 2026-11-21
 
 ### Groundwork for paid packs, switched off

@@ -2661,6 +2661,25 @@ the fallbacks stand, which means off; this release therefore changes nothing a v
 **The seller declaration** (`declaration.ts`) is versioned and stored with each answer, as the
 provenance attestation is.
 
+### D-95. Flood protection: refuse scrapers, limit each address, keep public answers at the edge
+
+**Why (owner, 2026-11-21):** about 160,000 requests in a day, from firms in the US and China, for a
+dozen of the hub's files, went over Workers' free 100,000 a day. That allowance is per ACCOUNT, so
+every Worker the owner runs went down with the hub.
+
+**What:** `server/guard.ts`, first in the hook: known AI and bulk crawlers, bare HTTP libraries and
+an empty agent get a 403; 300 dynamic requests a minute per address (wrangler `[[ratelimits]]`), then
+a 429; a signed-out GET of anything the route already calls `public` is answered from the edge cache.
+robots.txt names the crawlers and disallows `/asset/`. Refused and cached requests are still counted
+on the usage page, because they still count against the Workers limit.
+
+**The trade-off accepted:** the edge may keep an approved asset up to ten minutes (`EDGE_MAX_S`), so
+a ban (design 6.2) reaches a new visitor within ten minutes rather than on the next request.
+
+**What code cannot do:** a request that reaches the Worker is already counted. Stopping it before
+that is the dashboard's job, and docs/flood-protection.md lists the settings, with Workers Paid as
+the one change that stops one site's flood from taking the others down.
+
 ### D-16. The takedown address is assembled at runtime, never served as text
 
 The owner's instruction was explicit: keep it off the page as scrapable text. It is stored as
