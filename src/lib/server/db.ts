@@ -39,7 +39,7 @@ export interface HubEnv {
    */
   RESEND_API_KEY?: string;
   /**
-   * Per-address request allowance (D-94, wrangler.toml `[[ratelimits]]`). Optional: without it the
+   * Per-address request allowance (D-95, wrangler.toml `[[ratelimits]]`). Optional: without it the
    * hub simply does not rate limit.
    */
   PUBLIC_LIMIT?: import('./guard').RateLimiter;

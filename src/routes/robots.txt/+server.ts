@@ -19,7 +19,7 @@ export const GET: RequestHandler = async ({ platform, url, setHeaders }) => {
   const env = platform?.env;
   const base = env?.SUPABASE_URL ? (await loadSite(db(env), url)).url : url.origin;
   const text = [
-    // AI TRAINING AND BULK-DATA CRAWLERS ARE TURNED AWAY WHOLE (D-94). The ones that ignore this
+    // AI TRAINING AND BULK-DATA CRAWLERS ARE TURNED AWAY WHOLE (D-95). The ones that ignore this
     // are refused by agent in the Worker (server/guard.ts) and, best, by Cloudflare before it.
     ...AI_AND_BULK.map((bot) => 'User-agent: ' + bot),
     'Disallow: /',

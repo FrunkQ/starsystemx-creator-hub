@@ -36,7 +36,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 
   const sb = db(env);
 
-  // THE FLOOD GUARD (D-94, server/guard.ts), before any database or bucket is touched. Only for
+  // THE FLOOD GUARD (D-95, server/guard.ts), before any database or bucket is touched. Only for
   // requests that crossed Cloudflare's edge: the Worker's own clock calls (worker/index.mjs) carry
   // no `cf-connecting-ip` and no agent, and must never be refused as a scraper.
   const ip = event.request.headers.get('cf-connecting-ip');

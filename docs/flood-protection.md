@@ -1,11 +1,11 @@
-# Flood protection (D-94)
+# Flood protection (D-95)
 
 **What happened, 2026-11-21.** About 160,000 requests in one day, from firms in the US and China,
 for a dozen of the hub's files. Workers' free plan allows **100,000 requests a day for the whole
 Cloudflare account**, not per site, so the flood on the hub stopped every Worker on the account:
 the hub, Star System Explorer 4 (v4.starsystemx.com) and the converter.
 
-## What the code does (0.64.0)
+## What the code does (0.65.0)
 
 All in `src/lib/server/guard.ts`, called first thing in `src/hooks.server.ts`.
 
@@ -30,11 +30,9 @@ because the edge may hold an approved asset that long.
 
 Menu names move; these are as of November 2026.
 
-1. **Workers Paid, $5 a month.** *Workers & Pages* > *Plans* (or *Manage account* > *Billing*).
-   Ten million requests a month are included, then $0.30 a million. This is the one change that
-   stops a flood on one site from taking the other sites down, because the free 100,000 is shared
-   by the whole account. (The free alternative is a separate Cloudflare account for the hub alone;
-   it gets its own 100,000 a day, but moving the domain and bindings is real work.)
+1. **Workers Paid, $5 a month. DONE 2026-11-21.** Ten million requests a month are included, then
+   $0.30 a million, so a flood no longer takes the other sites down; it adds to the bill instead.
+   The steps below are what keep that bill at $5.
 2. **Block AI bots.** Select the `starsystemx.com` zone > *Security* > *Settings* > *Bot traffic*
    (or *AI Crawl Control*) > **Block AI bots: on, all pages**.
 3. **Bot Fight Mode.** Same page, **Bot Fight Mode: on**. Verified search engines and link previews

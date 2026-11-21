@@ -101,6 +101,31 @@ export interface Gates {
   patreon_enabled: boolean;
   patreon_campaign_id: string;
   patreon_tier_map: Record<string, string>;
+
+  /**
+   * THE MASTER SWITCH FOR PAID PACKS (owner, 2026-11-21; design SSE4-explorers-paid-packs.md 1a, 11).
+   * Off by default. While it is off no price, buy button, seller page or payment route exists for
+   * anyone: every money route answers "not found" (`$lib/paid/switch.ts`). Set by an admin only, on
+   * the Config page, and audited like every other row.
+   */
+  paid_packs: boolean;
+  /** The site's share of what is left after tax and card fees, basis points (2000 = 20%). Design question 4. */
+  paid_packs_site_share_bp: number;
+  /** The lowest price a seller may set, pence. Design question 5: below £2 the fixed card fee eats a quarter. */
+  paid_packs_min_price_pence: number;
+  /** The prices offered as the usual steps, pence. Any price at or above the minimum is still allowed. */
+  paid_packs_price_steps: number[];
+  /** A creator is paid out once owed at least this much, pence. Design question 6. */
+  paid_packs_payout_floor_pence: number;
+  /** Days a creator's share is held before it counts toward a payout (the refund window). Design question 6. */
+  paid_packs_hold_days: number;
+  /**
+   * SELL TO EU BUYERS (owner, 2026-11-21; design 3.4). Separate from the master switch and off by
+   * default: an EU sale needs the non-Union One Stop Shop registration in place first, because there
+   * is no small-seller threshold for a UK business selling downloads into the EU. Off = checkout
+   * refuses an EU billing country and says why.
+   */
+  paid_packs_sell_eu: boolean;
 }
 
 // Used only when a key is absent from the table - a missing row must never mean "no limit".
@@ -169,7 +194,17 @@ export const GATE_FALLBACKS: Gates = {
   mail_admin: '',
   patreon_enabled: false,
   patreon_campaign_id: '',
-  patreon_tier_map: {}
+  patreon_tier_map: {},
+
+  // PAID PACKS (design 11). OFF, and every value below is the design's recommendation, kept as a
+  // row so the owner's answers to its open questions are a setting rather than a rewrite.
+  paid_packs: false,
+  paid_packs_site_share_bp: 2000,
+  paid_packs_min_price_pence: 200,
+  paid_packs_price_steps: [300, 500, 800],
+  paid_packs_payout_floor_pence: 2500,
+  paid_packs_hold_days: 30,
+  paid_packs_sell_eu: false
 };
 
 /**

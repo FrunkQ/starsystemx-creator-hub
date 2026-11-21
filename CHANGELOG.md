@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.64.0 - 2026-11-21
+## 0.65.0 - 2026-11-21
 
 ### Protection from request floods
 
@@ -17,6 +17,15 @@ only a few times. Signed-in pages and downloads are never kept. A picture an adm
 to ten minutes to disappear for everyone, instead of the next request.
 
 Nothing changes for people using the site or Star System Explorer.
+
+## 0.64.0 - 2026-11-21
+
+### Groundwork for paid packs, switched off
+
+Nothing visible changes. This release adds the sums and rules that paid packs will use, behind a
+master switch that is off: how a sale is split (tax and card fees first, then 80% to the creator
+and 20% to the site for hosting), the rule that refuses a price on fan work or on anything that is
+not the seller's own, and the seller's declaration. Free is always free.
 
 ## 0.63.0 - 2026-11-21
 

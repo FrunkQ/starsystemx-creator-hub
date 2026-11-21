@@ -1,4 +1,4 @@
-// THE FLOOD GUARD (D-94): what stops a crawler from spending the whole Cloudflare account.
+// THE FLOOD GUARD (D-95): what stops a crawler from spending the whole Cloudflare account.
 //
 // ============================================================================================
 // WHAT HAPPENED (owner, 2026-11-21): about 160,000 requests in a day, from firms in the US and

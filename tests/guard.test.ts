@@ -1,4 +1,4 @@
-// THE FLOOD GUARD (D-94). 160,000 requests in a day for a dozen files took the owner's whole
+// THE FLOOD GUARD (D-95). 160,000 requests in a day for a dozen files took the owner's whole
 // Cloudflare account down; these pin what the Worker does about it.
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';

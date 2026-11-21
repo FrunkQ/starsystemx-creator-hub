@@ -56,7 +56,7 @@ bucket_name = "sshub-assets"
 binding = "HUB_BUNDLES"
 bucket_name = "sshub-bundles"
 
-# THE FLOOD GUARD'S ALLOWANCE (D-94, src/lib/server/guard.ts): 300 dynamic requests a minute from
+# THE FLOOD GUARD'S ALLOWANCE (D-95, src/lib/server/guard.ts): 300 dynamic requests a minute from
 # one address, counted per Cloudflare location. A person browsing, or the SSE app loading a page of
 # covers, uses a few dozen; a crawler pulling the same files in a loop goes over in seconds and gets
 # a 429 that costs no database or bucket read. It is still a Workers request: only the dashboard's
