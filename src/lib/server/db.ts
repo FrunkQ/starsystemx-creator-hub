@@ -43,6 +43,15 @@ export interface HubEnv {
    * hub simply does not rate limit.
    */
   PUBLIC_LIMIT?: import('./guard').RateLimiter;
+  /**
+   * PAID PACKS (D-94 onward). All four are Worker SECRETS that only the owner puts in, in Cloudflare;
+   * never a config row, never committed, never logged. The money routes refuse to run without them,
+   * and refuse a LIVE key outright until the owner's explicit yes (PP8): see server/paid/stripe.ts.
+   */
+  STRIPE_SECRET_KEY?: string;
+  STRIPE_WEBHOOK_SECRET?: string;
+  STRIPE_PUBLISHABLE_KEY?: string;
+  RECEIPT_SIGNING_KEY?: string;
 }
 
 export function db(env: HubEnv): Db {
