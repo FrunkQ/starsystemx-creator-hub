@@ -38,6 +38,11 @@ export interface HubEnv {
    * `wrangler secret put RESEND_API_KEY`. Absent = the hub sends nothing and says so.
    */
   RESEND_API_KEY?: string;
+  /**
+   * Per-address request allowance (D-94, wrangler.toml `[[ratelimits]]`). Optional: without it the
+   * hub simply does not rate limit.
+   */
+  PUBLIC_LIMIT?: import('./guard').RateLimiter;
 }
 
 export function db(env: HubEnv): Db {

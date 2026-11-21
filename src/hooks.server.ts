@@ -7,6 +7,7 @@ import { creatorForToken } from '$lib/server/devicePairing';
 import { ACCESS_COOKIE, REFRESH_COOKIE, setSession, clearSession } from '$lib/server/session';
 import { PUBLIC_CORS, preflight } from '$lib/server/cors';
 import { counter, categoryOf, flushIfDue } from '$lib/server/traffic';
+import { isScraper, withinLimit, edgeCacheable, edgeSeconds, forEdge } from '$lib/server/guard';
 
 /**
  * The endpoints the SSE app reaches CROSS-ORIGIN. All public, all uncredentialed.
@@ -34,6 +35,44 @@ export const handle: Handle = async ({ event, resolve }) => {
   if (!env?.SUPABASE_URL) return resolve(event);
 
   const sb = db(env);
+
+  // THE FLOOD GUARD (D-94, server/guard.ts), before any database or bucket is touched. Only for
+  // requests that crossed Cloudflare's edge: the Worker's own clock calls (worker/index.mjs) carry
+  // no `cf-connecting-ip` and no agent, and must never be refused as a scraper.
+  const ip = event.request.headers.get('cf-connecting-ip');
+  if (ip) {
+    const category = categoryOf(event.url.pathname);
+    if (isScraper(event.request.headers.get('user-agent'))) {
+      counter.record(category, 0);
+      flushIfDue(sb, event.platform?.context);
+      return new Response('Automated collection is not allowed here. See /robots.txt.\n', {
+        status: 403, headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' }
+      });
+    }
+    if (!(await withinLimit(env.PUBLIC_LIMIT, ip))) {
+      counter.record(category, 0);
+      flushIfDue(sb, event.platform?.context);
+      return new Response('Too many requests. Please slow down.\n', {
+        status: 429,
+        headers: { 'content-type': 'text/plain; charset=utf-8', 'retry-after': '60', 'cache-control': 'no-store' }
+      });
+    }
+  }
+
+  // THE EDGE COPY: a signed-out GET of something public, answered without Supabase or R2 when this
+  // data centre already has it. Still counted, because it is still a Workers request.
+  const edge = edgeCacheable(event.request, event.url.pathname)
+    ? (event.platform?.caches as unknown as { default?: Cache } | undefined)?.default
+    : undefined;
+  if (edge) {
+    const hit = await edge.match(event.request).catch(() => undefined);
+    if (hit) {
+      counter.record(categoryOf(event.url.pathname), Number(hit.headers.get('content-length') ?? 0));
+      flushIfDue(sb, event.platform?.context);
+      return hit;
+    }
+  }
+
   const access = event.request.headers.get('authorization')?.replace(/^Bearer /, '')
     ?? event.cookies.get(ACCESS_COOKIE)
     ?? null;
@@ -124,9 +163,16 @@ export const handle: Handle = async ({ event, resolve }) => {
     for (const [k, v] of Object.entries(PUBLIC_CORS)) headers.set(k, v);
   }
 
-  return new Response(body, {
+  const out = new Response(body, {
     status: response.status,
     statusText: response.statusText,
     headers
   });
+
+  const seconds = edge ? edgeSeconds(out) : 0;
+  if (edge && seconds > 0) {
+    const put = edge.put(event.request, forEdge(out, seconds)).catch(() => undefined);
+    if (event.platform?.context) event.platform.context.waitUntil(put);
+  }
+  return out;
 };
