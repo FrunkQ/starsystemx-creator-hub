@@ -204,5 +204,40 @@ engine's comment says so; the mirror repeats it; `tests/provenance.test.ts` cove
    read by the hub as of 0.6.0.
 
 `KNOWN_BUNDLE_FORMATS = [1]` since 2026-09-01. Still owed: R-13 (a manifest of what SSE ships, so
-the facet baselines stop being hand-copied lists) and R-14 (the paste target for clips) — both in
+the facet baselines stop being hand-copied lists) and R-14 (the paste target for clips; SSE4's side of it is C-08) — both in
 `docs/sse-requirements.md`.
+
+---
+
+## C-08. Clips from SSE4: `sseClip: 2`, agreed 21 Nov 2026, shipped in SSE4 22 Nov
+
+SSE4's Build desk Copy writes this to the clipboard as plain text (SSE4 `handover/packages/U20.md`;
+code `packages/ui-contract/src/clip.ts`, `readClip` and `copyClip`). The envelope was agreed with
+this site so that a V4 entry's clip can be stored and served **as the bytes SSE4 wrote**, never
+rebuilt here.
+
+```
+{ sseClip: 2, generation: "v4",
+  source: { site, title, url?, creditChain: [] },
+  packs: [{ id, version }],            // the stack it was made under, bottom to top
+  root: "n0",
+  nodes: [{ id, kind, parent }],       // parents first; parent null for the root
+  events: [{ kind: "authored.set", node, field, value, impossible? }] }
+```
+
+- **Facts only, in the kernel's own fields and SI units:** `name`, `orbit.semi_major_axis` (m),
+  `orbit.eccentricity`, `body.mass` (kg), `body.radius` (m), `body.rotation_period` (s),
+  `body.albedo`, `star.effective_temperature`, `star.luminosity` (W); belts add
+  `body.radius_inner`, `body.radius_outer` and `belt.shape`. **Derived values are never in a clip**:
+  SSE4's physics works them out again where the clip lands. A body stamped IMPOSSIBLE carries
+  `impossible: true` on its physical facts.
+- **Packs carry id and version only.** No content hash yet (the earlier proposal had one); when SSE4
+  adds it, it is an added field, not a new version.
+- **Versions:** SSE4 refuses a clip whose `sseClip` is above 2, and routes `sseClip: 1` (this site's
+  V3 clips, `src/lib/bundle/clip.ts`) to its V3 importer. So V3 clips here stay exactly as they are.
+- **The credit chain** is written onto the authored events when SSE4 places a paste (its part 2).
+  This site fills `source` (site, title, url) and appends to `creditChain` when it serves a clip.
+- **Where it is accepted in SSE4:** Build desk only; on Run, only stock ships and stations.
+
+**Not built here yet:** serving V4 clips waits on V4 entries (a V4 entry is a run manifest plus the
+authored chronicle, agreed with the same thread). Until then this site makes `sseClip: 1` only.
