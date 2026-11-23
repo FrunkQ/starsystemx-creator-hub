@@ -2757,6 +2757,23 @@ owner's. Every action is in the admin log. Reports appear on the reports page.
 "Add to my campaign" (the item page already links to `v4.starsystemx.com/?explorers=<listing>`,
 contract C-09; SSE4 wires it into its Open door in its stage 1), and V4 entries in the V3 Browse page and front page.
 
+### D-99. Small things are found by a "contains" filter, not by more shelves
+
+Example-packs note, question 6, accepted by the owner on 23 Nov ("yes to all"). Calendars, unit
+schemes, ship styles, role programs, overlays, sensor recipes and the like ride inside other packs,
+so they get no shelf of their own. Every shelf filters on them instead.
+
+**Read from the manifest, never declared by the uploader.** `containsOf` counts every key of
+`provides` and `provides.other`. Known synonyms are folded together (`tags` becomes tag groups,
+`calendar` becomes calendars, every `weather_*` key becomes one weather model). A key the site has
+never seen still shows under its own name, so a new kind of content is findable with no change here.
+Things a pack has one of however it is written (a class atlas, a calendar) count as one.
+
+**Stored as `{slug: count}` in the existing `v4_items.provides` column**, so no migration was
+needed. Slugs are lower case with underscores, so the API filters in the database
+(`provides->slug is not null`). Rows written by 0.67 used words rather than slugs as keys; the
+shelves were still empty when this changed.
+
 ### D-16. The takedown address is assembled at runtime, never served as text
 
 The owner's instruction was explicit: keep it off the page as scrapable text. It is stored as

@@ -130,27 +130,12 @@ function readPack(d: Record<string, unknown>, bytes: Uint8Array): V4Read {
 
   const p = isObj(d.provides) ? d.provides : {};
   const other = isObj(p.other) ? p.other : {};
-  const dressing = isObj(other.dressing) ? other.dressing : {};
-  const tags = other.tags;
-  const provides: Record<string, number> = {};
-  const put = (k: string, n: number) => { if (n > 0) provides[k] = n; };
-  put('flows', count(p.flows));
-  put('quantity kinds', count(p.quantity_kinds));
-  put('units', count(p.units));
-  put('boxes', count(p.boxes));
-  put('templates', count(other.templates));
-  put('dressing rules', count(dressing.rules));
-  put('tag groups', isObj(tags) && Array.isArray(tags.groups) ? tags.groups.length : count(tags));
-  put('rules', count(other.rules));
-  put('programs', count(other.programs));
-  put('sifters', count(other.sifters));
-  put('themes', count(other.themes) + count(other.skins));
-  put('lenses', count(other.lenses));
-  put('reference papers', count(p.reference));
+  const provides = containsOf(p);
 
   // A pack that carries tags and nothing that computes is a tag set, whatever kind it names.
-  const onlyTags = provides['tag groups'] && Object.keys(provides).every((k) => k === 'tag groups' || k === 'rules');
+  const onlyTags = !!provides.tag_groups && Object.keys(provides).every((k) => k === 'tag_groups' || k === 'rules' || k === 'vocabulary');
   const allKinds: PackKind[] = onlyTags && !kinds.includes('base-physics') ? [...kinds, 'tag-set'] : kinds;
+  const dressing = isObj(other.dressing) ? other.dressing : {};
 
   const about = isObj(other.about) ? other.about : {};
   return {
@@ -208,8 +193,123 @@ export function shelfOf(kinds: readonly string[]): string {
   return 'physics';
 }
 
-/** "3 templates, 1 dressing rule" */
-export function providesLine(provides: Record<string, number>): string {
-  const one = (k: string) => (k === 'boxes' ? 'box' : k === 'lenses' ? 'lens' : k.replace(/s$/, ''));
-  return Object.entries(provides).map(([k, n]) => `${n} ${n === 1 ? one(k) : k}`).join(', ');
+// ============================================================================================
+// WHAT A PACK CONTAINS (example-packs note, question 6, accepted 23 Nov). The small things -
+// calendars, unit schemes, ship styles, role programs, overlays, sensor recipes - get no shelf of
+// their own; they ride inside other packs, and every shelf filters on them instead. So the list is
+// read from the manifest itself, every key of `provides` and `provides.other`, and a key the site
+// has never heard of still shows (under its own name): a new kind of content is findable the day a
+// pack carries it, with no change here.
+//
+// Stored as `{slug: count}` in `v4_items.provides`. Slugs are lower case and underscores, so the
+// database can filter on them directly (`provides->slug`).
+// ============================================================================================
+
+/** Slug -> [one, many]. Order here is the order a listing shows them. */
+export const CONTAINS: Record<string, [string, string]> = {
+  templates: ['template', 'templates'],
+  dressing_rules: ['dressing rule', 'dressing rules'],
+  ship_styles: ['ship style', 'ship styles'],
+  ship_designs: ['ship design', 'ship designs'],
+  programs: ['role program', 'role programs'],
+  calendars: ['calendar', 'calendars'],
+  unit_schemes: ['unit scheme', 'unit schemes'],
+  name_schemes: ['name scheme', 'name schemes'],
+  overlays: ['overlay', 'overlays'],
+  sensors: ['sensor recipe', 'sensor recipes'],
+  view_styles: ['view style', 'view styles'],
+  lenses: ['lens', 'lenses'],
+  themes: ['theme', 'themes'],
+  tours: ['tour', 'tours'],
+  tag_groups: ['tag group', 'tag groups'],
+  vocabulary: ['vocabulary', 'vocabularies'],
+  class_atlas: ['class atlas', 'class atlases'],
+  rules: ['rule', 'rules'],
+  sifters: ['sifter', 'sifters'],
+  triggers: ['trigger', 'triggers'],
+  intents: ['intent', 'intents'],
+  code_sheets: ['code sheet', 'code sheets'],
+  record: ['campaign record', 'campaign records'],
+  flows: ['flow', 'flows'],
+  quantity_kinds: ['quantity kind', 'quantity kinds'],
+  boxes: ['box', 'boxes'],
+  observe: ['observation recipe', 'observation recipes'],
+  gas_mixes: ['gas mix', 'gas mixes'],
+  habitat_rules: ['habitat rule', 'habitat rules'],
+  surface: ['surface model', 'surface models'],
+  climate: ['climate model', 'climate models'],
+  cosmology: ['cosmology', 'cosmologies'],
+  light: ['light model', 'light models'],
+  nav: ['navigation model', 'navigation models'],
+  placement: ['placement model', 'placement models'],
+  patch_model: ['patch model', 'patch models'],
+  time: ['time model', 'time models'],
+  sol: ['Solar System model', 'Solar System models'],
+  weather: ['weather model', 'weather models'],
+  life: ['life model', 'life models'],
+  reference: ['reference paper', 'reference papers']
+};
+
+/** A manifest key's slug: the known synonyms folded together, weather_* and life_* as one each. */
+export function containsSlug(key: string): string | null {
+  const k = key.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+  if (!k || k === 'about') return null;
+  if (k.startsWith('weather')) return 'weather';
+  if (k.startsWith('life_')) return 'life';
+  const SAME: Record<string, string> = {
+    dressing: 'dressing_rules', tags: 'tag_groups', calendar: 'calendars', units: 'unit_schemes',
+    names: 'name_schemes', schemes: 'name_schemes', naming: 'name_schemes', ship_design: 'ship_designs',
+    ship_style: 'ship_styles', views: 'view_styles', view_style: 'view_styles', classes: 'class_atlas',
+    axes: 'class_atlas', skins: 'themes', overlay: 'overlays', sensor: 'sensors', tour: 'tours'
+  };
+  return SAME[k] ?? k;
 }
+
+/**
+ * Things a pack carries one of however it is written: a class atlas is one atlas whether it lists
+ * ten classes or a hundred, a calendar is one calendar, a sensor block is one set of recipes.
+ */
+const ONE_EACH = new Set(['class_atlas', 'calendars', 'sensors', 'vocabulary', 'record', 'surface', 'sol', 'time',
+  'climate', 'cosmology', 'patch_model', 'nav', 'placement', 'light', 'weather', 'life']);
+
+/** One manifest value's count: a list's length, the list inside a block of the same name, else 1. */
+function amount(key: string, slug: string, v: unknown): number {
+  if (v === undefined || v === null || v === false) return 0;
+  if (ONE_EACH.has(slug)) return (Array.isArray(v) ? v.length : isObj(v) ? Object.keys(v).length : 1) > 0 ? 1 : 0;
+  if (Array.isArray(v)) return v.length;
+  if (isObj(v)) {
+    for (const inner of [key, 'rules', 'groups', 'items', 'entries']) if (Array.isArray(v[inner])) return (v[inner] as unknown[]).length;
+    return Object.keys(v).length;
+  }
+  return 1;
+}
+
+/** Everything a pack's `provides` holds, as `{slug: count}`, only the non-zero ones. */
+export function containsOf(provides: Record<string, unknown>): Record<string, number> {
+  const out: Record<string, number> = {};
+  const add = (key: string, v: unknown) => {
+    const slug = containsSlug(key);
+    if (!slug) return;
+    const n = amount(key, slug, v);
+    if (n > 0) out[slug] = ONE_EACH.has(slug) ? 1 : (out[slug] ?? 0) + n;
+  };
+  for (const [k, v] of Object.entries(provides)) if (k !== 'other') add(k, v);
+  if (isObj(provides.other)) for (const [k, v] of Object.entries(provides.other)) add(k, v);
+  return out;
+}
+
+/** A slug in words, plural: "ship styles". Unknown slugs read as themselves. */
+export const containsLabel = (slug: string) => CONTAINS[slug]?.[1] ?? slug.replace(/_/g, ' ');
+
+/** "3 templates, 1 dressing rule", in CONTAINS order, then anything else alphabetically. */
+export function providesLine(provides: Record<string, number>): string {
+  const order = Object.keys(CONTAINS);
+  const rank = (k: string) => (order.includes(k) ? order.indexOf(k) : order.length);
+  return Object.entries(provides)
+    .sort(([a], [b]) => rank(a) - rank(b) || a.localeCompare(b))
+    .map(([k, n]) => `${n} ${n === 1 ? (CONTAINS[k]?.[0] ?? k.replace(/_/g, ' ')) : containsLabel(k)}`)
+    .join(', ');
+}
+
+/** A `contains` filter value from a query string: a known-shaped slug or nothing. */
+export const cleanContains = (raw: string | null) => (raw && /^[a-z0-9_]{1,40}$/.test(raw) ? raw : null);

@@ -1,6 +1,9 @@
 // THE V4 SHELVES, for SSE4 and anyone else (D-98, contract C-09). Public, no account, CORS open.
 //
-//   GET /api/v4?kind=pack|campaign&shelf=<shelf id>&q=<title>&page=<n>&limit=<n>
+//   GET /api/v4?kind=pack|campaign&shelf=<shelf id>&contains=<slug>&q=<title>&page=<n>&limit=<n>
+//
+// `contains` is one of the slugs read from the pack itself ($lib/v4/read.ts CONTAINS): calendars,
+// ship_styles, programs, overlays, sensors and so on.
 //
 // Every item says `generation: "v4"`; /api/maps says `generation: "v3"` on every map, so a reader of
 // both can tell them apart without knowing which endpoint an item came from.
@@ -10,7 +13,7 @@ import { db } from '$lib/server/db';
 import { PUBLIC_CORS, preflight } from '$lib/server/cors';
 import { loadSite } from '$lib/server/site';
 import { V4_CARD_COLUMNS, type V4Card } from '$lib/server/v4';
-import { SHELVES, shelfOf } from '$lib/v4/read';
+import { SHELVES, shelfOf, cleanContains, containsLabel } from '$lib/v4/read';
 import { fanWorkHeader } from '$lib/fanWork';
 
 const MAX_PAGE = 50;
@@ -30,6 +33,8 @@ export const GET: RequestHandler = async ({ platform, url, setHeaders }) => {
   let query = sb.from('v4_items').select(V4_CARD_COLUMNS).eq('state', 'public');
   if (kind) query = query.eq('kind', kind);
   if (shelf) query = query.eq('kind', 'pack').overlaps('pack_kinds', shelf.kinds);
+  const contains = cleanContains(url.searchParams.get('contains'));
+  if (contains) query = query.not(`provides->${contains}`, 'is', null);
   if (q) query = query.ilike('title', '%' + q + '%');
   const { data, error: e } = await query.order('created_at', { ascending: false }).range((page - 1) * size, page * size - 1);
   if (e) throw error(503, 'could not read the shelves');
@@ -47,6 +52,7 @@ export const GET: RequestHandler = async ({ platform, url, setHeaders }) => {
       return {
         generation: 'v4', ...r,
         shelf: r.kind === 'pack' ? shelfOf(r.pack_kinds) : 'campaign',
+        contains: Object.keys(r.provides ?? {}).map((slug) => ({ slug, label: containsLabel(slug), count: r.provides[slug] })),
         fanWork: r.fan_setting ? fanWorkHeader(r.fan_setting) : null,
         creator: p ? { name: p.display_name ?? p.handle, handle: p.handle } : null,
         url: `${site.url}/v/${r.slug}`,

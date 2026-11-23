@@ -1,7 +1,7 @@
 // SSE4 ON EXPLORERS (D-98): reading V4 campaigns and packs, and the migration that holds them.
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { readV4, validPackId, shelfOf, providesLine, SEMVER } from '../src/lib/v4/read';
+import { readV4, validPackId, shelfOf, providesLine, SEMVER, containsOf, containsSlug, cleanContains } from '../src/lib/v4/read';
 import { packSlug, creditChain } from '../src/lib/server/v4';
 
 const enc = (o: unknown) => new TextEncoder().encode(typeof o === 'string' ? o : JSON.stringify(o));
@@ -26,7 +26,7 @@ describe('reading a V4 pack', () => {
     if (!r.ok || r.item.kind !== 'pack') return;
     expect(r.item.packId).toBe('test.dressing-toy');
     expect(r.item.version).toBe('0.1.0');
-    expect(r.item.provides['dressing rules']).toBeGreaterThan(0);
+    expect(r.item.provides.dressing_rules).toBeGreaterThan(0);
     expect(r.item.provides.templates).toBeGreaterThan(0);
     // THE BYTES ARE THE SAME BYTES: SSE4 hashes the pack itself.
     expect(Buffer.from(r.bytes).equals(dressing)).toBe(true);
@@ -68,7 +68,8 @@ describe('reading a V4 pack', () => {
   });
 
   it('says what it provides in words', () => {
-    expect(providesLine({ templates: 3, 'dressing rules': 1, boxes: 1, lenses: 2 })).toBe('3 templates, 1 dressing rule, 1 box, 2 lenses');
+    expect(providesLine({ lenses: 2, boxes: 1, dressing_rules: 1, templates: 3 })).toBe('3 templates, 1 dressing rule, 2 lenses, 1 box');
+    expect(providesLine({ warp_gates: 2 })).toBe('2 warp gates');
   });
 });
 
@@ -138,5 +139,29 @@ describe('the V4 file header reaches SSE4', () => {
     const h = withCors({ 'x-sse-sha256': 'abc' });
     expect(h['access-control-expose-headers']).toContain('x-sse-sha256');
     expect(h['access-control-expose-headers']).toContain('x-fan-work');
+  });
+});
+
+describe('the "contains" filter, read from the pack itself (example-packs note, question 6)', () => {
+  it('finds the small things that have no shelf of their own', () => {
+    expect(containsOf({ units: [{}, {}], other: {
+      calendar: { months: [] }, ship_styles: [{}, {}, {}], programs: [{}], sensors: [{}], overlays: [{}],
+      views: [{}], names: { schemes: [] }, about: { title: 'x' }
+    } })).toEqual({ unit_schemes: 2, calendars: 1, ship_styles: 3, programs: 1, sensors: 1, overlays: 1, view_styles: 1, name_schemes: 1 });
+  });
+  it('folds synonyms and the weather and life families, and keeps a key it has never heard of', () => {
+    expect(containsSlug('tags')).toBe('tag_groups');
+    expect(containsSlug('weather_zonal')).toBe('weather');
+    expect(containsSlug('life_budget')).toBe('life');
+    expect(containsSlug('Warp Gates')).toBe('warp_gates');
+    expect(containsSlug('about')).toBeNull();
+    expect(containsOf({ other: { weather_zonal: {a: 1}, weather_giants: {a: 1}, dressing: { rules: [{}, {}] } } }))
+      .toEqual({ weather: 1, dressing_rules: 2 });
+  });
+  it('takes only a safe slug from a query string, because it goes into a database filter', () => {
+    expect(cleanContains('ship_styles')).toBe('ship_styles');
+    expect(cleanContains('a,b')).toBeNull();
+    expect(cleanContains('x)or(')).toBeNull();
+    expect(cleanContains(null)).toBeNull();
   });
 });
