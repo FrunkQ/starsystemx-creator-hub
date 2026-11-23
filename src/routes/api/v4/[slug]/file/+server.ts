@@ -32,7 +32,6 @@ export const GET: RequestHandler = async ({ platform, params }) => {
       'content-disposition': `attachment; filename="${name}"`,
       'x-sse-sha256': item.sha256,
       'x-fan-work': fanWorkHeader(item.fan_setting),
-      'access-control-expose-headers': 'x-fan-work, x-sse-sha256, content-disposition',
       'cache-control': 'no-store'
     })
   });

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.67.1 - 2026-11-23
+
+**SSE4 can read a V4 file's hash header.** `x-sse-sha256` was sent but hidden from SSE4's scripts,
+because the shared CORS headers replaced the file route's own list. SSE4 now checks a download
+against both the listing and the header.
+
 ## 0.67.0 - 2026-11-23
 
 ### Shelves for Star System Explorer 4 packs and campaigns
