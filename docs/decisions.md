@@ -2724,6 +2724,39 @@ are not made by the site and are left for an admin adjustment.
 `waived_cancellation_at`, rather than Stripe's consent collection, which needs a terms URL set in
 Stripe.
 
+### D-98. SSE4 on Explorers: V4 campaigns and packs on their own shelves, beside V3, not inside it
+
+SSE4 build plan X2 and tags design 5.7 (TG15), unblocked by the kernel's K5, TG1 and TG12.
+
+**Separate tables, not new columns on `systems`** (migration 0044, adding only). A V4 item is one
+JSON document with no zip, no images and a different check, and the V3 library and its ingest are
+left exactly as they were. `v4_items` holds both kinds (`campaign`, `pack`); `v4_reports` holds
+their reports, because the V3 `reports` table is tied to maps and image hashes by a check.
+
+**A pack is served byte for byte.** SSE4 works out a pack's content hash itself (canonical CBOR,
+SHA-256 in `sse-core`); re-serialising here would change it. The site keys the file on the SHA-256
+of its bytes (`v4/<sha256>.json` in the bundles bucket), shows that hash, and sends it as
+`x-sse-sha256`. The kernel's own pack hash is not reproduced here: SSE4 checks it on load.
+
+**A published pack version never changes, and a pack id has one owner**, the first to publish it.
+A campaign that names `id@version` therefore always fetches the same bytes, and nobody can publish
+a different pack under someone else's id.
+
+**A campaign is published without its GM record and undo history**, the same rule as SSE4's own
+`publicExport`. The state hash does not depend on either, so the published campaign opens at the
+hash it was saved with.
+
+**Fan work reuses D-61**: the same setting field, notice and attestation. A pack for a named setting
+goes on the fan-made shelf, apart from the rest (tags design 5.7; the paid-packs rule that it can
+never carry a price is already in `mayCarryPrice`).
+
+**Moderation:** a moderator holds and restores (content judgement, undoable); removing is the
+owner's. Every action is in the admin log. Reports appear on the reports page.
+
+**Not yet:** a preview of a pack applied to a stock system (needs SSE4 rendering), "Add to my
+campaign" as a direct link (SSE4 does not fetch from Explorers yet; the item page copies the
+listing URL, contract C-09), and V4 entries in the V3 Browse page and front page.
+
 ### D-16. The takedown address is assembled at runtime, never served as text
 
 The owner's instruction was explicit: keep it off the page as scrapable text. It is stored as

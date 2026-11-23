@@ -32,8 +32,8 @@ export type Category = 'page' | 'api' | 'asset' | 'download' | 'upload' | 'other
 
 export function categoryOf(pathname: string): Category {
   if (pathname.startsWith('/asset/') || pathname.startsWith('/private/asset/')) return 'asset';
-  if (pathname.startsWith('/api/download/')) return 'download';
-  if (pathname === '/api/upload' || pathname === '/api/screenshots' || pathname.startsWith('/api/debug/')) return 'upload';
+  if (pathname.startsWith('/api/download/') || /^\/api\/v4\/[^/]+\/file$/.test(pathname)) return 'download';
+  if (pathname === '/api/upload' || pathname === '/api/v4/upload' || pathname === '/api/screenshots' || pathname.startsWith('/api/debug/')) return 'upload';
   if (pathname.startsWith('/api/')) return 'api';
   if (pathname.startsWith('/_app/') || pathname === '/favicon.ico' || pathname === '/robots.txt') return 'other';
   return 'page';

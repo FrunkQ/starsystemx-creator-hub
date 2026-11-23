@@ -60,6 +60,7 @@
     </a>
     <div class="spacer"></div>
     <a href="/browse">Browse</a>
+    <a href="/shelves">Shelves</a>
     <a href="/upload">Share a map</a>
     {#if data?.viewer}
       <a class="me" href="/account">

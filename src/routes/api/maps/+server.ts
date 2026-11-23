@@ -115,6 +115,8 @@ export const GET: RequestHandler = async ({ platform, url, setHeaders }) => {
   return json({
     // `creator_id` is the database's, not the contract's: it goes, and `creator` comes instead.
     maps: (data ?? []).map(({ creator_id, ...m }) => ({
+      // V3 or V4 (D-98): every map here is a V3 save. SSE4 items are listed at /api/v4.
+      generation: 'v3',
       ...m,
       creator: nameOf.has(creator_id) ? { name: nameOf.get(creator_id) as string, url: null } : null,
       // `information`: 0..5, how much of the map is written about, 5 being the best on the hub.
@@ -129,6 +131,7 @@ export const GET: RequestHandler = async ({ platform, url, setHeaders }) => {
     sort,
     // Kept for the callers already built against them.
     downloadPath: '/api/download/{slug}',
+    v4Path: '/api/v4',
     coverPath: '/asset/{sha256}'
   });
 };

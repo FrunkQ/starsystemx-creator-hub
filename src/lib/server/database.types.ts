@@ -525,6 +525,48 @@ export type StripeEventRow = {
   processed_at: string | null;
 };
 
+/** An SSE4 campaign or pack on its shelf (0044, D-98). */
+export type V4ItemRow = {
+  id: string;
+  slug: string;
+  kind: 'campaign' | 'pack';
+  creator_id: string;
+  title: string;
+  summary: string | null;
+  pack_id: string | null;
+  pack_version: string | null;
+  pack_kinds: string[];
+  fictional: boolean;
+  licence: string | null;
+  kernel_range: string | null;
+  requires: { id: string; range: string }[];
+  provides: Record<string, number>;
+  universe_root: string | null;
+  state_hash: string | null;
+  event_count: number | null;
+  stack: { id: string; version: string }[];
+  sha256: string;
+  byte_size: number;
+  fan_setting: string | null;
+  state: 'public' | 'held' | 'removed';
+  hold_note: string | null;
+  download_count: number;
+  attestation_text_version: number | null;
+  attested_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type V4ReportRow = {
+  id: string;
+  reporter_id: string;
+  item_id: string;
+  reason: 'content' | 'copyright' | 'spam' | 'other';
+  detail: string | null;
+  state: 'open' | 'closed';
+  created_at: string;
+};
+
 export interface Database {
   public: {
     Tables: {
@@ -572,6 +614,8 @@ export interface Database {
       purchases: Table<PurchaseRow>;
       payout_ledger: Table<PayoutLedgerRow>;
       stripe_events: Table<StripeEventRow>;
+      v4_items: Table<V4ItemRow>;
+      v4_reports: Table<V4ReportRow, [Rel<'v4_reports_item_id_fkey', 'item_id', 'v4_items', 'id'>]>;
     };
     Views: { [_ in never]: never };
     Functions: {

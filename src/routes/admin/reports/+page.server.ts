@@ -28,7 +28,15 @@ export const load: PageServerLoad = async ({ platform, locals }) => {
     : { data: [] as { id: string; handle: string }[] };
   const handle = new Map((people ?? []).map((p) => [p.id, p.handle]));
 
+  // V4 ITEMS' REPORTS (D-98), settled on the item's own page, where hold and restore are. Read
+  // tolerantly: before migration 0044 runs the table does not exist, and this page must still load.
+  const { data: v4open } = await sb.from('v4_reports')
+    .select('id, reason, detail, created_at, v4_items(slug, title)')
+    .eq('state', 'open').order('created_at', { ascending: false }).limit(100);
+
   return {
+    v4reports: (v4open ?? []).map((r) => ({ id: r.id, reason: r.reason, detail: r.detail, created_at: r.created_at,
+      item: r.v4_items ? { slug: r.v4_items.slug, title: r.v4_items.title } : null })),
     reports: (open ?? []).map((r) => ({
       id: r.id, target: r.target, reason: r.reason, detail: r.detail, created_at: r.created_at, sha256: r.sha256,
       map: r.systems ? { slug: r.systems.slug, title: r.systems.title } : null,

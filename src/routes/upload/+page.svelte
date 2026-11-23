@@ -62,6 +62,7 @@
   <h1>Share a map</h1>
   <p class="lede">
     Upload a save from Star System Explorer and it gets a page anyone can download from in one click.
+    A campaign or pack from Star System Explorer 4? <a href="/upload/v4">Share it on the shelves</a>.
   </p>
 {/if}
 

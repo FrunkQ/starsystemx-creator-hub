@@ -241,3 +241,23 @@ rebuilt here.
 
 **Not built here yet:** serving V4 clips waits on V4 entries (a V4 entry is a run manifest plus the
 authored chronicle, agreed with the same thread). Until then this site makes `sseClip: 1` only.
+
+---
+
+## C-09. The V4 shelves, for SSE4 to read (D-98)
+
+Public, no account, CORS open, like the V3 download.
+
+- `GET /api/v4?kind=pack|campaign&shelf=universe|game-system|physics|tag-set|looks&q=&page=&limit=`
+  lists items, newest first. Every item has `generation: "v4"`; `/api/maps` now says
+  `generation: "v3"` on every map.
+- `GET /api/v4/<slug>` is one item's listing: `kind`; `pack {id, version, kinds, fictional, licence,
+  kernelRange, requires, provides}` or `campaign {root, stateHash, events, stack}`; `sha256` of the
+  file's bytes; `fanWork` (the D-61 statement, or null); `creator`; and
+  **`source {site, title, url, creditChain}`, in the same shape as an `sseClip: 2` clip's source
+  (C-08)**, so SSE4 can write it onto whatever it places.
+- `GET /api/v4/<slug>/file` returns the file exactly as stored, with `x-sse-sha256` (exposed to
+  scripts) and `x-fan-work`. Never cached.
+
+A pack's address is `<id>-<version>` (for example `acme.ports-1.2.0`). A published version never
+changes. The kernel's pack content hash is not given here, because SSE4 computes it on load.
