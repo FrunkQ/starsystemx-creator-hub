@@ -14,6 +14,25 @@
 {#if form?.done}<div class="panel notice"><p>{form.done}</p></div>{/if}
 {#if form?.message}<div class="panel notice bad"><p>{form.message}</p></div>{/if}
 
+{#if data.v4reports.length}
+  <h2>SSE4 packs and campaigns</h2>
+  <p class="lede">Settled on the item's own page: hold, restore, or close the reports with no action.</p>
+  <table>
+    <thead><tr><th>When</th><th>About</th><th>Reason</th><th>Detail</th></tr></thead>
+    <tbody>
+      {#each data.v4reports as r (r.id)}
+        <tr>
+          <td class="when">{r.created_at?.slice(0, 10)}</td>
+          <td>{#if r.item}<span class="kind">v4</span> <a href="/v/{r.item.slug}">{r.item.title}</a>{:else}<span class="muted">an item that is gone</span>{/if}</td>
+          <td><span class="tag">{r.reason}</span></td>
+          <td class="detail">{r.detail ?? ''}</td>
+        </tr>
+      {/each}
+    </tbody>
+  </table>
+  <h2>V3 maps, comments and images</h2>
+{/if}
+
 {#if !data.reports.length}
   <div class="panel"><p>Nothing open.</p></div>
 {:else}

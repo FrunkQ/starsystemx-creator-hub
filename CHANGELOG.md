@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.67.0 - 2026-11-23
+
+### Shelves for Star System Explorer 4 packs and campaigns
+
+**A new Shelves page** lists packs and campaigns made with Star System Explorer 4, each marked
+**v4**: universe packs (a setting's ships, bases and the rules that place them), game systems,
+physics, tag sets, and looks. Fan packs for other people's settings sit on their own **fan-made,
+unofficial** shelf, apart from everything else.
+
+**Each item has a page** saying what its pack file says: its id and version, what it provides
+(templates, dressing rules, flows...), which other packs it needs, its licence, whether its physics
+is fictional, and the file's SHA-256 so anyone can check a download. A campaign's page gives its
+universe, its event count and the packs it was made with.
+
+**Share an SSE4 campaign or pack** from the upload page. A campaign's GM record and undo history are
+taken out before it is stored. A published pack version never changes: a new version is a new
+upload. A pack id belongs to whoever published it first.
+
+V3 maps are unchanged. Needs migration 0044.
+
 ## 0.66.1 - 2026-11-21
 
 **Webhooks are never turned away by the flood protection**, so Patreon pledges (and payments,

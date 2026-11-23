@@ -22,6 +22,9 @@ function isPublicApi(pathname: string): boolean {
     || pathname === '/api/maps'
     || pathname.startsWith('/api/maps/')
     || pathname.startsWith('/api/download/')
+    // SSE4 reads the V4 shelves cross-origin (D-98). Upload and report are same-origin only.
+    || pathname === '/api/v4'
+    || (pathname.startsWith('/api/v4/') && pathname !== '/api/v4/upload' && pathname !== '/api/v4/report')
     || pathname.startsWith('/asset/');
 }
 

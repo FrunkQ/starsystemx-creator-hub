@@ -1,0 +1,57 @@
+{
+ "format": "sse.pack/1",
+ "id": "test.dressing-toy",
+ "version": "0.1.0",
+ "kind": ["game-system"],
+ "kernel_range": "^0.1",
+ "licence": "Apache-2.0",
+ "provides": {
+  "other": {
+   "tags": {
+    "about": "Tags this pack names (tags design, TG1): labels only, never an input to physics.",
+    "groups": [],
+    "tags": [
+     {"id": "port", "label": "port"},
+     {"id": "depot", "label": "fuel depot"},
+     {"id": "navy", "label": "navy"},
+     {"id": "beacon", "label": "beacon"}
+    ]
+   },
+   "templates": {
+    "templates": [
+     {"id": "fuel-depot", "kind": "station", "label": "Fuel depot", "facts": {"station.crew": 40}, "tags": ["depot"], "explain": "a skimming station that refines hydrogen"},
+     {"id": "nav-beacon", "kind": "beacon", "label": "Nav beacon", "tags": ["beacon"]}
+    ]
+   },
+   "dressing": {
+    "about": "TG12 fixture: a depot on every giant with a port within 2 AU, and seeded beacons.",
+    "rules": [
+     {
+      "id": "giant-depot.v1",
+      "applies_to": ["body"],
+      "when": {"if": "all", "of": [
+       {"if": "range", "field": "mass_kg", "min": 1e26},
+       {"if": "tag", "tag": "port"},
+       {"if": "range", "field": "orbit.a_au", "max": 2.0}
+      ]},
+      "place": "fuel-depot",
+      "where": "low-orbit",
+      "tags": ["navy"],
+      "faction": "navy",
+      "explain": "a gas giant with a port within 2 AU of its star gets a fuel depot"
+     },
+     {
+      "id": "beacons.v1",
+      "applies_to": ["body"],
+      "when": {"if": "has", "field": "mass_kg"},
+      "place": "nav-beacon",
+      "where": "L4",
+      "count": 3,
+      "chance": 0.5,
+      "explain": "busy lanes mark their worlds with beacons, at random"
+     }
+    ]
+   }
+  }
+ }
+}
