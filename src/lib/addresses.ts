@@ -53,6 +53,13 @@ export const SSE_PROD_ORIGIN = 'https://starsystemx.com';
 /** Which engine the hub talks to today. One edit here moves both defaults below to production. */
 export const SSE_ORIGIN = SSE_BETA_ORIGIN;
 
+/**
+ * STAR SYSTEM EXPLORER 4 (D-98, contract C-09). Its one Open door takes `?explorers=<listing url>`:
+ * it fetches the listing, then the file, checks both hashes, and shows the credit before adding.
+ */
+export const SSE4_ORIGIN = 'https://v4.starsystemx.com';
+export const sse4OpenUrl = (listingUrl: string) => SSE4_ORIGIN + '/?explorers=' + encodeURIComponent(listingUrl);
+
 /** R-17: what the percent-encoded download URL is appended to. Overridden by `open_in_sse_url`. */
 export const DEFAULT_OPEN_IN_SSE_URL = SSE_ORIGIN + '/?open=';
 

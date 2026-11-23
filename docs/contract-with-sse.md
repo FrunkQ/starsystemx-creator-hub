@@ -259,5 +259,10 @@ Public, no account, CORS open, like the V3 download.
 - `GET /api/v4/<slug>/file` returns the file exactly as stored, with `x-sse-sha256` (exposed to
   scripts) and `x-fan-work`. Never cached.
 
+**Opening in SSE4:** the item page links to `https://v4.starsystemx.com/?explorers=<listing URL,
+URL-encoded>` (agreed with the SSE4 test-drive thread, 23 Nov). SSE4 fetches the listing and the
+file, checks `x-sse-sha256` against the listing and the kernel's own pack hash, and shows the source
+and credit chain before adding anything.
+
 A pack's address is `<id>-<version>` (for example `acme.ports-1.2.0`). A published version never
 changes. The kernel's pack content hash is not given here, because SSE4 computes it on load.

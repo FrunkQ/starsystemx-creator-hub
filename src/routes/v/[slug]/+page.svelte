@@ -1,6 +1,7 @@
 <script lang="ts">
   import { providesLine } from '$lib/v4/read';
   import { fanWorkNotice } from '$lib/fanWork';
+  import { sse4OpenUrl } from '$lib/addresses';
   let { data } = $props();
   const it = $derived(data.item);
   let copied = $state(false);
@@ -42,8 +43,9 @@
 {/if}
 
 <div class="actions">
-  <a class="download" href={data.fileUrl} data-sveltekit-reload>Download</a>
-  <button onclick={copyLink}>{copied ? 'Copied' : 'Copy the link for SSE4'}</button>
+  <a class="download" href={sse4OpenUrl(data.metaUrl)} rel="noopener">{it.kind === 'pack' ? 'Add to my campaign in SSE4' : 'Open in SSE4'}</a>
+  <a class="download plain" href={data.fileUrl} data-sveltekit-reload>Download</a>
+  <button onclick={copyLink}>{copied ? 'Copied' : 'Copy the link'}</button>
 </div>
 
 <dl class="panel facts">
@@ -113,6 +115,7 @@
   .crumb { margin: 0 0 4px; color: var(--ink-faint); font-size: 0.9rem; }
   .gen { font-family: var(--font-mono); font-size: 0.8rem; vertical-align: middle; border: 1px solid var(--edge); padding: 1px 6px; color: var(--ink-dim); }
   .lede { color: var(--ink-dim); margin: 0 0 16px; max-width: 64ch; }
+  .download.plain { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
   .actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 14px 0; align-items: center; }
   .facts { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; }
   .facts dt { color: var(--ink-faint); }

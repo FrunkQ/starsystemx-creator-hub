@@ -123,3 +123,11 @@ describe('the V4 migration', () => {
     expect(sql).not.toMatch(/create type/i);
   });
 });
+
+describe('opening in SSE4', () => {
+  it('hands SSE4 the listing URL, encoded, on its one Open door', async () => {
+    const { sse4OpenUrl } = await import('../src/lib/addresses');
+    expect(sse4OpenUrl('https://explorers.starsystemx.com/api/v4/acme.ports-1.2.0'))
+      .toBe('https://v4.starsystemx.com/?explorers=https%3A%2F%2Fexplorers.starsystemx.com%2Fapi%2Fv4%2Facme.ports-1.2.0');
+  });
+});

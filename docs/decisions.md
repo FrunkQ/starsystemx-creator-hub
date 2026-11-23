@@ -2753,9 +2753,9 @@ never carry a price is already in `mayCarryPrice`).
 **Moderation:** a moderator holds and restores (content judgement, undoable); removing is the
 owner's. Every action is in the admin log. Reports appear on the reports page.
 
-**Not yet:** a preview of a pack applied to a stock system (needs SSE4 rendering), "Add to my
-campaign" as a direct link (SSE4 does not fetch from Explorers yet; the item page copies the
-listing URL, contract C-09), and V4 entries in the V3 Browse page and front page.
+**Not yet:** a preview of a pack applied to a stock system (needs SSE4 rendering), SSE4's side of
+"Add to my campaign" (the item page already links to `v4.starsystemx.com/?explorers=<listing>`,
+contract C-09; SSE4 wires it into its Open door in its stage 1), and V4 entries in the V3 Browse page and front page.
 
 ### D-16. The takedown address is assembled at runtime, never served as text
 
