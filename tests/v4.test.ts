@@ -131,3 +131,12 @@ describe('opening in SSE4', () => {
       .toBe('https://v4.starsystemx.com/?explorers=https%3A%2F%2Fexplorers.starsystemx.com%2Fapi%2Fv4%2Facme.ports-1.2.0');
   });
 });
+
+describe('the V4 file header reaches SSE4', () => {
+  it('exposes x-sse-sha256 to cross-origin scripts (withCors spreads PUBLIC_CORS last, so it must be there)', async () => {
+    const { withCors } = await import('../src/lib/server/cors');
+    const h = withCors({ 'x-sse-sha256': 'abc' });
+    expect(h['access-control-expose-headers']).toContain('x-sse-sha256');
+    expect(h['access-control-expose-headers']).toContain('x-fan-work');
+  });
+});

@@ -28,7 +28,7 @@ export const PUBLIC_CORS: Record<string, string> = {
   // response headers and no more, so `x-fan-work` (D-61) would be invisible to the engine and to
   // anything else fetching a download - present on the wire, absent from `response.headers`, which
   // is the kind of absence nobody debugs. Named here, it can be read.
-  'access-control-expose-headers': 'x-fan-work, content-disposition',
+  'access-control-expose-headers': 'x-fan-work, x-sse-sha256, content-disposition',
   'access-control-max-age': '86400'
 };
 
