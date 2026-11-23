@@ -248,8 +248,10 @@ authored chronicle, agreed with the same thread). Until then this site makes `ss
 
 Public, no account, CORS open, like the V3 download.
 
-- `GET /api/v4?kind=pack|campaign&shelf=universe|game-system|physics|tag-set|looks&q=&page=&limit=`
-  lists items, newest first. Every item has `generation: "v4"`; `/api/maps` now says
+- `GET /api/v4?kind=pack|campaign&shelf=universe|game-system|physics|tag-set|looks&contains=<slug>&q=&page=&limit=`
+  lists items, newest first. `contains` is a slug read from the pack (`calendars`, `ship_styles`,
+  `programs`, `overlays`, `sensors`... see `CONTAINS` in `src/lib/v4/read.ts`), and each item
+  carries `contains: [{slug, label, count}]`. Every item has `generation: "v4"`; `/api/maps` now says
   `generation: "v3"` on every map.
 - `GET /api/v4/<slug>` is one item's listing: `kind`; `pack {id, version, kinds, fictional, licence,
   kernelRange, requires, provides}` or `campaign {root, stateHash, events, stack}`; `sha256` of the

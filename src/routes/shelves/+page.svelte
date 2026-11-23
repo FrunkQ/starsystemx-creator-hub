@@ -14,7 +14,19 @@
   <a href="/upload/v4">Share your own</a>.
 </p>
 
-{#if empty}
+{#if data.choices.length}
+  <nav class="contains" aria-label="Packs that contain">
+    <span class="lbl">Contains</span>
+    <a href="/shelves" class:on={!data.contains} data-sveltekit-noscroll>anything</a>
+    {#each data.choices as ch (ch.slug)}
+      <a href="/shelves?contains={ch.slug}" class:on={data.contains?.slug === ch.slug} data-sveltekit-noscroll>{ch.label} <span class="n">{ch.packs}</span></a>
+    {/each}
+  </nav>
+{/if}
+
+{#if data.contains && empty}
+  <p class="panel">Nothing on the shelves contains {data.contains.label} yet. <a href="/shelves">Show everything</a>.</p>
+{:else if empty}
   <p class="panel">Nothing on the shelves yet. The first SSE4 packs and campaigns will appear here.</p>
 {/if}
 
@@ -53,6 +65,12 @@
   h1 { margin: 0 0 6px; }
   .lede { color: var(--ink-dim); margin: 0 0 20px; max-width: 64ch; }
   section { margin: 26px 0; }
+  .contains { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 0 0 8px; }
+  .contains .lbl { color: var(--ink-faint); font-size: 0.85rem; margin-right: 4px; }
+  .contains a { font-size: 0.88rem; padding: 2px 8px; border: 1px solid var(--edge); border-radius: var(--radius); color: var(--ink-dim); text-decoration: none; }
+  .contains a:hover { border-color: var(--accent); color: var(--ink); }
+  .contains a.on { background: var(--ink); color: var(--accent-ink, var(--bg)); border-color: var(--ink); }
+  .contains .n { font-family: var(--font-mono); font-size: 0.78rem; opacity: 0.7; }
   h2 { margin: 0 0 4px; }
   .blurb { color: var(--ink-faint); margin: 0 0 12px; font-size: 0.95rem; }
   .fanshelf { border-top: var(--cr-line-heavy, 1.6px) solid var(--edge); padding-top: 16px; }

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.68.0 - 2026-11-23
+
+**Find a pack by what is in it.** The Shelves page has a "Contains" row: templates, dressing rules,
+ship styles, role programs, calendars, unit schemes, name schemes, overlays, sensor recipes, view
+styles and anything else a listed pack carries. Choosing one narrows every shelf at once. It is read
+from the pack file itself, so a new kind of content is findable as soon as a pack carries it. The
+same filter is on the shelves API as `?contains=`.
+
 ## 0.67.1 - 2026-11-23
 
 **SSE4 can read a V4 file's hash header.** `x-sse-sha256` was sent but hidden from SSE4's scripts,
