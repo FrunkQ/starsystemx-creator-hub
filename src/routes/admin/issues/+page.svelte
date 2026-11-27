@@ -12,6 +12,7 @@
   <span class="tag warn">needs-a-fix</span> pill until they upload a fixed version. If downloaders need
   warning in the meantime, put the map on hold from its page.
 </p>
+<p class="v4-note"><strong>SSE4:</strong> SSE4 items are read in full when uploaded and refused if they do not read, so none is published with problems to list here. SSE4 checks a pack again before adding it to a campaign.</p>
 
 {#if form?.done}<div class="panel notice"><p>{form.done}</p></div>{/if}
 {#if form?.message}<div class="panel notice bad"><p>{form.message}</p></div>{/if}
@@ -71,6 +72,7 @@
 {/if}
 
 <style>
+  .v4-note { color: var(--ink-dim); font-size: 0.9rem; margin: 0 0 14px; max-width: 72ch; }
   h1 { margin: 0 0 6px; }
   .lede { color: var(--ink-dim); margin: 0 0 18px; max-width: 72ch; }
   .muted { color: var(--ink-faint); font-size: 0.88rem; }

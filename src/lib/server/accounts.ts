@@ -134,6 +134,11 @@ export async function restoreSystem(
 
 export interface DeletionReport {
   maps: number;
+  /**
+   * SSE4 items deleted with the account (the v4_items foreign key cascades, 0044). Their files stay
+   * in the bucket, and the backup's copies stay too (SP16), so a published pack can be put back.
+   */
+  v4: number;
   /** Assets whose bytes were freed because no other map referenced them. */
   freed: number;
   /** False when the Supabase auth user could not be removed: finish that by hand, by id. */
@@ -159,6 +164,8 @@ export async function deleteCreator(
   // What will need cleaning up in R2 once the rows are gone.
   const { data: mine } = await sb.from('systems').select('id, cover_sha256').eq('creator_id', who.id);
   const ids = (mine ?? []).map((m) => m.id);
+  const { data: v4Mine } = await sb.from('v4_items').select('slug').eq('creator_id', who.id);
+  const v4Slugs = (v4Mine ?? []).map((r) => r.slug);
   const hashes = new Set<string>((mine ?? []).flatMap((m) => (m.cover_sha256 ? [m.cover_sha256] : [])));
   if (ids.length) {
     const [{ data: linked }, { data: shots }] = await Promise.all([
@@ -191,7 +198,7 @@ export async function deleteCreator(
   // The id is gone from `creators`, so the handle goes in the detail - and the actor is null when
   // the person deleted themselves, because a foreign key cannot point at a row that no longer exists.
   await audit.record(sb, opts.actorId, 'creator.delete', 'creator:' + who.id, opts.note,
-    { handle: who.handle, maps: ids.length, removeComments: opts.removeComments, freed, signInDeleted });
+    { handle: who.handle, maps: ids.length, v4: v4Slugs, removeComments: opts.removeComments, freed, signInDeleted });
 
-  return { maps: ids.length, freed, signInDeleted };
+  return { maps: ids.length, v4: v4Slugs.length, freed, signInDeleted };
 }

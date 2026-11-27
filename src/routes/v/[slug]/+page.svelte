@@ -107,6 +107,8 @@
       <button onclick={() => act('remove')} disabled={!note.trim()}>Remove (owner only)</button>
     </div>
     {#if staffMsg}<p class="dim">{staffMsg}</p>{/if}
+    <p class="dim small">The app's starter list (on a V3 map's page) does not take SSE4 items: SSE4 pins its
+      own starter packs in its build, by id, version and SHA-256.</p>
   </div>
 {/if}
 

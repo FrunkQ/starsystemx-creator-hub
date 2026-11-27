@@ -85,6 +85,41 @@
   </table>
 {/if}
 
+<h2>SSE4 items</h2>
+{#if !data.v4.length}
+  <p class="muted">None.</p>
+{:else}
+  <table>
+    <thead><tr><th>Item</th><th>Kind</th><th>State</th><th>Downloads</th><th></th></tr></thead>
+    <tbody>
+      {#each data.v4 as v (v.id)}
+        <tr class:off={v.state === 'removed'}>
+          <td><a href="/v/{v.slug}">{v.title}</a>{#if v.pack_id} <span class="muted">{v.pack_id} {v.pack_version}</span>{/if}</td>
+          <td>{v.kind}</td>
+          <td>{v.state}{#if v.hold_note} <span class="muted">· {v.hold_note}</span>{/if}</td>
+          <td>{v.download_count}</td>
+          <td>
+            {#if v.state === 'public'}
+              <form class="row" method="POST" action="?/v4">
+                <input type="hidden" name="id" value={v.id} /><input type="hidden" name="action" value="hold" />
+                <input name="note" placeholder="why" maxlength="500" />
+                <button class="danger" type="submit">Hold</button>
+              </form>
+            {:else if v.state === 'held'}
+              <form method="POST" action="?/v4">
+                <input type="hidden" name="id" value={v.id} /><input type="hidden" name="action" value="restore" />
+                <button type="submit">Restore</button>
+              </form>
+            {:else}
+              <span class="muted">Removed; restore from its page</span>
+            {/if}
+          </td>
+        </tr>
+      {/each}
+    </tbody>
+  </table>
+{/if}
+
 {#if data.reports.length}
   <h2>Reports about their maps</h2>
   <table>
@@ -194,6 +229,9 @@
     <p class="muted">
       Their maps and everything under them go, their sign-in goes, and any picture nobody else uses is
       freed from storage. A banned picture stays banned. This cannot be undone.
+      {#if data.v4.length}<strong>Their {data.v4.length} SSE4 {data.v4.length === 1 ? 'item goes' : 'items go'} too,</strong>
+        and any campaign that names one of their packs can no longer fetch it. The files are kept in
+        the backup copies.{/if}
     </p>
     <label><input type="radio" name="comments" value="keep" checked /> Keep their comments, shown as a former explorer's</label>
     <label><input type="radio" name="comments" value="remove" /> Delete their comments too</label>

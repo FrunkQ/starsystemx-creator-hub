@@ -56,6 +56,15 @@ const LABELS: Record<string, { verb: string; group: ActionGroup }> = {
   'takedown.rejected': { verb: 'rejected a takedown claim', group: 'Moderation' },
   'takedown.withdrawn': { verb: 'recorded a takedown claim as withdrawn', group: 'Moderation' },
   'takedown.reopen': { verb: 'reopened a takedown claim', group: 'Moderation' },
+  // SSE4 items (D-98, SP16). Holding is moderation; removing is the owner's.
+  'v4.hold': { verb: 'held an SSE4 item', group: 'Moderation' },
+  'v4.restore': { verb: 'put an SSE4 item back on the shelf', group: 'Moderation' },
+  'v4.remove': { verb: 'removed an SSE4 item', group: 'Moderation' },
+  'v4.dismiss': { verb: 'closed the reports on an SSE4 item, no action', group: 'Moderation' },
+  // The maker's own doing (SP15): logged so "who changed this listing" has an answer.
+  'v4.edit': { verb: 'edited the listing of', group: 'Other' },
+  'v4.withdraw': { verb: 'took their own item off the shelf:', group: 'Other' },
+  'v4.return': { verb: 'put their own item back on the shelf:', group: 'Other' },
   // Maps
   'system.takedown': { verb: 'took down', group: 'Moderation' },
   'system.restore': { verb: 'restored', group: 'Moderation' },
@@ -105,7 +114,7 @@ export function describeAction(action: string): { verb: string; group: ActionGro
 }
 
 export type TargetKind =
-  'creator' | 'system' | 'asset' | 'report' | 'takedown' | 'config' | 'tag' | 'comment' | 'unknown';
+  'creator' | 'system' | 'v4_item' | 'asset' | 'report' | 'takedown' | 'config' | 'tag' | 'comment' | 'unknown';
 
 /**
  * What the action was done TO.
@@ -121,6 +130,8 @@ export function parseTarget(action: string, target: string): { kind: TargetKind;
     const id = target.slice(at + 1);
     if (prefix === 'creator') return { kind: 'creator', id };
     if (prefix === 'system') return { kind: 'system', id };
+    // An SSE4 item is named by its slug, which outlives a title change.
+    if (prefix === 'v4_item') return { kind: 'v4_item', id };
     if (prefix === 'sha256') return { kind: 'asset', id };
     if (prefix === 'report') return { kind: 'report', id };
     if (prefix === 'takedown') return { kind: 'takedown', id };

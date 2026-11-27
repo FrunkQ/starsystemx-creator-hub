@@ -55,17 +55,22 @@ export const load: PageServerLoad = async ({ platform, locals, url }) => {
     ...targets.filter((t) => t.kind === 'creator').map((t) => t.id)
   ])];
   const systemIds = [...new Set(targets.filter((t) => t.kind === 'system').map((t) => t.id))];
+  const v4Slugs = [...new Set(targets.filter((t) => t.kind === 'v4_item').map((t) => t.id))];
 
-  const [{ data: people }, { data: systems }] = await Promise.all([
+  const [{ data: people }, { data: systems }, { data: v4 }] = await Promise.all([
     creatorIds.length
       ? sb.from('creators').select('id, handle, role').in('id', creatorIds)
       : Promise.resolve({ data: [] as { id: string; handle: string; role: string }[] }),
     systemIds.length
       ? sb.from('systems').select('id, slug, title').in('id', systemIds)
-      : Promise.resolve({ data: [] as { id: string; slug: string; title: string }[] })
+      : Promise.resolve({ data: [] as { id: string; slug: string; title: string }[] }),
+    v4Slugs.length
+      ? sb.from('v4_items').select('slug, title').in('slug', v4Slugs)
+      : Promise.resolve({ data: [] as { slug: string; title: string }[] })
   ]);
   const person = new Map((people ?? []).map((p) => [p.id, p]));
   const map = new Map((systems ?? []).map((m) => [m.id, m]));
+  const v4Item = new Map((v4 ?? []).map((m) => [m.slug, m]));
 
   // Everyone who has ever acted, for the filter. A separate small read so the dropdown does not
   // only contain the people on the page you happen to be looking at.
@@ -89,6 +94,8 @@ export const load: PageServerLoad = async ({ platform, locals, url }) => {
         target: t,
         targetPerson: t.kind === 'creator' ? person.get(t.id)?.handle ?? null : null,
         targetMap: t.kind === 'system' ? map.get(t.id) ?? null : null,
+        // A deleted item still has its slug in the log; it just has no title to show.
+        targetV4: t.kind === 'v4_item' ? v4Item.get(t.id) ?? { slug: t.id, title: t.id } : null,
         reason: r.reason,
         detail: r.detail ? JSON.stringify(r.detail) : null
       };

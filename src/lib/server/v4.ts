@@ -7,6 +7,7 @@ import type { HubEnv } from './db';
 import type { Viewer } from './auth';
 import { readV4, type PackSummary, type CampaignSummary } from '$lib/v4/read';
 import { sha256Hex } from '$lib/bundle/hash';
+import * as audit from './audit';
 
 export const v4Key = (sha256: string) => `v4/${sha256}.json`;
 
@@ -109,4 +110,25 @@ function campaignRow(c: CampaignSummary, base: Base, slug: string): V4ItemRow {
  */
 export function creditChain(item: { title: string; slug: string }, maker: { handle: string; display_name: string | null } | null, siteUrl: string) {
   return [{ name: maker?.display_name ?? maker?.handle ?? 'unknown', handle: maker?.handle ?? null, title: item.title, url: `${siteUrl}/v/${item.slug}`, site: 'Explorers' }];
+}
+
+export type V4StaffAction = 'hold' | 'restore' | 'remove' | 'dismiss';
+
+/**
+ * HOLD, RESTORE, REMOVE OR DISMISS, the one way (D-98, SP16). Used by the item page's moderation
+ * panel (/api/admin/v4) and by an explorer's admin page, so the two cannot drift. The caller has
+ * already checked who may do what (removing is the owner's). Every action closes the item's open
+ * reports and goes in the log. Nothing here deletes a row or a file: "removed" is a state.
+ */
+export async function setV4State(
+  sb: Db, actorId: string, item: { id: string; slug: string; state: string }, action: V4StaffAction, note: string
+): Promise<void> {
+  if (action !== 'dismiss') {
+    const state = action === 'hold' ? 'held' : action === 'remove' ? 'removed' : 'public';
+    const { error } = await sb.from('v4_items')
+      .update({ state, hold_note: action === 'restore' ? null : note, updated_at: new Date().toISOString() }).eq('id', item.id);
+    if (error) throw new Error('could not change the item: ' + error.message);
+  }
+  await sb.from('v4_reports').update({ state: 'closed' }).eq('item_id', item.id).eq('state', 'open');
+  await audit.record(sb, actorId, 'v4.' + action, 'v4_item:' + item.slug, note || undefined, { from: item.state });
 }

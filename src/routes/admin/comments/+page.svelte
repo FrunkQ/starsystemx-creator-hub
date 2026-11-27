@@ -16,6 +16,7 @@
     {data.removed ? 'Show live comments' : 'Show removed comments'}
   </a>
 </p>
+<p class="v4-note"><strong>SSE4:</strong> SSE4 items cannot be commented on yet, so there is nothing of theirs here.</p>
 
 {#if data.problem}
   <div class="panel notice bad">
@@ -56,6 +57,7 @@
 {/if}
 
 <style>
+  .v4-note { color: var(--ink-dim); font-size: 0.9rem; margin: 0 0 14px; max-width: 72ch; }
   h1 { margin: 0 0 6px; }
   .lede { color: var(--ink-dim); margin: 0 0 18px; max-width: 70ch; }
   .lede a { margin-left: 6px; }

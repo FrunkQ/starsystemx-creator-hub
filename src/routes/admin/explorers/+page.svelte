@@ -43,7 +43,8 @@
   <div class="panel notice" class:bad={!data.flash.signIn}>
     <h3>{data.flash.handle} is gone.</h3>
     <p>
-      {data.flash.maps} {data.flash.maps === 1 ? 'map' : 'maps'} deleted, {data.flash.freed}
+      {data.flash.maps} {data.flash.maps === 1 ? 'map' : 'maps'} and {data.flash.v4} SSE4
+      {data.flash.v4 === 1 ? 'item' : 'items'} deleted, {data.flash.freed}
       {data.flash.freed === 1 ? 'picture' : 'pictures'} nobody else used freed from storage.
       {#if !data.flash.signIn}
         <strong>The sign-in could not be removed.</strong> Delete user <code>{data.flash.id}</code>
@@ -68,7 +69,7 @@
       {#if data.showEmails}<th>Email</th>{/if}
       <th>State</th>
       <th title="Pictures approved on arrival, still shown in the review queue">Trusted</th>
-      <th>Joined</th><th>Maps</th><th>Comments</th>
+      <th>Joined</th><th>Maps</th><th>SSE4</th><th>Comments</th>
     </tr></thead>
     <tbody>
       {#each data.people as p (p.id)}
@@ -116,6 +117,7 @@
           </td>
           <td class="when">{p.created_at.slice(0, 10)}</td>
           <td>{p.maps.pub} public <span class="muted">of {p.maps.all}</span></td>
+          <td>{p.v4.pub} public <span class="muted">of {p.v4.all}</span></td>
           <td>{p.comments}</td>
         </tr>
       {/each}

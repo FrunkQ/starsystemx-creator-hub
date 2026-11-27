@@ -120,3 +120,9 @@ export const TAKEDOWN_ADDRESS = 'keeper' + '@' + MAIL_DOMAIN;
 /** An address a link may be built from. `"off"` in a config row is therefore a working off switch. */
 export const isHttpUrl = (value: unknown): value is string =>
   typeof value === 'string' && /^https?:\/\/./.test(value.trim());
+
+/** The slug in an Explorers SSE4 item address (`.../v/<slug>`), or null (SP16, takedowns). */
+export function v4SlugOf(url: string | null): string | null {
+  const m = /\/v\/([a-z0-9._-]+)\/?(?:[?#].*)?$/i.exec(url ?? '');
+  return m ? m[1].toLowerCase() : null;
+}
