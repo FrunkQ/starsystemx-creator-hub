@@ -132,3 +132,76 @@ export async function setV4State(
   await sb.from('v4_reports').update({ state: 'closed' }).eq('item_id', item.id).eq('state', 'open');
   await audit.record(sb, actorId, 'v4.' + action, 'v4_item:' + item.slug, note || undefined, { from: item.state });
 }
+
+/** States whose file and listing data are served at their exact address (0045). */
+export const SERVED_STATES = ['public', 'withdrawn'] as const;
+export const isServed = (state: string) => (SERVED_STATES as readonly string[]).includes(state);
+
+/** The only columns an owner's listing edit may write (SP15). Never the file, its hash or its size. */
+export const LISTING_COLUMNS = ['title', 'summary', 'fan_setting'] as const;
+export const TITLE_MAX = 120;
+export const SUMMARY_MAX = 400;
+
+export interface ListingEdit { title?: unknown; summary?: unknown; fanSetting?: unknown }
+export type EditResult = { ok: true; changed: string[] } | { ok: false; status: number; message: string };
+
+/**
+ * THE MAKER EDITS THEIR LISTING (SP15, store packs design 9.6). Title, summary and fan setting are
+ * the listing's, not the file's: the published bytes and their SHA-256 never change, and a pack's
+ * slug (its id and version) stays put. Only the maker may do it, in any state but removed. The
+ * change goes in the log with what it was before.
+ */
+export async function editV4Listing(sb: Db, viewerId: string, slug: string, edit: ListingEdit, clean: (raw: unknown) => string | null): Promise<EditResult> {
+  const { data: item } = await sb.from('v4_items').select('id, slug, creator_id, state, title, summary, fan_setting').eq('slug', slug).maybeSingle();
+  if (!item || item.creator_id !== viewerId) return { ok: false, status: 404, message: 'Not found' };
+  if (item.state === 'removed') return { ok: false, status: 409, message: 'This item was removed, so its listing cannot be changed.' };
+
+  const patch: Partial<Pick<V4ItemRow, 'title' | 'summary' | 'fan_setting'>> = {};
+  if (edit.title !== undefined) {
+    const title = String(edit.title ?? '').replace(/\s+/g, ' ').trim().slice(0, TITLE_MAX);
+    if (!title) return { ok: false, status: 400, message: 'A listing needs a title.' };
+    if (title !== item.title) patch.title = title;
+  }
+  if (edit.summary !== undefined) {
+    const summary = String(edit.summary ?? '').trim().slice(0, SUMMARY_MAX) || null;
+    if (summary !== item.summary) patch.summary = summary;
+  }
+  if (edit.fanSetting !== undefined) {
+    const fan = clean(edit.fanSetting);
+    if (fan !== item.fan_setting) patch.fan_setting = fan;
+  }
+  const changed = Object.keys(patch);
+  if (!changed.length) return { ok: true, changed };
+
+  const { error } = await sb.from('v4_items').update({ ...patch, updated_at: new Date().toISOString() }).eq('id', item.id);
+  if (error) throw new Error('could not save the listing: ' + error.message);
+  const before = Object.fromEntries(changed.map((k) => [k, item[k as keyof typeof item]]));
+  await audit.record(sb, viewerId, 'v4.edit', 'v4_item:' + item.slug, undefined, { before, after: patch });
+  return { ok: true, changed };
+}
+
+export type ShelfResult = { ok: true; state: string } | { ok: false; status: number; message: string };
+
+/**
+ * THE MAKER TAKES THEIR OWN ITEM OFF THE SHELF, OR PUTS IT BACK (SP15). `withdrawn` is not listed
+ * or searched, but its file is still served at its exact address, so a campaign that already names
+ * it keeps working. A moderator's hold is not the maker's to lift, and a removed item stays removed.
+ */
+export async function setOwnShelf(sb: Db, viewerId: string, slug: string, on: boolean): Promise<ShelfResult> {
+  const { data: item } = await sb.from('v4_items').select('id, slug, creator_id, state').eq('slug', slug).maybeSingle();
+  if (!item || item.creator_id !== viewerId) return { ok: false, status: 404, message: 'Not found' };
+  const want = on ? 'public' : 'withdrawn';
+  if (item.state === want) return { ok: true, state: want };
+  if (item.state === 'held') return { ok: false, status: 409, message: 'A moderator has held this item, so it stays off the shelf until they lift the hold. Their note says why.' };
+  if (item.state === 'removed') return { ok: false, status: 409, message: 'This item was removed and cannot go back on the shelf.' };
+  if (on && item.state !== 'withdrawn') return { ok: false, status: 409, message: 'Only an item you took off the shelf can be put back.' };
+
+  const { error } = await sb.from('v4_items').update({ state: want, updated_at: new Date().toISOString() }).eq('id', item.id);
+  if (error) {
+    // 23514: the state check before migration 0045 does not know `withdrawn`.
+    if (error.code === '23514') return { ok: false, status: 503, message: 'Taking an item off the shelf needs a small database change that has not been run yet (0045). Nothing was changed.' };
+    throw new Error('could not change the item: ' + error.message);
+  }
+  await audit.record(sb, viewerId, on ? 'v4.return' : 'v4.withdraw', 'v4_item:' + item.slug);
+  return { ok: true, state: want };
+}

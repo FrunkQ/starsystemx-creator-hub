@@ -7,7 +7,7 @@ import type { RequestHandler } from './$types';
 import { error } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import { withCors, preflight } from '$lib/server/cors';
-import { v4Key } from '$lib/server/v4';
+import { v4Key, isServed } from '$lib/server/v4';
 import { fanWorkHeader } from '$lib/fanWork';
 
 export const GET: RequestHandler = async ({ platform, params }) => {
@@ -16,7 +16,8 @@ export const GET: RequestHandler = async ({ platform, params }) => {
   const sb = db(env);
   const { data: item } = await sb.from('v4_items')
     .select('id, slug, kind, state, sha256, fan_setting, download_count, pack_id, pack_version').eq('slug', params.slug).maybeSingle();
-  if (!item || item.state !== 'public') throw error(404, 'not found');
+  // Withdrawn by its maker is off the shelves but still served here, so campaigns that name it keep working (SP15).
+  if (!item || !isServed(item.state)) throw error(404, 'not found');
   const object = await env.HUB_BUNDLES.get(v4Key(item.sha256));
   if (!object) throw error(404, 'not found');
 

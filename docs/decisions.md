@@ -2796,6 +2796,23 @@ a campaign that names one of its packs can no longer fetch it, and the pack id b
 someone else. The delete panels now say so and the log records the slugs. Keeping packs after an
 account goes would be a migration, and is the owner's call.
 
+### D-101. The maker looks after their own listing; the file never changes (SP15)
+
+Store packs design 9.6, from the owner on 27 Nov 2026: "no edit to change the name", then "allow the
+user to edit their own content... updating a name or description should be fine".
+
+**Title, summary and fan setting are the listing's.** `editV4Listing` writes only those columns
+(`LISTING_COLUMNS`) and `updated_at`, for the maker alone, in any state but removed. The bytes, the
+SHA-256, the size and the slug never move. Each edit is logged with what it was before. The cover
+in 9.6 is not built: V4 items have no cover yet, and Explorers is to be made to look better later.
+
+**Off the shelf is `withdrawn` (migration 0045).** Not listed or searched, but the file and the
+listing data are still served at their exact address (`isServed`), so a campaign that pins the
+pack keeps working; the API says `listed: false`. Only the maker puts it back, and a moderator's
+`held` is never the maker's to lift. The same migration adds `draft` for SP8, so the owner runs one
+change for both. Until it runs, withdrawing says so (the state check answers 23514) and changes
+nothing.
+
 ### D-16. The takedown address is assembled at runtime, never served as text
 
 The owner's instruction was explicit: keep it off the page as scrapable text. It is stored as

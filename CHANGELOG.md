@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.70.0 - 2026-11-27
+
+**Edit your own SSE4 listing.** On your pack's or campaign's page there is an "Edit listing"
+button: change its title, summary and the fan-work setting at any time. The published file and its
+SHA-256 never change, and the item keeps its address; a new file is still a new version. Every
+edit is in the log. Your account page now lists your SSE4 items too.
+
+**Take your own item off the shelf, and put it back.** "Take off the shelf" hides it from every
+shelf and search, while its address keeps working, so campaigns that already use it are not
+broken. A moderator's hold is different and only staff lift it. This one needs a small database
+change (0045) before it works; until it is run the button says so and changes nothing.
+
 ## 0.69.0 - 2026-11-27
 
 **The admin pages see SSE4 packs and campaigns.** An explorer's admin page lists their SSE4 items
