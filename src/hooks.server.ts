@@ -7,7 +7,7 @@ import { creatorForToken } from '$lib/server/devicePairing';
 import { ACCESS_COOKIE, REFRESH_COOKIE, setSession, clearSession } from '$lib/server/session';
 import { PUBLIC_CORS, preflight } from '$lib/server/cors';
 import { counter, categoryOf, flushIfDue } from '$lib/server/traffic';
-import { isScraper, withinLimit, edgeCacheable, edgeSeconds, forEdge } from '$lib/server/guard';
+import { isScraper, withinLimit, edgeCacheable, edgeSeconds, forEdge, edgeKey, ZONE_NO_STORE } from '$lib/server/guard';
 
 /**
  * The endpoints the SSE app reaches CROSS-ORIGIN. All public, all uncredentialed.
@@ -73,7 +73,7 @@ export const handle: Handle = async ({ event, resolve }) => {
     ? (event.platform?.caches as unknown as { default?: Cache } | undefined)?.default
     : undefined;
   if (edge) {
-    const hit = await edge.match(event.request).catch(() => undefined);
+    const hit = await edge.match(edgeKey(event.request, version)).catch(() => undefined);
     if (hit) {
       counter.record(categoryOf(event.url.pathname), Number(hit.headers.get('content-length') ?? 0));
       flushIfDue(sb, event.platform?.context);
@@ -141,6 +141,9 @@ export const handle: Handle = async ({ event, resolve }) => {
   // Every response says which build produced it. Verifying a deploy is then one curl, instead of
   // an inference from behaviour - which was wrong once (0.7.2).
   headers.set('x-hub-version', version);
+  // A page names this build's script chunks, so no cache in front of the Worker may keep it past a
+  // deploy (guard.ts ZONE_NO_STORE). Assets are content-hashed and are not touched.
+  if ((headers.get('content-type') ?? '').startsWith('text/html')) headers.set(...ZONE_NO_STORE);
 
   // Traffic, for the usage page's "where it starts to cost" panel (server/traffic.ts). Counted
   // from the response the visitor gets and flushed in batches, so counting costs a fraction of
@@ -179,7 +182,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 
   const seconds = edge ? edgeSeconds(out) : 0;
   if (edge && seconds > 0) {
-    const put = edge.put(event.request, forEdge(out, seconds)).catch(() => undefined);
+    const put = edge.put(edgeKey(event.request, version), forEdge(out, seconds)).catch(() => undefined);
     if (event.platform?.context) event.platform.context.waitUntil(put);
   }
   return out;

@@ -59,6 +59,10 @@
       <PixelText text={data?.site?.name ?? 'StarSystemX Explorers'} scale={2} />
     </a>
     <div class="spacer"></div>
+    <!-- THE LINKS AS ONE GROUP (27 Nov 2026): on a phone they wrapped raggedly, "Shelves" alone
+         beside the wordmark and the rest under it. There the group takes its own row and the
+         wordmark shares the first with the theme switch (app.css); on a wide screen it is one row. -->
+    <div class="navlinks">
     <!-- One way in (SP17): the V3 library is two shelves there, and each leads on to Browse. -->
     <a href="/shelves">Shelves</a>
     <a href="/upload">Share a map</a>
@@ -96,6 +100,7 @@
       <a href="/login">Sign in</a>
       <a class="join" href="/join">Join</a>
     {/if}
+    </div>
     {#if night !== null}
       <button class="theme" type="button" onclick={toggleTheme}
         title={night ? 'Switch to the light Chart room' : 'Switch to the dark Night chart'}

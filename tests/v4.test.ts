@@ -70,6 +70,9 @@ describe('reading a V4 pack', () => {
   it('says what it provides in words', () => {
     expect(providesLine({ lenses: 2, boxes: 1, dressing_rules: 1, templates: 3 })).toBe('3 templates, 1 dressing rule, 2 lenses, 1 box');
     expect(providesLine({ warp_gates: 2 })).toBe('2 warp gates');
+    // Sol today was listed as "6 credit, 1 crews" (27 Nov 2026).
+    expect(providesLine({ credit: 6, crews: 1 })).toBe('1 crew, 6 credits');
+    expect(providesLine({ warp_gates: 1, gizmo: 3, glass: 2 })).toBe('3 gizmos, 2 glasses, 1 warp gate');
   });
 });
 

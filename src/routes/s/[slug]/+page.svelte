@@ -63,7 +63,9 @@
     }
   }
 
-  const total = $derived(data.bodies.length + data.constructs.length);
+  // THE SAME COUNT AS THE FACTS BELOW (27 Nov 2026): the file's own count of bodies and constructs,
+  // which leaves out barycentres. Counting the stored rows put "38 objects" beside "37 bodies".
+  const total = $derived((s.body_count ?? data.bodies.length) + (s.construct_count ?? data.constructs.length));
 
   // ============================================================================================
   // COPY FOR SSE (D-56). The engine opens a campaign from a URL and refuses a single system - so

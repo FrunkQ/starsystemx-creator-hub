@@ -247,8 +247,23 @@ export const CONTAINS: Record<string, [string, string]> = {
   sol: ['Solar System model', 'Solar System models'],
   weather: ['weather model', 'weather models'],
   life: ['life model', 'life models'],
-  reference: ['reference paper', 'reference papers']
+  reference: ['reference paper', 'reference papers'],
+  // Sol today's (27 Nov 2026): it was listed as "6 credit, 1 crews".
+  crews: ['crew', 'crews'],
+  credit: ['credit', 'credits'],
+  memorials: ['memorial', 'memorials'],
+  in_memory: ['in memory list', 'in memory lists'],
+  files: ['file', 'files'],
+  contents: ['contents list', 'contents lists']
 };
+
+/** A slug nobody has named yet, in words: "-s" added or taken off, so the count still reads right. */
+function guessWords(slug: string): [string, string] {
+  const w = slug.replace(/_/g, ' ');
+  if (/ss$/.test(w)) return [w, w + 'es'];
+  if (/s$/.test(w)) return [w.slice(0, -1), w];
+  return [w, w + 's'];
+}
 
 /** A manifest key's slug: the known synonyms folded together, weather_* and life_* as one each. */
 export function containsSlug(key: string): string | null {
@@ -299,7 +314,7 @@ export function containsOf(provides: Record<string, unknown>): Record<string, nu
 }
 
 /** A slug in words, plural: "ship styles". Unknown slugs read as themselves. */
-export const containsLabel = (slug: string) => CONTAINS[slug]?.[1] ?? slug.replace(/_/g, ' ');
+export const containsLabel = (slug: string) => (CONTAINS[slug] ?? guessWords(slug))[1];
 
 /** "3 templates, 1 dressing rule", in CONTAINS order, then anything else alphabetically. */
 export function providesLine(provides: Record<string, number>): string {
@@ -307,7 +322,7 @@ export function providesLine(provides: Record<string, number>): string {
   const rank = (k: string) => (order.includes(k) ? order.indexOf(k) : order.length);
   return Object.entries(provides)
     .sort(([a], [b]) => rank(a) - rank(b) || a.localeCompare(b))
-    .map(([k, n]) => `${n} ${n === 1 ? (CONTAINS[k]?.[0] ?? k.replace(/_/g, ' ')) : containsLabel(k)}`)
+    .map(([k, n]) => `${n} ${(CONTAINS[k] ?? guessWords(k))[n === 1 ? 0 : 1]}`)
     .join(', ');
 }
 

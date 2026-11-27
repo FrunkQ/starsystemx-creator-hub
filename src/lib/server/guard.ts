@@ -106,9 +106,30 @@ export function edgeSeconds(response: Response): number {
   return Math.max(0, Math.min(EDGE_MAX_S, age));
 }
 
+/**
+ * THE EDGE COPY'S KEY CARRIES THE BUILD (27 Nov 2026). Keyed on the bare URL, a copy written by one
+ * build was served after the next deploy, and its HTML named script chunks the new build no longer
+ * had, so `/shelves` turned into the error page for signed-out visitors. With the build in the key a
+ * deploy starts a fresh set of copies and the old ones simply age out unread.
+ */
+export function edgeKey(request: Request, build: string): Request {
+  const url = new URL(request.url);
+  url.searchParams.set('__hub', build);
+  return new Request(url.toString(), { method: 'GET' });
+}
+
+/**
+ * NO ZONE CACHE FOR PAGES. The Worker keeps its own, versioned copy (above); a second copy in the
+ * zone's cache, under a Cache Rule's own lifetime, is the one that outlived a deploy by hours. This
+ * header asks Cloudflare's cache in front of the Worker not to keep the HTML. A Cache Rule set to
+ * override the origin's lifetime still wins over it, so that rule has to be checked too.
+ */
+export const ZONE_NO_STORE: [string, string] = ['cloudflare-cdn-cache-control', 'no-store'];
+
 /** The copy that goes into the edge cache: same body and headers, the edge's own lifetime. */
 export function forEdge(response: Response, seconds: number): Response {
   const headers = new Headers(response.headers);
+  headers.delete(ZONE_NO_STORE[0]);
   // The Cache API reads `cache-control` for the lifetime of what it stores; `s-maxage` wins over
   // `max-age` there, so the browser-facing max-age (a year, for an asset) is left as it was.
   const cc = headers.get('cache-control') ?? 'public';

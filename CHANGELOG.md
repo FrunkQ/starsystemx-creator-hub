@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.72.1 - 2026-11-27
+
+**A deploy can no longer serve a page whose scripts are gone.** After 0.72.0 went live, signed-out
+visitors to Shelves were handed a copy of the page saved by 0.68.0, whose script files no longer
+existed, and it turned into the error page. The hub's own saved copies of pages are now kept per
+release, and every page tells Cloudflare's cache in front of the hub not to keep it. A Cloudflare
+Cache Rule that overrides that can still keep pages, so that rule is worth a look. Also: the "nothing
+matches" line on Shelves has its missing space; pack contents read "6 credits, 1 crew" rather than
+"6 credit, 1 crews"; on a phone the top bar is two tidy rows, the name and theme switch above and
+every link on one line below; and a V3 map's page counts its objects the same way as its facts,
+leaving out barycentres.
+
 ## 0.72.0 - 2026-11-27
 
 **Badges that say what each thing is.** Every card on the shelves, every item page and every V3

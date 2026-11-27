@@ -5,6 +5,12 @@
   import { v4Badges, v3Badges } from '$lib/itemBadges';
   let { data } = $props();
   const empty = $derived(data.shelves.every((s) => s.items.length === 0) && data.fan.length === 0 && data.v3.every((s) => s.items.length === 0));
+  // Built as one string: Svelte drops the space at the start of an {#if} block, which printed
+  // "Nothing on the shelvesmatches".
+  const nothingLine = $derived('Nothing on the shelves'
+    + (data.contains ? ' contains ' + data.contains.label : '')
+    + (data.contains && data.q ? ' and' : '')
+    + (data.q ? ' matches "' + data.q + '"' : '') + '.');
   const qs = (contains: string | null) => {
     const p = new URLSearchParams();
     if (contains) p.set('contains', contains);
@@ -41,7 +47,7 @@
 {/if}
 
 {#if (data.contains || data.q) && empty}
-  <p class="panel">Nothing on the shelves{#if data.contains} contains {data.contains.label}{/if}{#if data.q} matches "{data.q}"{/if}. <a href="/shelves">Show everything</a>.</p>
+  <p class="panel">{nothingLine} <a href="/shelves">Show everything</a>.</p>
 {:else if empty}
   <p class="panel">Nothing on the shelves yet. The first SSE4 packs and campaigns will appear here.</p>
 {/if}
