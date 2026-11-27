@@ -19,6 +19,8 @@
   import { formatBytes, ROLE_PILLS } from '$lib/bundle/facets';
   import { COMMENT_MAX } from '$lib/comments';
   import { FAN_WORK_BADGE, fanWorkNotice, cleanSetting } from '$lib/fanWork';
+  import ItemBadges from '$lib/components/ItemBadges.svelte';
+  import { v3Badges } from '$lib/itemBadges';
   import { customCalendars, calendarCaveat } from '$lib/bundle/overrides';
   import { enhance } from '$app/forms';
   import { invalidateAll } from '$app/navigation';
@@ -185,6 +187,8 @@
     if (mine) names.delete(mine);
     return [...names];
   });
+  // The item's badges (SP14), the same set as every shelf card.
+  const itemBadges = $derived(v3Badges({ kind: s.kind, auto_tags: (s.auto_tags ?? []) as string[], fan_setting: fanSetting }));
 </script>
 
 <svelte:head>
@@ -221,6 +225,7 @@
        with no notice on it looks, to a rights holder skimming this page, exactly like a claim on
        it. The pill is above the fold and names the setting; the full wording is at the bottom
        beside the credits, where a reader who wants the sentence will look for it. -->
+  <p class="item-badges"><ItemBadges badges={itemBadges} /></p>
   {#if fanSetting}
     <p class="fan-pill"><a href="#fan-work">{FAN_WORK_BADGE}: {fanSetting}</a></p>
   {/if}

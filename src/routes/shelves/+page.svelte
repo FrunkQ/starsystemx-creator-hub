@@ -1,6 +1,8 @@
 <script lang="ts">
   import { providesLine } from '$lib/v4/read';
   import { FAN_WORK_BADGE } from '$lib/fanWork';
+  import ItemBadges from '$lib/components/ItemBadges.svelte';
+  import { v4Badges, v3Badges } from '$lib/itemBadges';
   let { data } = $props();
   const empty = $derived(data.shelves.every((s) => s.items.length === 0) && data.fan.length === 0 && data.v3.every((s) => s.items.length === 0));
   const qs = (contains: string | null) => {
@@ -46,8 +48,7 @@
 
 {#snippet card(c: any)}
   <a class="card" href="/v/{c.slug}">
-    <span class="top"><span class="gen">v4</span> <span class="kind">{c.kind === 'pack' ? c.pack_kinds.join(', ') : 'campaign'}</span>
-      {#if c.fictional}<span class="flag">fictional physics</span>{/if}</span>
+    <span class="top"><ItemBadges badges={v4Badges(c)} /></span>
     <strong>{c.title}</strong>
     {#if c.summary}<span class="sum">{c.summary}</span>{/if}
     <span class="meta">
@@ -68,7 +69,7 @@
 
 {#snippet v3card(c: any)}
   <a class="card" href="/s/{c.slug}">
-    <span class="top"><span class="gen">v3</span> <span class="kind">{c.kind === 'starmap' ? 'starmap' : 'system'}</span></span>
+    <span class="top"><ItemBadges badges={v3Badges(c)} /></span>
     <strong>{c.title}</strong>
     {#if c.blurb || c.summary}<span class="sum">{c.blurb ?? c.summary}</span>{/if}
     <span class="meta">{c.kind === 'starmap' ? (c.system_count ?? 0) + ' systems · ' : ''}{c.body_count ?? 0} bodies · {c.download_count} downloads · {c.hearts_count} stars</span>
@@ -118,8 +119,6 @@
     border-radius: var(--radius); background: var(--panel); color: var(--ink); text-decoration: none; }
   .card:hover { border-color: var(--accent); }
   .top { display: flex; gap: 6px; align-items: center; font-size: 0.8rem; color: var(--ink-faint); }
-  .gen { font-family: var(--font-mono); font-size: 0.75rem; border: 1px solid var(--edge); padding: 0 5px; color: var(--ink-dim); }
-  .flag { color: var(--warn, var(--ink-dim)); }
   .sum { color: var(--ink-dim); font-size: 0.92rem; }
   .meta { color: var(--ink-faint); font-size: 0.85rem; font-family: var(--font-mono); overflow-wrap: anywhere; }
   .fan { font-size: 0.85rem; color: var(--ink-dim); }

@@ -15,6 +15,8 @@
   import { FAN_WORK_BADGE } from '$lib/fanWork';
   import { PROBLEM_TAG } from '$lib/bundle/problems';
   import type { SseLink } from '$lib/openInSse';
+  import ItemBadges from '$lib/components/ItemBadges.svelte';
+  import { v3Badges } from '$lib/itemBadges';
   interface System {
     slug: string;
     title: string;
@@ -94,6 +96,7 @@
   </div>
   <div class="body">
     <h3><a class="title" href="/s/{system.slug}">{system.title}</a></h3>
+    <div class="item-badges"><ItemBadges badges={v3Badges(system)} /></div>
     {#if system.blurb || system.summary}<p>{system.blurb ?? system.summary}</p>{/if}
     {#if whatsInIt}<p class="counts">{whatsInIt}</p>{/if}
     <!-- WHOSE UNIVERSE, when it is somebody else's (D-61). On the card as well as the page,

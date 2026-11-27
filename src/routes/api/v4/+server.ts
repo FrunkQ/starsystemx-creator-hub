@@ -14,6 +14,7 @@ import { PUBLIC_CORS, preflight } from '$lib/server/cors';
 import { loadSite } from '$lib/server/site';
 import { V4_CARD_COLUMNS, type V4Card } from '$lib/server/v4';
 import { SHELVES, shelfOf, cleanContains, containsLabel } from '$lib/v4/read';
+import { v4Badges } from '$lib/itemBadges';
 import { fanWorkHeader } from '$lib/fanWork';
 
 const MAX_PAGE = 50;
@@ -52,6 +53,8 @@ export const GET: RequestHandler = async ({ platform, url, setHeaders }) => {
       return {
         generation: 'v4', ...r,
         shelf: r.kind === 'pack' ? shelfOf(r.pack_kinds) : 'campaign',
+        // Worked out from the item (SP14); SSE4 shows the same words and lines.
+        badges: v4Badges(r),
         contains: Object.keys(r.provides ?? {}).map((slug) => ({ slug, label: containsLabel(slug), count: r.provides[slug] })),
         fanWork: r.fan_setting ? fanWorkHeader(r.fan_setting) : null,
         creator: p ? { name: p.display_name ?? p.handle, handle: p.handle } : null,

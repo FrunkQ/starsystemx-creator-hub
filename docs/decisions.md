@@ -2823,6 +2823,17 @@ test says so. One search (`$lib/shelves`) runs over every shelf; the Contains ro
 derived pills, one list shared with Browse. A slug only packs carry skips the V3 read. Badges on
 both kinds of card are SP14.
 
+### D-103. Item badges are worked out from the item, in one table (SP14)
+
+Store packs design 9.5, from the owner on 27 Nov 2026: "probably need a badge update on the store
+now we have more types of content." `$lib/itemBadges.ts` holds the table (id, words, line, group)
+and two readers, `v4Badges` and `v3Badges`; shelf cards, item pages, V3 cards and the `/api/v4`
+and `/api/maps` lists use them, so SSE4 can show the same words. A pack shows one "what it is"
+badge for each thing its contents carry; Physics comes from the contents as well as the written
+kind, and is the only badge that warns. Plain text for now (the owner: "we can beautify the store
+later"). Not yet: Real data and Free only need `downloaded_data` (SP3); a price needs paid packs
+on; Update and Yours are the app's. Not the explorer's own achievement badges (`badges.ts`).
+
 ### D-16. The takedown address is assembled at runtime, never served as text
 
 The owner's instruction was explicit: keep it off the page as scrapable text. It is stored as

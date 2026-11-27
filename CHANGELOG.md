@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.72.0 - 2026-11-27
+
+**Badges that say what each thing is.** Every card on the shelves, every item page and every V3
+map card now carries a short row of badges worked out from the item itself, never typed by its
+maker: V3 or V4; Campaign, System, Setting, Constructs, Parts, Game system, Looks or Physics (a
+pack shows one for each thing it carries, and Physics is always marked, in the warning colour);
+Fan-made and Fictional physics; Free; Needs N packs; and Withdrawn when its maker took it off the
+shelf. Hover a badge for its one-line meaning. The SSE4 and V3 lists in the API return the same
+badges, so the app can show the same words. Real data and Free only arrive when the store reads a
+pack's data sources; prices arrive with paid packs.
+
 ## 0.71.0 - 2026-11-27
 
 **One Shelves page for everything.** The V3 library is now two shelves on the Shelves page,

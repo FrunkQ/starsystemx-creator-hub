@@ -3,6 +3,7 @@
 // Mirrors what /browse shows, because two answers to "what is on the hub" that could disagree is
 // one too many. NO CREDENTIALS - browsing and downloading never need an account, in the app exactly
 // as on the web.
+import { v3Badges } from '$lib/itemBadges';
 import type { RequestHandler } from './$types';
 import { json, error } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
@@ -118,6 +119,7 @@ export const GET: RequestHandler = async ({ platform, url, setHeaders }) => {
       // V3 or V4 (D-98): every map here is a V3 save. SSE4 items are listed at /api/v4.
       generation: 'v3',
       ...m,
+      badges: v3Badges(m as { kind: string; auto_tags?: string[] | null; fan_setting?: string | null }),
       creator: nameOf.has(creator_id) ? { name: nameOf.get(creator_id) as string, url: null } : null,
       // `information`: 0..5, how much of the map is written about, 5 being the best on the hub.
       information: densityLevel(m.info_density, best),
