@@ -54,16 +54,51 @@ export interface HubEnv {
   RECEIPT_SIGNING_KEY?: string;
 }
 
+// ============================================================================================
+// EVERY DATABASE CALL GIVES UP AFTER EIGHT SECONDS (27 Nov 2026 outage).
+//
+// supabase-js has no timeout of its own. When the free Nano machine ran out of disk IO budget,
+// every PostgREST call hung about twenty seconds before Cloudflare answered 522, and a page that
+// makes three calls one after another took forty seconds to show a 500. With a limit the call is
+// aborted, postgrest-js hands back `{ error }` like any other failure, and the page shows its own
+// "could not be read" state in seconds. Eight seconds is far above a healthy call (~0.4 s measured
+// end to end) and well inside Workers' wall-clock allowance.
+// ============================================================================================
+export const DB_TIMEOUT_MS = 8_000;
+
+/** The message every page shows when the database did not answer in time. */
+export const DB_UNREACHABLE = 'The database is not answering right now.';
+
+/** A fetch that aborts after `ms`, keeping any signal the caller passed as well. */
+export function timedFetch(ms = DB_TIMEOUT_MS, base: typeof fetch = (...a) => fetch(...a)): typeof fetch {
+  return (input, init) => {
+    const limit = AbortSignal.timeout(ms);
+    const signal = init?.signal ? AbortSignal.any([init.signal, limit]) : limit;
+    return base(input, { ...init, signal });
+  };
+}
+
+/** True for the error a timed-out database call throws or returns. */
+export function isDbTimeout(e: unknown): boolean {
+  const name = (e as { name?: string } | null)?.name ?? '';
+  const message = String((e as { message?: string } | null)?.message ?? e ?? '');
+  return name === 'TimeoutError' || name === 'AbortError' || /TimeoutError|AbortError|aborted due to timeout|signal timed out/i.test(message);
+}
+
+const GLOBAL = { fetch: timedFetch() };
+
 export function db(env: HubEnv): Db {
   return createClient<Database>(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
-    auth: { persistSession: false, autoRefreshToken: false }
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: GLOBAL
   });
 }
 
 /** A client for signing a person in. Narrow key, narrow purpose. */
 export function authClient(env: HubEnv) {
   return createClient(env.SUPABASE_URL, env.SUPABASE_PUBLISHABLE_KEY, {
-    auth: { persistSession: false, autoRefreshToken: false }
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: GLOBAL
   });
 }
 
@@ -84,6 +119,7 @@ export function authClient(env: HubEnv) {
  */
 export function linkClient(env: HubEnv) {
   return createClient(env.SUPABASE_URL, env.SUPABASE_PUBLISHABLE_KEY, {
-    auth: { persistSession: false, autoRefreshToken: false, flowType: 'implicit' }
+    auth: { persistSession: false, autoRefreshToken: false, flowType: 'implicit' },
+    global: GLOBAL
   });
 }

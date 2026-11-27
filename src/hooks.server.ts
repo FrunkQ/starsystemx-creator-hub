@@ -1,7 +1,7 @@
 // Resolve the viewer once per request. Everything else reads `locals.viewer`.
-import type { Handle } from '@sveltejs/kit';
+import type { Handle, HandleServerError } from '@sveltejs/kit';
 import { version } from '$app/environment';
-import { db, authClient } from '$lib/server/db';
+import { db, authClient, isDbTimeout, DB_UNREACHABLE } from '$lib/server/db';
 import { viewerFromToken } from '$lib/server/auth';
 import { creatorForToken } from '$lib/server/devicePairing';
 import { ACCESS_COOKIE, REFRESH_COOKIE, setSession, clearSession } from '$lib/server/session';
@@ -183,4 +183,17 @@ export const handle: Handle = async ({ event, resolve }) => {
     if (event.platform?.context) event.platform.context.waitUntil(put);
   }
   return out;
+};
+
+/**
+ * AN UNEXPECTED ERROR'S MESSAGE. SvelteKit says "Internal Error" for anything a load throws; a
+ * database that did not answer in time (server/db.ts, DB_TIMEOUT_MS) says so instead, so the page
+ * tells a visitor to try again rather than implying the hub itself is broken.
+ */
+export const handleError: HandleServerError = ({ error }) => {
+  if (isDbTimeout(error) || isDbTimeout((error as { cause?: unknown } | null)?.cause)) {
+    return { message: DB_UNREACHABLE };
+  }
+  console.error(error);
+  return { message: 'Internal Error' };
 };

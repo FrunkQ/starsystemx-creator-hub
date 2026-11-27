@@ -14,7 +14,10 @@ export const load: PageServerLoad = async ({ platform, setHeaders, url }) => {
   if (!env?.SUPABASE_URL) return { systems: [], configured: false, failed: false, bye, best: null, openPrefixes: NO_PREFIXES };
 
   const sb = db(env);
-  const [{ data, error }, best, gates] = await Promise.all([
+  // A STALLED DATABASE IS A "COULD NOT READ" PAGE, NOT A 500 (27 Nov 2026). `loadGates` throws on
+  // a failed read, and when every call timed out that throw turned the front page into the error
+  // page. Any failure here, thrown or returned, lands on the same honest state below.
+  const settled = await Promise.all([
     tolerantSelect<CardRow[]>(CARD_COLUMNS, CARD_OPTIONAL, (cols) =>
       // Most loved first, and maps that need a fix after every one that does not (D-89).
       orderCards(sb.from('systems').select(cols).eq('state', 'public').eq('visibility', 'public'), 'loved')
@@ -24,7 +27,12 @@ export const load: PageServerLoad = async ({ platform, setHeaders, url }) => {
     bestDensity(sb),
     // The engine prefixes for a card's "Open in SSE" and "Add System to SSE" (D-35, D-92).
     loadGates(sb)
-  ]);
+  ]).catch((e: unknown) => {
+    console.error('front page read failed', e instanceof Error ? e.message : String(e));
+    return null;
+  });
+  if (!settled) return { systems: [], configured: true, failed: true, bye, best: null, openPrefixes: NO_PREFIXES };
+  const [{ data, error }, best, gates] = settled;
 
   // Same rule as /browse: a failed query must not render as an empty library. Do not cache a
   // failure either - a 60-second cache on a broken read turns a blip into a minute of wrong page.
