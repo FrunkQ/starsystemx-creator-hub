@@ -59,7 +59,7 @@
       <PixelText text={data?.site?.name ?? 'StarSystemX Explorers'} scale={2} />
     </a>
     <div class="spacer"></div>
-    <a href="/browse">Browse</a>
+    <!-- One way in (SP17): the V3 library is two shelves there, and each leads on to Browse. -->
     <a href="/shelves">Shelves</a>
     <a href="/upload">Share a map</a>
     {#if data?.viewer}
