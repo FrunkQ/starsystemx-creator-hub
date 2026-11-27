@@ -2,30 +2,44 @@
   import { providesLine } from '$lib/v4/read';
   import { FAN_WORK_BADGE } from '$lib/fanWork';
   let { data } = $props();
-  const empty = $derived(data.shelves.every((s) => s.items.length === 0) && data.fan.length === 0);
+  const empty = $derived(data.shelves.every((s) => s.items.length === 0) && data.fan.length === 0 && data.v3.every((s) => s.items.length === 0));
+  const qs = (contains: string | null) => {
+    const p = new URLSearchParams();
+    if (contains) p.set('contains', contains);
+    if (data.q) p.set('q', data.q);
+    const t = p.toString();
+    return '/shelves' + (t ? '?' + t : '');
+  };
 </script>
 
 <svelte:head><title>Shelves - {data.site.name}</title></svelte:head>
 
-<h1>Shelves <span class="gen">v4</span></h1>
+<h1>Shelves</h1>
 <p class="lede">
-  Packs and campaigns for Star System Explorer 4. A pack adds to a campaign: a setting's ships and
-  bases, a game's rules, new physics, a vocabulary or a look. V3 maps are on <a href="/browse">Browse</a>.
-  <a href="/upload/v4">Share your own</a>.
+  Everything on Explorers: packs and campaigns for Star System Explorer 4, and the V3 library of
+  starmaps and systems. A pack adds to a campaign: a setting's ships and bases, a game's rules, new
+  physics, a vocabulary or a look. <a href="/upload/v4">Share your own</a>.
 </p>
+
+<form class="search" method="GET" action="/shelves" role="search">
+  {#if data.contains}<input type="hidden" name="contains" value={data.contains.slug} />{/if}
+  <input type="search" name="q" value={data.q} placeholder="Search every shelf" maxlength="80" aria-label="Search every shelf" />
+  <button type="submit">Search</button>
+  {#if data.q}<a href={qs(data.contains?.slug ?? null).replace(/[?&]q=[^&]*/, '')}>clear</a>{/if}
+</form>
 
 {#if data.choices.length}
   <nav class="contains" aria-label="Packs that contain">
     <span class="lbl">Contains</span>
-    <a href="/shelves" class:on={!data.contains} data-sveltekit-noscroll>anything</a>
+    <a href={qs(null)} class:on={!data.contains} data-sveltekit-noscroll>anything</a>
     {#each data.choices as ch (ch.slug)}
-      <a href="/shelves?contains={ch.slug}" class:on={data.contains?.slug === ch.slug} data-sveltekit-noscroll>{ch.label} <span class="n">{ch.packs}</span></a>
+      <a href={qs(ch.slug)} class:on={data.contains?.slug === ch.slug} data-sveltekit-noscroll>{ch.label}{#if ch.packs} <span class="n">{ch.packs}</span>{/if}</a>
     {/each}
   </nav>
 {/if}
 
-{#if data.contains && empty}
-  <p class="panel">Nothing on the shelves contains {data.contains.label} yet. <a href="/shelves">Show everything</a>.</p>
+{#if (data.contains || data.q) && empty}
+  <p class="panel">Nothing on the shelves{#if data.contains} contains {data.contains.label}{/if}{#if data.q} matches "{data.q}"{/if}. <a href="/shelves">Show everything</a>.</p>
 {:else if empty}
   <p class="panel">Nothing on the shelves yet. The first SSE4 packs and campaigns will appear here.</p>
 {/if}
@@ -52,6 +66,28 @@
   </section>
 {/each}
 
+{#snippet v3card(c: any)}
+  <a class="card" href="/s/{c.slug}">
+    <span class="top"><span class="gen">v3</span> <span class="kind">{c.kind === 'starmap' ? 'starmap' : 'system'}</span></span>
+    <strong>{c.title}</strong>
+    {#if c.blurb || c.summary}<span class="sum">{c.blurb ?? c.summary}</span>{/if}
+    <span class="meta">{c.kind === 'starmap' ? (c.system_count ?? 0) + ' systems · ' : ''}{c.body_count ?? 0} bodies · {c.download_count} downloads · {c.hearts_count} stars</span>
+    {#if c.fan_setting}<span class="fan">{FAN_WORK_BADGE}: {c.fan_setting}</span>{/if}
+  </a>
+{/snippet}
+
+{#each data.v3 as s (s.id)}
+  {#if s.items.length || s.failed}
+    <section>
+      <h2>{s.title}</h2>
+      <p class="blurb">{s.blurb}</p>
+      {#if s.failed}<p class="panel">This shelf could not be read right now.</p>{/if}
+      <div class="grid">{#each s.items as c (c.slug)}{@render v3card(c)}{/each}</div>
+      <p class="all"><a href={s.all}>{s.more ? 'See them all, with every filter' : 'Open on Browse, with every filter'}</a></p>
+    </section>
+  {/if}
+{/each}
+
 {#if data.fan.length}
   <section class="fanshelf">
     <h2>Fan-made, unofficial</h2>
@@ -63,6 +99,9 @@
 
 <style>
   h1 { margin: 0 0 6px; }
+  .search { display: flex; gap: 8px; align-items: center; margin: 0 0 12px; flex-wrap: wrap; }
+  .search input[type='search'] { flex: 1 1 220px; max-width: 420px; }
+  .all { margin: 8px 0 0; font-size: 0.92rem; }
   .lede { color: var(--ink-dim); margin: 0 0 20px; max-width: 64ch; }
   section { margin: 26px 0; }
   .contains { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 0 0 8px; }

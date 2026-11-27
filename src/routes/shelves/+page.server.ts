@@ -5,6 +5,9 @@ import { error } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import { V4_CARD_COLUMNS, type V4Card } from '$lib/server/v4';
 import { SHELVES, shelfOf, cleanContains, containsLabel, CONTAINS } from '$lib/v4/read';
+import { tolerantSelect } from '$lib/server/tolerant';
+import { CARD_COLUMNS, CARD_OPTIONAL, orderCards, type CardRow } from '$lib/server/cards';
+import { V3_CONTAINS, V3_SHELF_SIZE, cleanSearch, matchesSearch } from '$lib/shelves';
 
 export const load: PageServerLoad = async ({ platform, setHeaders, url }) => {
   const env = platform?.env;
@@ -32,8 +35,36 @@ export const load: PageServerLoad = async ({ platform, setHeaders, url }) => {
   const rank = (k: string) => (order.includes(k) ? order.indexOf(k) : order.length);
   const choices = [...tally.entries()].sort(([a], [b]) => rank(a) - rank(b) || a.localeCompare(b))
     .map(([slug, packs]) => ({ slug, label: containsLabel(slug), packs }));
-  const contains = cleanContains(url.searchParams.get('contains'));
-  const shown = contains ? cards.filter((c) => (c.provides ?? {})[contains]) : cards;
+  // The V3 maps' own "contains" pills, offered beside the packs' (a fixed list, so no extra read).
+  for (const t of V3_CONTAINS) if (!choices.some((c) => c.slug === t.slug)) choices.push({ slug: t.slug, label: t.label, packs: 0 });
+  const rawContains = url.searchParams.get('contains');
+  const v3Tag = V3_CONTAINS.find((t) => t.slug === rawContains) ?? null;
+  const contains = cleanContains(rawContains) ?? v3Tag?.slug ?? null;
+  // ONE SEARCH FOR EVERY SHELF (SP17): titles and summaries, V4 here in the Worker (the V4 rows are
+  // already in hand), V3 in the database the way Browse does it.
+  const q = cleanSearch(url.searchParams.get('q'));
+  const shown = cards.filter((c) => (!contains || (c.provides ?? {})[contains]) && matchesSearch(q, c.title, c.summary));
+
+  // THE V3 LIBRARY AS TWO SHELVES (SP17, store packs design 9.6): "Starmaps (V3)" and "Systems (V3)",
+  // read from `systems` as it is, nothing moved or rewritten. A short shelf each, most loved first,
+  // with the rest on Browse, which keeps its full filters. A V3 map's "contains" is its derived pills.
+  const v3Shelf = async (kind: 'starmap' | 'system') => {
+    const { data: rows, error: e } = await tolerantSelect<CardRow[]>(CARD_COLUMNS, CARD_OPTIONAL, (cols) => {
+      let query = sb.from('systems').select(cols).eq('state', 'public').eq('visibility', 'public').eq('kind', kind);
+      if (contains) query = query.contains('auto_tags', [contains]);
+      if (q) query = query.or('title.ilike.%' + q + '%,blurb.ilike.%' + q + '%');
+      return orderCards(query, 'loved').limit(V3_SHELF_SIZE + 1);
+    });
+    if (e) { console.error('v3 shelf query failed', e.message); return { items: [] as CardRow[], more: false, failed: true }; }
+    const list = rows ?? [];
+    return { items: list.slice(0, V3_SHELF_SIZE), more: list.length > V3_SHELF_SIZE, failed: false };
+  };
+  // A slug only V4 packs can carry (calendars, ship styles) narrows the V3 shelves to nothing, and
+  // asking the database for that would be a wasted read.
+  const v3Possible = !contains || V3_CONTAINS.some((t) => t.slug === contains);
+  const none = { items: [] as CardRow[], more: false, failed: false };
+  const [starmaps, systems] = v3Possible ? await Promise.all([v3Shelf('starmap'), v3Shelf('system')]) : [none, none];
+  const browse = (kind: string) => '/browse?kind=' + kind + (contains ? '&tag=' + contains : '') + (q ? '&q=' + encodeURIComponent(q) : '');
 
   const own = shown.filter((c) => !c.fan_setting);
   setHeaders({ 'cache-control': 'public, max-age=60' });
@@ -43,7 +74,12 @@ export const load: PageServerLoad = async ({ platform, setHeaders, url }) => {
       { id: 'campaign', title: 'Campaigns', blurb: 'Whole SSE4 campaigns to open and play.', items: own.filter((c) => c.kind === 'campaign') }
     ],
     fan: shown.filter((c) => !!c.fan_setting),
+    v3: [
+      { id: 'v3-starmap', title: 'Starmaps (V3)', blurb: 'Whole star maps made in Star System Explorer 3. SSE4 opens them too.', ...starmaps, all: browse('starmap') },
+      { id: 'v3-system', title: 'Systems (V3)', blurb: 'Single star systems made in Star System Explorer 3.', ...systems, all: browse('system') }
+    ],
+    q,
     choices,
-    contains: contains ? { slug: contains, label: containsLabel(contains) } : null
+    contains: contains ? { slug: contains, label: v3Tag?.label ?? containsLabel(contains) } : null
   };
 };

@@ -32,7 +32,8 @@
 
 <h1>Browse</h1>
 <p class="lede">
-  Every map here is free to download in one click, no account needed. The first pills are worked
+  The V3 library, with every filter: the Starmaps (V3) and Systems (V3) <a href="/shelves">shelves</a>
+  lead here. Every map here is free to download in one click, no account needed. The first pills are worked
   out from the file itself; the rest are what each cartographer says their map is.
   <!-- The rules library sits here rather than in the banner (D-71): it is a second thing to browse,
        and it belongs beside the first rather than competing with it for a nav slot. -->

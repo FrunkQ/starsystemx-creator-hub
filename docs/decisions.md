@@ -2813,6 +2813,16 @@ pack keeps working; the API says `listed: false`. Only the maker puts it back, a
 change for both. Until it runs, withdrawing says so (the state check answers 23514) and changes
 nothing.
 
+### D-102. The V3 library is two shelves on the one Shelves page (SP17)
+
+Store packs design 9.6, from the owner on 27 Nov 2026: "v3 starmaps/system maps should just be a
+shelf". `/shelves` reads `systems` (public, publicly visible, by kind) for "Starmaps (V3)" and
+"Systems (V3)", twelve each, most loved first, through the same `orderCards` as every other list,
+with a link to Browse for the rest and its full filters. Read only: the page writes nothing, and a
+test says so. One search (`$lib/shelves`) runs over every shelf; the Contains row adds the V3
+derived pills, one list shared with Browse. A slug only packs carry skips the V3 read. Badges on
+both kinds of card are SP14.
+
 ### D-16. The takedown address is assembled at runtime, never served as text
 
 The owner's instruction was explicit: keep it off the page as scrapable text. It is stored as

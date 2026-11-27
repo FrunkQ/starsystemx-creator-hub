@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.71.0 - 2026-11-27
+
+**One Shelves page for everything.** The V3 library is now two shelves on the Shelves page,
+"Starmaps (V3)" and "Systems (V3)", beside the SSE4 packs and campaigns, each showing its most
+loved maps with a link to the rest on Browse. A search box on Shelves searches every shelf at once,
+and the Contains row now offers the V3 maps' own pills (moons, rings, ships and the rest) too.
+Browse keeps all its filters and is reached from those shelves; the top bar has one Shelves link.
+Nothing in the V3 library was moved or changed.
+
 ## 0.70.0 - 2026-11-27
 
 **Edit your own SSE4 listing.** On your pack's or campaign's page there is an "Edit listing"
