@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.69.0 - 2026-11-27
+
+**The admin pages see SSE4 packs and campaigns.** An explorer's admin page lists their SSE4 items
+with Hold and Restore beside their maps, and the Explorers list counts them. The log names SSE4
+items and what was done to them. Usage has an SSE4 panel: packs, campaigns, downloads, storage,
+held items and open reports. A takedown claim that gives an SSE4 item's address links to it. The
+review queue, comments, tags, issues, debug and gates pages each say in a line why SSE4 items do
+not come to them. Deleting an account now says plainly that its SSE4 items go too.
+
 ## 0.68.2 - 2026-11-27
 
 **The backup now holds SSE4 packs and campaigns.** Until now the weekly backup left out every SSE4

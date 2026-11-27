@@ -95,6 +95,24 @@
 
 <h1>Usage</h1>
 
+{#if data.v4}
+  <h2>SSE4 items</h2>
+  <div class="tiles">
+    <div class="tile"><b>{fmt(data.v4.packs.pub)}</b><span>packs public <em>of {fmt(data.v4.packs.all)}</em></span></div>
+    <div class="tile"><b>{fmt(data.v4.campaigns.pub)}</b><span>campaigns public <em>of {fmt(data.v4.campaigns.all)}</em></span></div>
+    <div class="tile"><b>{fmt(data.v4.downloads)}</b><span>downloads, all time</span></div>
+    <div class="tile"><b>{(data.v4.bytes / 1048576).toFixed(1)} MB</b><span>stored</span></div>
+    <div class="tile" class:warn={data.v4.held > 0}><b>{fmt(data.v4.held)}</b><span>held</span></div>
+    <div class="tile" class:warn={data.v4.openReports > 0}><b>{fmt(data.v4.openReports)}</b><span>open reports</span></div>
+  </div>
+  {#if data.v4.top.length}
+    <p class="muted">Most downloaded:
+      {#each data.v4.top as t, i (t.slug)}<a href="/v/{t.slug}">{t.title}</a> ({fmt(t.downloads)}){i < data.v4.top.length - 1 ? ', ' : ''}{/each}
+    </p>
+  {/if}
+  <p class="muted">The figures below are V3 maps, except uploads and refusals, which count SSE4 uploads too.</p>
+{/if}
+
 {#if data.problem}
   <div class="panel notice bad">
     <h3>The statistics function is not available</h3>

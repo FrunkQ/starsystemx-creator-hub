@@ -34,6 +34,7 @@
   normally applies — no account, no attestation, no review — because the file worth diagnosing is
   usually the one that cannot pass them.
 </p>
+<p class="v4-note"><strong>SSE4:</strong> SSE4 items do not come here. A debug upload is a file an app could not open, sent in to be looked at; it is never published.</p>
 
 {#if form?.created}
   <div class="panel notice">
@@ -139,6 +140,7 @@
 </div>
 
 <style>
+  .v4-note { color: var(--ink-dim); font-size: 0.9rem; margin: 0 0 14px; max-width: 72ch; }
   h1 { margin: 0 0 6px; }
   h2 { margin: 0 0 10px; font-size: 1.05rem; }
   .lede, .muted { color: var(--ink-dim); max-width: 68ch; }

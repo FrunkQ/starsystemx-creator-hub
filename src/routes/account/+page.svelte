@@ -205,7 +205,7 @@
 <form class="panel danger-zone" method="POST" action="?/delete">
   <h2>Delete your account</h2>
   <p class="muted">
-    Your maps go, your sign-in goes, and any picture nobody else uses is freed from storage. It
+    Your maps and SSE4 packs and campaigns go, your sign-in goes, and any picture nobody else uses is freed from storage. It
     cannot be undone. Your comments are your call:
   </p>
   <label><input type="radio" name="comments" value="keep" checked /> Keep them, shown as a former explorer's</label>

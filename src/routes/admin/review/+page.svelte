@@ -128,6 +128,7 @@
   {cards.length} unreviewed {cards.length === 1 ? 'image' : 'images'}.
   Only novel bytes appear here - anything already approved never comes back.
 </p>
+<p class="v4-note"><strong>SSE4:</strong> SSE4 items carry no pictures, so nothing of theirs comes to this queue. An SSE4 item is moderated from its own page or its maker's Explorers page: hold, restore, remove.</p>
 <p class="keys">
   <kbd>A</kbd> approve &nbsp; <kbd>R</kbd> reject: content &nbsp; <kbd>C</kbd> copyright &nbsp;
   <kbd>S</kbd> spam &nbsp; <kbd>U</kbd> undo &nbsp; <kbd>J</kbd>/<kbd>K</kbd> move
@@ -289,6 +290,7 @@
 {/if}
 
 <style>
+  .v4-note { color: var(--ink-dim); font-size: 0.9rem; margin: 0 0 14px; max-width: 72ch; }
   h1 { margin: 0 0 4px; }
   .lede { color: var(--ink-dim); margin: 0 0 8px; }
   .keys { color: var(--ink-faint); font-size: 0.88rem; margin: 0 0 20px; }

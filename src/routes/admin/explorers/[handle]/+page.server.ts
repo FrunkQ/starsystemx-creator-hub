@@ -10,6 +10,7 @@ import * as accounts from '$lib/server/accounts';
 import * as audit from '$lib/server/audit';
 import { isBadge } from '$lib/badges';
 import { isStaff, isAdmin } from '$lib/server/auth';
+import { setV4State } from '$lib/server/v4';
 
 // One explorer: who they are, what they have shared and said, and everything the hub can do
 // about it (D-28). Every action here is one the terms already promise and the audit log records.
@@ -22,12 +23,15 @@ export const load: PageServerLoad = async ({ platform, locals, params }) => {
   const { data: person } = await sb.from('creators').select('*').eq('handle', params.handle).maybeSingle();
   if (!person) throw error(404, 'Not found');
 
-  const [{ data: maps }, { data: comments }, { data: badgeRows }] = await Promise.all([
+  const [{ data: maps }, { data: comments }, { data: badgeRows }, { data: v4 }] = await Promise.all([
     // `*`: state_note is 0022's, and naming it before that migration fails the read.
     sb.from('systems').select('*').eq('creator_id', person.id).order('updated_at', { ascending: false }),
     sb.from('comments').select('id, body, created_at, system_id, removed_at, removed_reason')
       .eq('creator_id', person.id).order('created_at', { ascending: false }).limit(50),
-    sb.from('creator_badges').select('badge').eq('creator_id', person.id)
+    sb.from('creator_badges').select('badge').eq('creator_id', person.id),
+    // Their SSE4 items (SP16): every state, so a held or removed one is still visible here.
+    sb.from('v4_items').select('id, slug, kind, title, pack_id, pack_version, state, hold_note, download_count, created_at')
+      .eq('creator_id', person.id).order('created_at', { ascending: false }).limit(200)
   ]);
 
   const mapIds = (maps ?? []).map((m) => m.id);
@@ -62,6 +66,7 @@ export const load: PageServerLoad = async ({ platform, locals, params }) => {
       id: m.id, slug: m.slug, title: m.title, kind: m.kind, state: m.state, state_note: m.state_note ?? null,
       stars: m.hearts_count, comments: m.comments_count ?? 0, downloads: m.download_count
     })),
+    v4: v4 ?? [],
     comments: (comments ?? []).map((c) => ({
       id: c.id, body: c.body, created_at: c.created_at, removed_at: c.removed_at,
       removed_reason: c.removed_reason, map: aboutMap.get(c.system_id) ?? null
@@ -268,6 +273,27 @@ export const actions: Actions = {
   },
 
   /**
+   * HOLD OR RESTORE ONE OF THEIR SSE4 ITEMS (SP16). Staff, and undoable, like a map's takedown.
+   * Removing stays on the item's own page and is the owner's (D-98).
+   */
+  v4: async ({ request, platform, locals, params }) => {
+    const { sb, me } = await staff(platform, locals);
+    const person = await personByHandle(sb, params.handle);
+    const form = await request.formData();
+    const id = String(form.get('id') ?? '');
+    const action = String(form.get('action') ?? '');
+    const note = noteOf(form) ?? '';
+    if (!ID.test(id)) return fail(400, { message: 'bad id' });
+    if (action !== 'hold' && action !== 'restore') return fail(400, { message: 'Hold or restore?' });
+    if (action === 'hold' && !note) return fail(400, { message: 'Say why: the reason goes in the log.' });
+    const { data: item } = await sb.from('v4_items').select('id, slug, state').eq('id', id).eq('creator_id', person.id).maybeSingle();
+    if (!item) throw error(404, 'Not found');
+    try { await setV4State(sb, me.id, item, action, note); }
+    catch (e) { return fail(500, { message: (e as Error).message }); }
+    return { done: action === 'hold' ? 'Held. Not shown or served until restored.' : 'Restored and public.' };
+  },
+
+  /**
    * MAKE SOMEBODY STAFF, or stop them being staff. The owner's alone, and never on yourself: an
    * admin who could demote themselves can lock the place, and one who could promote themselves
    * makes the role meaningless.
@@ -300,7 +326,7 @@ export const actions: Actions = {
       report = await accounts.deleteCreator(env, sb, person, { removeComments, actorId: me.id, note: noteOf(form) ?? undefined });
     } catch (e) { return fail(500, { message: (e as Error).message }); }
     redirect(303, '/admin/explorers?deleted=' + encodeURIComponent(person.handle)
-      + '&maps=' + report.maps + '&freed=' + report.freed + '&signin=' + (report.signInDeleted ? 1 : 0)
+      + '&maps=' + report.maps + '&v4=' + report.v4 + '&freed=' + report.freed + '&signin=' + (report.signInDeleted ? 1 : 0)
       + '&id=' + person.id);
   }
 };

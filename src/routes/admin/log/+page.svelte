@@ -82,6 +82,8 @@
             <span class="verb">{e.verb}</span>
             {#if e.targetMap}
               <a href="/s/{e.targetMap.slug}">{e.targetMap.title}</a>
+            {:else if e.targetV4}
+              <a href="/v/{e.targetV4.slug}">{e.targetV4.title}</a> <span class="muted">(V4)</span>
             {:else if e.targetPerson}
               <a href="/admin/explorers/{e.targetPerson}">{e.targetPerson}</a>
             {:else if e.target.kind === 'tag' || e.target.kind === 'config'}

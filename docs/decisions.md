@@ -2774,6 +2774,28 @@ needed. Slugs are lower case with underscores, so the API filters in the databas
 (`provides->slug is not null`). Rows written by 0.67 used words rather than slugs as keys; the
 shelves were still empty when this changed.
 
+### D-100. Every admin page covers SSE4 items, or says on the page why it does not (SP16)
+
+Store packs design 9.6 (SSE4 repo, `handover/design/SSE4-store-packs-design.md`), from the owner on
+27 Nov 2026: "all the admin functions do not touch v4 stuff, yet."
+
+**Backup first (0.68.2).** Every table a migration creates is backed up or skipped with its reason
+(`SKIPPED` in `backup.ts`); `tests/backup.test.ts` reads the migrations and fails on a table in
+neither list. Each V4 file is copied once to `backup-files/v4/<sha256>.json`, outside the pruned
+`backups/` folder, and listed in the backup. Same bucket, so it guards against a file deleted or
+overwritten by mistake, not against losing the bucket.
+
+**Then the pages (0.69.0).** Explorers (counts, list, hold and restore), log (v4 actions and items by
+slug), stats (a V4 panel counted in the Worker, no SQL function), takedowns (a `/v/<slug>` address
+matched on read, no column) and reports (already, D-98) take V4 items. Review, comments, tags,
+issues, debug and gates say why they do not apply. `tests/adminV4.test.ts` fails on an admin page
+that does neither. Hold and restore go through one function, `setV4State`, from both places.
+
+**Found, not changed:** deleting an account deletes its V4 rows (the foreign key cascades, 0044), so
+a campaign that names one of its packs can no longer fetch it, and the pack id becomes free for
+someone else. The delete panels now say so and the log records the slugs. Keeping packs after an
+account goes would be a migration, and is the owner's call.
+
 ### D-16. The takedown address is assembled at runtime, never served as text
 
 The owner's instruction was explicit: keep it off the page as scrapable text. It is stored as

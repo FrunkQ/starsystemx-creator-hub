@@ -11,6 +11,7 @@
   question here is never "is this a good word", it is <strong>"do we already have this one?"</strong>
   Swapping puts the existing tag on their map, which is what they wanted anyway.
 </p>
+<p class="v4-note"><strong>SSE4:</strong> SSE4 packs carry their tags in the pack file itself; nobody proposes them, so there is nothing of theirs to review here. A pack's tags change only with a new version.</p>
 
 {#if form?.done}<div class="panel notice"><p>{form.done}</p></div>{/if}
 {#if form?.message}<div class="panel notice bad"><p>{form.message}</p></div>{/if}
@@ -91,6 +92,7 @@
 {/if}
 
 <style>
+  .v4-note { color: var(--ink-dim); font-size: 0.9rem; margin: 0 0 14px; max-width: 72ch; }
   h1 { margin: 0 0 6px; }
   .lede { color: var(--ink-dim); margin: 0 0 18px; max-width: 78ch; }
   .proposal { display: flex; flex-direction: column; gap: 12px; }

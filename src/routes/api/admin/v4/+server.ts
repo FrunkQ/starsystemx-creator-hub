@@ -4,7 +4,7 @@ import type { RequestHandler } from './$types';
 import { json, error } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import { isStaff, isAdmin } from '$lib/server/auth';
-import * as audit from '$lib/server/audit';
+import { setV4State, type V4StaffAction } from '$lib/server/v4';
 
 export const POST: RequestHandler = async ({ request, platform, locals }) => {
   const env = platform?.env;
@@ -21,11 +21,6 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
   const sb = db(env);
   const { data: item } = await sb.from('v4_items').select('id, slug, state').eq('id', id).maybeSingle();
   if (!item) throw error(404, 'No such item');
-  if (action !== 'dismiss') {
-    const state = action === 'hold' ? 'held' : action === 'remove' ? 'removed' : 'public';
-    await sb.from('v4_items').update({ state, hold_note: action === 'restore' ? null : note, updated_at: new Date().toISOString() }).eq('id', id);
-  }
-  await sb.from('v4_reports').update({ state: 'closed' }).eq('item_id', id).eq('state', 'open');
-  await audit.record(sb, locals.viewer.id, 'v4.' + action, 'v4_item:' + item.slug, note || undefined, { from: item.state });
+  await setV4State(sb, locals.viewer.id, item, action as V4StaffAction, note);
   return json({ ok: true });
 };

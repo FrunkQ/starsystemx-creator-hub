@@ -58,6 +58,7 @@
   Every limit the hub enforces is a row here. Changes take effect on the next request - no deploy.
   Values are JSON: <code>true</code>, <code>false</code>, a number, or a string in quotes.
 </p>
+<p class="v4-note"><strong>SSE4:</strong> SSE4 uploads obey max_bundle_bytes, uploads_per_user_per_day (and its trusted twin) and new_account_cooldown_hours, and count in the daily allowance. zips_allowed does not apply to them: an SSE4 file is one JSON file with no pictures.</p>
 
 <div class="panel notice">
   <h3>zips_allowed is the kill switch</h3>
@@ -189,6 +190,7 @@
 </table>
 
 <style>
+  .v4-note { color: var(--ink-dim); font-size: 0.9rem; margin: 0 0 14px; max-width: 72ch; }
   h1 { margin: 0 0 6px; }
   .lede { color: var(--ink-dim); margin: 0 0 18px; max-width: 66ch; }
   .panel h3 { margin: 0 0 6px; font-size: 0.98rem; }

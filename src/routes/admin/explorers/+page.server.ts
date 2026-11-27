@@ -20,6 +20,10 @@ export const load: PageServerLoad = async ({ platform, locals, url }) => {
   const { data: maps } = ids.length
     ? await sb.from('systems').select('creator_id, state').in('creator_id', ids)
     : { data: [] as { creator_id: string; state: string }[] };
+  // SSE4 items too (SP16): one small read, counted the same way as maps.
+  const { data: v4 } = ids.length
+    ? await sb.from('v4_items').select('creator_id, state').in('creator_id', ids)
+    : { data: [] as { creator_id: string; state: string }[] };
   const { data: comments } = ids.length
     ? await sb.from('comments').select('creator_id').in('creator_id', ids).is('removed_at', null)
     : { data: [] as { creator_id: string | null }[] };
@@ -30,6 +34,13 @@ export const load: PageServerLoad = async ({ platform, locals, url }) => {
     c.all++;
     if (m.state === 'public') c.pub++;
     mapsOf.set(m.creator_id, c);
+  }
+  const v4Of = new Map<string, { all: number; pub: number }>();
+  for (const m of v4 ?? []) {
+    const c = v4Of.get(m.creator_id) ?? { all: 0, pub: 0 };
+    c.all++;
+    if (m.state === 'public') c.pub++;
+    v4Of.set(m.creator_id, c);
   }
   const commentsOf = new Map<string, number>();
   for (const c of comments ?? []) if (c.creator_id) commentsOf.set(c.creator_id, (commentsOf.get(c.creator_id) ?? 0) + 1);
@@ -71,6 +82,7 @@ export const load: PageServerLoad = async ({ platform, locals, url }) => {
     ? {
         handle: deleted,
         maps: Number(url.searchParams.get('maps') ?? 0),
+        v4: Number(url.searchParams.get('v4') ?? 0),
         freed: Number(url.searchParams.get('freed') ?? 0),
         signIn: url.searchParams.get('signin') !== '0',
         id: url.searchParams.get('id') ?? ''
@@ -82,6 +94,7 @@ export const load: PageServerLoad = async ({ platform, locals, url }) => {
     people: (people ?? []).map((p) => ({
       ...p,
       maps: mapsOf.get(p.id) ?? { all: 0, pub: 0 },
+      v4: v4Of.get(p.id) ?? { all: 0, pub: 0 },
       comments: commentsOf.get(p.id) ?? 0,
       // ALWAYS BOTH KEYS, never a spread of "maybe an object": a union of `{}` and `{email}` is a
       // type nothing downstream can read a property off, and null is a clearer answer than absent.

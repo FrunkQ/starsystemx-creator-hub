@@ -21,6 +21,7 @@ import { error, fail } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import { isStaff } from '$lib/server/auth';
 import * as audit from '$lib/server/audit';
+import { v4SlugOf } from '$lib/addresses';
 import type { TakedownRow, TakedownState } from '$lib/server/database.types';
 
 const RESOLUTIONS: TakedownState[] = ['actioned', 'rejected', 'withdrawn'];
@@ -39,7 +40,16 @@ export const load: PageServerLoad = async ({ platform, locals, url }) => {
       .order('resolved_at', { ascending: false }).limit(100)
   ]);
 
+  // A CLAIM ABOUT AN SSE4 ITEM (SP16). The form resolves a URL to a V3 map only, so a `/v/<slug>`
+  // address is matched here, on read, to the item it names: no new column, and old claims match too.
+  const v4Slugs = [...new Set([...(open ?? []), ...(closed ?? [])].map((t) => v4SlugOf(t.url)).filter((x): x is string => !!x))];
+  const { data: v4 } = v4Slugs.length
+    ? await sb.from('v4_items').select('slug, title, state').in('slug', v4Slugs)
+    : { data: [] as { slug: string; title: string; state: string }[] };
+  const v4Items = Object.fromEntries((v4 ?? []).map((v) => [v.slug, v]));
+
   return {
+    v4Items,
     open: (open ?? []) as TakedownRow[],
     closed: (closed ?? []) as TakedownRow[],
     done: url.searchParams.get('done') ?? ''

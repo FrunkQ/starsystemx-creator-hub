@@ -11,6 +11,8 @@
     rejected: 'Rejected',
     withdrawn: 'Withdrawn'
   };
+  import { v4SlugOf } from '$lib/addresses';
+  const v4Of = (url: string | null) => { const s = v4SlugOf(url); return s ? data.v4Items[s] ?? null : null; };
 </script>
 
 <svelte:head><title>Takedowns - admin</title><meta name="robots" content="noindex" /></svelte:head>
@@ -51,6 +53,10 @@
           <!-- The hub RESOLVED that url to a map when the claim came in, so this is one of ours
                and the link goes somewhere. An unresolved url may be anything at all. -->
           <span class="tag">a map on the hub</span>
+        {:else if v4Of(t.url)}
+          {@const v = v4Of(t.url)}
+          <a href="/v/{v?.slug}">{v?.title}</a> <span class="tag">an SSE4 item on the hub, {v?.state}</span>
+          <span class="muted small">- hold or remove it from its own page</span>
         {:else}
           <span class="muted small">- the hub could not match that to a map</span>
         {/if}
