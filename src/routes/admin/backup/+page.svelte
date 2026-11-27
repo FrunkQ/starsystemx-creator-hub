@@ -7,15 +7,18 @@
 
 <h1>Backups</h1>
 <p class="lede">
-  A gzipped copy of every table, written to the bundles bucket. The last {data.keep} are kept.
-  The pictures and bundles are not in it - they are content-addressed objects in the same buckets
-  and the backup names which ones matter. Secrets are never written.
+  A gzipped copy of every table, SSE4 items first, written to the bundles bucket. The last
+  {data.keep} are kept. Each SSE4 file (a published pack or campaign) is also copied once to
+  <code>backup-files/v4/</code>, kept for good, and the backup lists them all. V3 pictures and
+  bundles are not copied - they are content-addressed objects in the same buckets and the backup
+  names which ones matter. Secrets are never written.
 </p>
 
 <form method="POST" action="?/run">
   <button class="primary" type="submit">Back up now</button>
   {#if form?.report}
     <span class="muted"> Written {form.report.key.slice(8)} ({formatBytes(form.report.bytes)}).
+      SSE4 files: {form.report.v4Files.total}, {form.report.v4Files.copiedNow} copied this time.
       {#if form.report.problems.length}<span class="bad">Problems: {form.report.problems.join('; ')}</span>{/if}
     </span>
   {/if}

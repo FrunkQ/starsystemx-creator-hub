@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.68.2 - 2026-11-27
+
+**The backup now holds SSE4 packs and campaigns.** Until now the weekly backup left out every SSE4
+item, so the first official pack (Sol today) was in no backup at all. It also left out takedown
+requests, tag proposals, the paid pack tables and the debug invites. Every table is now in the
+backup, SSE4 items first, except pairing codes that only live for minutes. Each SSE4 file is copied
+once to its own kept folder, and the backup lists every one, so a deleted or overwritten file can be
+put back. A test now fails if a new table is added and left out of the backup.
+
 ## 0.68.1 - 2026-11-27
 
 **A stalled database is a short, honest message, not a long wait and a crash.** On 27 November the
