@@ -10,8 +10,14 @@ export const load: PageServerLoad = async ({ platform, setHeaders, url }) => {
   const env = platform?.env;
   if (!env?.SUPABASE_URL) throw error(500, 'not configured');
   const sb = db(env);
-  const { data } = await sb.from('v4_items').select(V4_CARD_COLUMNS).eq('state', 'public')
+  const { data, error: failed } = await sb.from('v4_items').select(V4_CARD_COLUMNS).eq('state', 'public')
     .order('created_at', { ascending: false }).limit(300);
+  // A FAILED READ IS NOT AN EMPTY SHELF (27 Nov 2026): it showed "Nothing on the shelves yet" and
+  // cached that for a minute. An error page carries no public cache header, so nothing keeps it.
+  if (failed) {
+    console.error('shelves query failed', failed.message);
+    throw error(503, 'The shelves could not be read right now.');
+  }
   const rows = (data ?? []) as unknown as V4Card[];
   const ids = [...new Set(rows.map((r) => r.creator_id))];
   const { data: people } = ids.length ? await sb.from('creators').select('id, handle, display_name').in('id', ids) : { data: [] };

@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.68.1 - 2026-11-27
+
+**A stalled database is a short, honest message, not a long wait and a crash.** On 27 November the
+hub's database ran out of disk allowance and stopped answering; every page waited about twenty
+seconds per read and the front page ended in "Something broke". Every database call now gives up
+after eight seconds. The front page shows its "could not be read" notice, Shelves says the shelves
+could not be read instead of showing an empty shelf (and that failure is no longer kept in the
+cache for a minute), and any other page says "The database is not answering right now" rather
+than "Internal Error".
+
 ## 0.68.0 - 2026-11-23
 
 **Find a pack by what is in it.** The Shelves page has a "Contains" row: templates, dressing rules,
