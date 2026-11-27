@@ -99,7 +99,7 @@
           <td>{v.state}{#if v.hold_note} <span class="muted">· {v.hold_note}</span>{/if}</td>
           <td>{v.download_count}</td>
           <td>
-            {#if v.state === 'public'}
+            {#if v.state === 'public' || v.state === 'withdrawn'}
               <form class="row" method="POST" action="?/v4">
                 <input type="hidden" name="id" value={v.id} /><input type="hidden" name="action" value="hold" />
                 <input name="note" placeholder="why" maxlength="500" />
@@ -110,7 +110,7 @@
                 <input type="hidden" name="id" value={v.id} /><input type="hidden" name="action" value="restore" />
                 <button type="submit">Restore</button>
               </form>
-            {:else}
+            {:else if v.state === 'removed'}
               <span class="muted">Removed; restore from its page</span>
             {/if}
           </td>

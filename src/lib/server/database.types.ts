@@ -548,7 +548,7 @@ export type V4ItemRow = {
   sha256: string;
   byte_size: number;
   fan_setting: string | null;
-  state: 'public' | 'held' | 'removed';
+  state: 'public' | 'held' | 'removed' | 'withdrawn' | 'draft';
   hold_note: string | null;
   download_count: number;
   attestation_text_version: number | null;

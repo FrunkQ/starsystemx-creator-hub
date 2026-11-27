@@ -2,7 +2,9 @@
   import { providesLine } from '$lib/v4/read';
   import { fanWorkNotice } from '$lib/fanWork';
   import { sse4OpenUrl } from '$lib/addresses';
-  let { data } = $props();
+  import { enhance } from '$app/forms';
+  let { data, form } = $props();
+  let editing = $state(false);
   const it = $derived(data.item);
   let copied = $state(false);
   let reportOpen = $state(false);
@@ -34,8 +36,38 @@
 <h1>{it.title} <span class="gen">v4</span></h1>
 {#if it.summary}<p class="lede">{it.summary}</p>{/if}
 
-{#if it.state !== 'public'}
+{#if it.state === 'withdrawn'}
+  <div class="panel notice"><p><strong>Off the shelf:</strong> its maker took it off the shelves. It is not listed or searched, and its address still works for anyone who has it.</p></div>
+{:else if it.state === 'draft'}
+  <div class="panel notice"><p><strong>Draft:</strong> only its maker sees this. Not published yet.</p></div>
+{:else if it.state !== 'public'}
   <div class="panel notice bad"><p><strong>{it.state === 'held' ? 'Held' : 'Removed'}:</strong> not shown or served to anyone else. {it.hold_note ?? ''}</p></div>
+{/if}
+
+{#if data.mine && it.state !== 'removed'}
+  <div class="panel own">
+    <h3>Your listing</h3>
+    {#if form?.done}<p class="dim">{form.done}</p>{/if}
+    {#if form?.message}<p class="bad">{form.message}</p>{/if}
+    {#if editing}
+      <form method="POST" action="?/edit" use:enhance={() => async ({ update }) => { await update({ reset: false }); editing = false; }}>
+        <label>Title <input name="title" value={it.title} maxlength={data.limits.title} required /></label>
+        <label>Summary <textarea name="summary" maxlength={data.limits.summary} rows="3">{it.summary ?? ''}</textarea></label>
+        <label>Unofficial fan work of (leave empty if it is your own setting) <input name="fanSetting" value={it.fan_setting ?? ''} maxlength="60" /></label>
+        <p class="dim small">These belong to the listing. The published file and its SHA-256 never change; a new file is a new version.</p>
+        <div class="actions"><button class="primary" type="submit">Save</button><button type="button" onclick={() => (editing = false)}>Cancel</button></div>
+      </form>
+    {:else}
+      <div class="actions">
+        <button onclick={() => (editing = true)}>Edit listing</button>
+        {#if it.state === 'public'}
+          <form method="POST" action="?/shelf" use:enhance><input type="hidden" name="on" value="0" /><button type="submit">Take off the shelf</button></form>
+        {:else if it.state === 'withdrawn'}
+          <form method="POST" action="?/shelf" use:enhance><input type="hidden" name="on" value="1" /><button type="submit">Put back on the shelf</button></form>
+        {/if}
+      </div>
+    {/if}
+  </div>
 {/if}
 
 {#if it.fan_setting}
@@ -102,7 +134,8 @@
     <h3>Moderation {#if data.openReports}<span class="dim">({data.openReports} open reports)</span>{/if}</h3>
     <label>Reason (goes in the log) <input bind:value={note} maxlength="500" /></label>
     <div class="actions">
-      {#if it.state === 'public'}<button onclick={() => act('hold')} disabled={!note.trim()}>Hold</button>{:else}<button onclick={() => act('restore')}>Restore</button>{/if}
+      {#if it.state === 'public' || it.state === 'withdrawn'}<button onclick={() => act('hold')} disabled={!note.trim()}>Hold</button>{:else}<button onclick={() => act('restore')}>Restore</button>{/if}
+      {#if it.state === 'withdrawn'}<span class="dim">Its maker took it off the shelf; only they put it back.</span>{/if}
       {#if data.openReports}<button onclick={() => act('dismiss')}>Close reports, no action</button>{/if}
       <button onclick={() => act('remove')} disabled={!note.trim()}>Remove (owner only)</button>
     </div>
@@ -124,6 +157,8 @@
   .facts dd { margin: 0; overflow-wrap: anywhere; }
   .mono { font-family: var(--font-mono); font-size: 0.9rem; }
   .fan { color: var(--ink-dim); font-size: 0.92rem; }
+  .own h3 { margin: 0 0 8px; }
+  .bad { color: var(--bad); }
   .dim { color: var(--ink-faint); }
   .small { font-size: 0.88rem; max-width: 68ch; }
   .versions { padding-left: 18px; }

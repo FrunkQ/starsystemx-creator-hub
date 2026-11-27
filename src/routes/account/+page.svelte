@@ -111,6 +111,28 @@
 </div>
 
 <div class="panel">
+  <h2>Your SSE4 packs and campaigns</h2>
+  {#if !data.v4.length}
+    <p class="muted">Nothing yet. <a href="/upload/v4">Share a pack or a campaign</a>.</p>
+  {:else}
+    <p class="muted">Open one to edit its listing or take it off the shelf. The file itself changes only with a new version.</p>
+    <table>
+      <thead><tr><th>Item</th><th>Kind</th><th>State</th><th>Downloads</th></tr></thead>
+      <tbody>
+        {#each data.v4 as v (v.slug)}
+          <tr>
+            <td><a href="/v/{v.slug}">{v.title}</a>{#if v.pack_id} <span class="muted">{v.pack_id} {v.pack_version}</span>{/if}</td>
+            <td>{v.kind}</td>
+            <td>{v.state === 'withdrawn' ? 'off the shelf' : v.state}</td>
+            <td>{v.download_count}</td>
+          </tr>
+        {/each}
+      </tbody>
+    </table>
+  {/if}
+</div>
+
+<div class="panel">
   <h2>Badges</h2>
   <p class="muted">
     {earned.size} of {BADGE_IDS.length}. Earned by doing things, never handed out - and lost again

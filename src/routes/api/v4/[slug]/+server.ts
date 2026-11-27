@@ -6,7 +6,7 @@ import { json, error } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import { PUBLIC_CORS, preflight } from '$lib/server/cors';
 import { loadSite } from '$lib/server/site';
-import { creditChain } from '$lib/server/v4';
+import { creditChain, isServed } from '$lib/server/v4';
 import { shelfOf } from '$lib/v4/read';
 import { fanWorkHeader } from '$lib/fanWork';
 
@@ -15,7 +15,8 @@ export const GET: RequestHandler = async ({ platform, params, url, setHeaders })
   if (!env?.SUPABASE_URL) throw error(500, 'not configured');
   const sb = db(env);
   const { data: item } = await sb.from('v4_items').select('*').eq('slug', params.slug).maybeSingle();
-  if (!item || item.state !== 'public') throw error(404, 'not found');
+  // Withdrawn by its maker is off the shelves but still served here, so campaigns that name it keep working (SP15).
+  if (!item || !isServed(item.state)) throw error(404, 'not found');
   const { data: maker } = await sb.from('creators').select('handle, display_name').eq('id', item.creator_id).maybeSingle();
   const site = await loadSite(sb, url);
 
@@ -24,6 +25,8 @@ export const GET: RequestHandler = async ({ platform, params, url, setHeaders })
     generation: 'v4',
     kind: item.kind,
     slug: item.slug,
+    // false when its maker took it off the shelf: still served, no longer listed (SP15).
+    listed: item.state === 'public',
     title: item.title,
     summary: item.summary,
     shelf: item.kind === 'pack' ? shelfOf(item.pack_kinds) : 'campaign',
