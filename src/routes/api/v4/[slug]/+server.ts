@@ -9,6 +9,7 @@ import { loadSite } from '$lib/server/site';
 import { creditChain, isServed } from '$lib/server/v4';
 import { shelfOf } from '$lib/v4/read';
 import { fanWorkHeader } from '$lib/fanWork';
+import { v4Badges } from '$lib/itemBadges';
 
 export const GET: RequestHandler = async ({ platform, params, url, setHeaders }) => {
   const env = platform?.env;
@@ -30,6 +31,7 @@ export const GET: RequestHandler = async ({ platform, params, url, setHeaders })
     title: item.title,
     summary: item.summary,
     shelf: item.kind === 'pack' ? shelfOf(item.pack_kinds) : 'campaign',
+    badges: v4Badges(item),
     pack: item.kind === 'pack' ? {
       id: item.pack_id, version: item.pack_version, kinds: item.pack_kinds, fictional: item.fictional,
       licence: item.licence, kernelRange: item.kernel_range, requires: item.requires, provides: item.provides

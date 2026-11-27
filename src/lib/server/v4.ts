@@ -12,10 +12,10 @@ import * as audit from './audit';
 export const v4Key = (sha256: string) => `v4/${sha256}.json`;
 
 /** Columns a shelf card needs. */
-export const V4_CARD_COLUMNS = 'id, slug, kind, creator_id, title, summary, pack_id, pack_version, pack_kinds, fictional, licence, provides, universe_root, event_count, fan_setting, download_count, created_at, sha256, byte_size';
+export const V4_CARD_COLUMNS = 'id, slug, kind, creator_id, title, summary, pack_id, pack_version, pack_kinds, fictional, licence, provides, requires, universe_root, event_count, fan_setting, download_count, created_at, sha256, byte_size';
 
 export type V4Card = Pick<V4ItemRow, 'id' | 'slug' | 'kind' | 'creator_id' | 'title' | 'summary' | 'pack_id' | 'pack_version' |
-  'pack_kinds' | 'fictional' | 'licence' | 'provides' | 'universe_root' | 'event_count' | 'fan_setting' | 'download_count' |
+  'pack_kinds' | 'fictional' | 'licence' | 'provides' | 'requires' | 'universe_root' | 'event_count' | 'fan_setting' | 'download_count' |
   'created_at' | 'sha256' | 'byte_size'>;
 
 /** A pack's address: its id and version, as one URL-safe word ("acme.ports-1.2.0"). */

@@ -3,6 +3,8 @@
   import { fanWorkNotice } from '$lib/fanWork';
   import { sse4OpenUrl } from '$lib/addresses';
   import { enhance } from '$app/forms';
+  import ItemBadges from '$lib/components/ItemBadges.svelte';
+  import { v4Badges } from '$lib/itemBadges';
   let { data, form } = $props();
   let editing = $state(false);
   const it = $derived(data.item);
@@ -33,7 +35,8 @@
 <svelte:head><title>{it.title} - {data.site.name}</title></svelte:head>
 
 <p class="crumb"><a href="/shelves">Shelves</a> › {data.shelfTitle}</p>
-<h1>{it.title} <span class="gen">v4</span></h1>
+<h1>{it.title}</h1>
+<p class="badgeline"><ItemBadges badges={v4Badges(it)} /></p>
 {#if it.summary}<p class="lede">{it.summary}</p>{/if}
 
 {#if it.state === 'withdrawn'}
@@ -148,7 +151,6 @@
 <style>
   h1 { margin: 0 0 6px; }
   .crumb { margin: 0 0 4px; color: var(--ink-faint); font-size: 0.9rem; }
-  .gen { font-family: var(--font-mono); font-size: 0.8rem; vertical-align: middle; border: 1px solid var(--edge); padding: 1px 6px; color: var(--ink-dim); }
   .lede { color: var(--ink-dim); margin: 0 0 16px; max-width: 64ch; }
   .download.plain { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
   .actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 14px 0; align-items: center; }
@@ -158,6 +160,7 @@
   .mono { font-family: var(--font-mono); font-size: 0.9rem; }
   .fan { color: var(--ink-dim); font-size: 0.92rem; }
   .own h3 { margin: 0 0 8px; }
+  .badgeline { margin: 0 0 10px; }
   .bad { color: var(--bad); }
   .dim { color: var(--ink-faint); }
   .small { font-size: 0.88rem; max-width: 68ch; }
