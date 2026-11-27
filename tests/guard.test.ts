@@ -102,3 +102,17 @@ describe('robots.txt', () => {
     expect(r).toContain("'Crawl-delay: 10'");
   });
 });
+
+describe('the edge copy is keyed by build (27 Nov 2026)', async () => {
+  const { edgeKey, ZONE_NO_STORE } = await import('../src/lib/server/guard');
+  it('two builds never share a copy of the same page', () => {
+    const r = new Request('https://explorers.starsystemx.com/shelves?q=sol');
+    const a = edgeKey(r, '0.72.0').url, b = edgeKey(r, '0.73.0').url;
+    expect(a).not.toBe(b);
+    expect(new URL(a).searchParams.get('q')).toBe('sol');
+  });
+  it('the zone-cache refusal is not stored in the Worker\'s own copy', () => {
+    const res = new Response('x', { headers: { 'cache-control': 'public, max-age=60', [ZONE_NO_STORE[0]]: ZONE_NO_STORE[1] } });
+    expect(forEdge(res, 60).headers.has(ZONE_NO_STORE[0])).toBe(false);
+  });
+});
